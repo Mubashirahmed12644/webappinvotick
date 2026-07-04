@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Logo } from "@/components/ui/Logo";
 import { Button } from "@/components/ui/Button";
 import { TextField } from "@/components/ui/TextField";
+import { GoogleButton } from "@/components/auth/GoogleButton";
 
 export default function LoginPage() {
   return (
@@ -40,7 +41,7 @@ function LoginView() {
         setError(data.message || "Login failed.");
         return;
       }
-      router.push(params.get("next") || "/dashboard");
+      router.push(params.get("next") || "/invoices");
       router.refresh();
     } catch {
       setError("Something went wrong. Please try again.");
@@ -115,6 +116,14 @@ function LoginView() {
               Sign in
             </Button>
           </form>
+
+          <div className="my-6 flex items-center gap-3 text-xs text-[var(--color-on-surface-variant)]">
+            <span className="h-px flex-1 bg-[var(--color-outline-variant)]" />
+            <span>or</span>
+            <span className="h-px flex-1 bg-[var(--color-outline-variant)]" />
+          </div>
+
+          <GoogleButton onError={setError} label="signin_with" />
 
           <p className="mt-6 text-center text-sm text-[var(--color-on-surface-variant)]">
             New to Invotick?{" "}

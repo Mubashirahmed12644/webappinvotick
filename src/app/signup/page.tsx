@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Logo } from "@/components/ui/Logo";
 import { Button } from "@/components/ui/Button";
 import { TextField } from "@/components/ui/TextField";
+import { GoogleButton } from "@/components/auth/GoogleButton";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -35,7 +36,7 @@ export default function SignupPage() {
         return;
       }
       if (data.verified) {
-        router.push("/dashboard");
+        router.push("/invoices");
         router.refresh();
       } else {
         setNotice(data.message || "Check your email for a verification code.");
@@ -78,6 +79,14 @@ export default function SignupPage() {
             Create account
           </Button>
         </form>
+
+        <div className="my-6 flex items-center gap-3 text-xs text-[var(--color-on-surface-variant)]">
+          <span className="h-px flex-1 bg-[var(--color-outline-variant)]" />
+          <span>or</span>
+          <span className="h-px flex-1 bg-[var(--color-outline-variant)]" />
+        </div>
+
+        <GoogleButton onError={setError} label="signup_with" />
 
         <p className="mt-6 text-center text-sm text-[var(--color-on-surface-variant)]">
           Already have an account?{" "}

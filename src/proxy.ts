@@ -17,10 +17,10 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Already logged in and visiting an auth page -> go to dashboard.
+  // Already logged in and visiting an auth page -> go to Home.
   if (hasSession && isPublic) {
     const url = request.nextUrl.clone();
-    url.pathname = "/dashboard";
+    url.pathname = "/invoices";
     url.search = "";
     return NextResponse.redirect(url);
   }
