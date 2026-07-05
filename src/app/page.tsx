@@ -8,8 +8,9 @@ const SITE = "https://www.invotick.com";
 export const metadata: Metadata = {
   metadataBase: new URL(SITE),
   title: "Free Invoice Generator — Create & Download Invoices Online | Invotick",
+  // ~152 chars, targets: free invoice generator / create invoice / download PDF invoice
   description:
-    "Make professional invoices for free with Invotick's online invoice generator. Add your logo, line items and tax, then download a PDF instantly — no sign-up required.",
+    "Free invoice generator — create a professional invoice online and download a PDF invoice in seconds. Add your logo, items and tax. No sign-up needed.",
   keywords: [
     "free invoice generator",
     "free invoice maker",
@@ -34,9 +35,34 @@ export const metadata: Metadata = {
   },
 };
 
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebApplication",
+      name: "Invotick Free Invoice Generator",
+      url: SITE + "/",
+      applicationCategory: "FinanceApplication",
+      operatingSystem: "Web",
+      description:
+        "Free online invoice generator to create professional invoices and download them as PDF — no sign-up required.",
+      offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+      publisher: { "@type": "Organization", name: "Invotick", url: SITE + "/" },
+    },
+    {
+      "@type": "Organization",
+      name: "Invotick",
+      url: SITE + "/",
+      logo: SITE + "/invotick-icon.png",
+    },
+  ],
+};
+
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-[var(--color-background)]">
+      {/* Structured data for rich results (WebApplication + Organization) */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       {/* Public top bar */}
       <nav className="mx-auto flex max-w-[1400px] items-center justify-between px-4 py-4 sm:px-6">
         <span className="text-lg font-extrabold tracking-tight text-[var(--color-on-background)]">

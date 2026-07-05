@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { cn } from "@/lib/cn";
 import { TEMPLATES, type InvoiceTemplate } from "@/lib/free-invoice/templates";
 
@@ -27,10 +28,17 @@ export function TemplatePicker({ selectedId, currentColor, onSelect }: { selecte
                 : "border-[var(--color-outline-variant)] hover:border-[var(--color-primary)]",
             )}
           >
-            <div className="flex h-10 w-full items-center justify-center" style={{ backgroundColor: swatch }}>
+            {/* Fixed-height container reserves the aspect ratio (no CLS); next/image
+                serves WebP/AVIF and lazy-loads, keeping the landing light. */}
+            <div className="relative flex h-10 w-full items-center justify-center overflow-hidden" style={{ backgroundColor: swatch }}>
               {t.headerImage ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={t.headerImage} alt="" loading="lazy" className="h-full w-full object-cover" />
+                <Image
+                  src={t.headerImage}
+                  alt={`${t.name} invoice template`}
+                  fill
+                  sizes="(max-width: 1280px) 33vw, 220px"
+                  className="object-cover"
+                />
               ) : (
                 <span className="text-[10px] font-bold uppercase tracking-wide text-white/90">Solid</span>
               )}
