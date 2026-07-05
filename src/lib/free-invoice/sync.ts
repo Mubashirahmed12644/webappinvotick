@@ -19,12 +19,13 @@ export interface SyncResult {
   needsBusiness: boolean;
 }
 
-// Invoices attach to a business; find the user's first one via the sync-pull.
+// Invoices attach to a business; find the user's first one. Uses /v1/businesses
+// (the client proxy only allows /v1/** paths — /v2/sync/pull is blocked).
 async function fetchPrimaryBusinessId(): Promise<string | null> {
   try {
-    const res = await fetch("/api/backend/v2/sync/pull");
+    const res = await fetch("/api/backend/v1/businesses");
     const json = await res.json();
-    const businesses = json?.data?.businesses ?? [];
+    const businesses = Array.isArray(json?.data) ? json.data : [];
     return businesses[0]?.id ?? null;
   } catch {
     return null;

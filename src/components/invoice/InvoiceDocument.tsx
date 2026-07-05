@@ -31,19 +31,20 @@ export function InvoiceDocument({ data, qrDataUrl }: { data: InvoiceRenderData; 
         <img src={backgroundUrl} alt="" aria-hidden className="pointer-events-none absolute inset-0 h-full w-full object-cover" style={{ opacity: data.backgroundOpacity }} />
       )}
 
-      {/* Header: full-bleed image (or solid color) with logo + title */}
-      <div className="relative flex items-center justify-between gap-4 px-8 py-6" style={{ minHeight: 128, backgroundColor: headerUrl ? undefined : backgroundUrl ? "transparent" : color }}>
+      {/* Header: full-bleed image (or solid color) with logo + title — kept slim
+          so the invoice stays compact and the details sit near the top. */}
+      <div className="relative flex items-center justify-between gap-4 px-8 py-4" style={{ minHeight: 84, backgroundColor: headerUrl ? undefined : backgroundUrl ? "transparent" : color }}>
         {headerUrl && <img src={headerUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />}
         <div className="relative z-10">
           {logoUrl && (
-            <span className="inline-flex h-20 w-20 items-center justify-center rounded-md bg-white shadow-md">
-              <img src={logoUrl} alt="" className="h-[72px] w-[72px] rounded object-contain" />
+            <span className="inline-flex h-14 w-14 items-center justify-center rounded-md bg-white shadow-md">
+              <img src={logoUrl} alt="" className="h-[52px] w-[52px] rounded object-contain" />
             </span>
           )}
         </div>
         {t.title && (
           <p
-            className="relative z-10 text-5xl font-bold tracking-tight"
+            className="relative z-10 text-4xl font-bold tracking-tight"
             style={{
               // Uses the synced title color if present; else default (white over
               // a header image, theme-contrast otherwise). Auto-applies on sync.

@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { LandingHero } from "@/components/landing/LandingHero";
 import { FreeInvoiceTool } from "@/components/free-invoice/FreeInvoiceTool";
+import { Faq } from "@/components/landing/Faq";
+import { SiteFooter } from "@/components/landing/SiteFooter";
+import { FAQ_ITEMS } from "@/components/landing/faq-data";
 
 const SITE = "https://www.invotick.com";
 
@@ -55,6 +58,14 @@ const jsonLd = {
       url: SITE + "/",
       logo: SITE + "/invotick-icon.png",
     },
+    {
+      "@type": "FAQPage",
+      mainEntity: FAQ_ITEMS.map((f) => ({
+        "@type": "Question",
+        name: f.q,
+        acceptedAnswer: { "@type": "Answer", text: f.a },
+      })),
+    },
   ],
 };
 
@@ -94,11 +105,11 @@ export default function LandingPage() {
           </Link>
           .
         </p>
+
+        <Faq />
       </main>
 
-      <footer className="border-t border-[var(--color-outline-variant)] py-6 text-center text-xs text-[var(--color-on-surface-variant)]">
-        © {new Date().getFullYear()} Invotick · Free online invoice generator
-      </footer>
+      <SiteFooter />
     </div>
   );
 }
