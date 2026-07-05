@@ -3,6 +3,9 @@
 // streams the bytes with the auth token attached server-side.
 export function imageProxyUrl(raw?: string | null): string | null {
   if (!raw) return null;
+  // Already-usable client-side images (e.g. the free-invoice tool's locally
+  // uploaded logo) are passed straight through — nothing to proxy.
+  if (raw.startsWith("data:") || raw.startsWith("blob:")) return raw;
   // Locally-bundled system-default assets are served directly, not proxied.
   if (raw.startsWith("/system-assets/")) return raw;
   let path = raw;

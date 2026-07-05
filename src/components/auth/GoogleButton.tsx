@@ -17,7 +17,7 @@ const GIS_SRC = "https://accounts.google.com/gsi/client";
 const CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 
 // `label` is a Google-supported button text code: signin_with | signup_with | continue_with.
-export function GoogleButton({ onError, label = "signin_with" }: { onError?: (m: string) => void; label?: string }) {
+export function GoogleButton({ onError, onSuccess, label = "signin_with" }: { onError?: (m: string) => void; onSuccess?: () => void; label?: string }) {
   const router = useRouter();
   const params = useSearchParams();
   const ref = useRef<HTMLDivElement>(null);
@@ -46,6 +46,12 @@ export function GoogleButton({ onError, label = "signin_with" }: { onError?: (m:
             const data = await r.json();
             if (!data.success) {
               onError?.(data.message || "Google sign-in failed.");
+              return;
+            }
+            // On the landing's backup flow we stay on the page (redirect-safe)
+            // so local invoices can sync; elsewhere we go to the app.
+            if (onSuccess) {
+              onSuccess();
               return;
             }
             router.push(params.get("next") || "/invoices");
@@ -82,7 +88,7 @@ export function GoogleButton({ onError, label = "signin_with" }: { onError?: (m:
     }
     script.addEventListener("load", render);
     return () => script?.removeEventListener("load", render);
-  }, [router, params, onError, label]);
+  }, [router, params, onError, onSuccess, label]);
 
   if (!CLIENT_ID) {
     return <p className="text-center text-xs text-[var(--color-on-surface-variant)]">Google sign-in isn’t configured yet.</p>;

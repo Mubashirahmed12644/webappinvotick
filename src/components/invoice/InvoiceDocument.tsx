@@ -23,7 +23,9 @@ export function InvoiceDocument({ data, qrDataUrl }: { data: InvoiceRenderData; 
   const label = "text-xs font-extrabold uppercase tracking-wide text-[#1c1b1f]";
 
   return (
-    <div className="relative overflow-hidden bg-white text-[#1c1b1f]">
+    // flex column so the footer can pin to the bottom of an A4-height sheet
+    // (in the free-tool preview). In the app's plain container it's a no-op.
+    <div className="relative flex flex-1 flex-col overflow-hidden bg-white text-[#1c1b1f]">
       {/* Background image — fetched from the synced template background (not invented) */}
       {backgroundUrl && (
         <img src={backgroundUrl} alt="" aria-hidden className="pointer-events-none absolute inset-0 h-full w-full object-cover" style={{ opacity: data.backgroundOpacity }} />
@@ -56,7 +58,7 @@ export function InvoiceDocument({ data, qrDataUrl }: { data: InvoiceRenderData; 
         )}
       </div>
 
-      <div className="relative z-10 px-8 py-6">
+      <div className="relative z-10 flex flex-1 flex-col px-8 py-6">
         {/* From / Bill To / Details */}
         <div className="grid gap-6 sm:grid-cols-3">
           {t.sender && (
@@ -164,8 +166,9 @@ export function InvoiceDocument({ data, qrDataUrl }: { data: InvoiceRenderData; 
           </div>
         )}
 
-        {/* Footer — white rounded container with brand logo + QR (mirrors the mobile PDF footer) */}
-        <div className="mt-10 flex items-center justify-between gap-4 rounded-[var(--radius-md)] bg-white px-5 py-3.5 shadow-sm ring-1 ring-gray-200">
+        {/* Footer — pinned to the bottom of the sheet (mt-auto); the gap above it
+            flexes with the content, so its position doesn't shift as line items grow. */}
+        <div className="mt-auto flex items-center justify-between gap-4 rounded-[var(--radius-md)] bg-white px-5 py-3.5 shadow-sm ring-1 ring-gray-200">
           <div className="flex items-center gap-3">
             <img src={BRAND_LOGO} alt="Invotick" className="h-9 w-9 rounded-md object-contain" />
             <div className="text-xs text-gray-500">
