@@ -12,8 +12,8 @@ export default function manifest(): MetadataRoute.Manifest {
     background_color: "#F6F7FB",
     theme_color: "#0D4DC0",
     icons: [
-      { src: "/icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },
-      { src: "/icon.svg", sizes: "any", type: "image/svg+xml", purpose: "maskable" },
+      { src: "/invotick-icon.png", sizes: "512x512", type: "image/png", purpose: "any" },
+      { src: "/invotick-icon.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
     ],
   };
 }

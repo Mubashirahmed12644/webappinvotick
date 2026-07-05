@@ -15,7 +15,8 @@ export const metadata: Metadata = {
   applicationName: "Invotick",
   manifest: "/manifest.webmanifest",
   appleWebApp: { capable: true, title: "Invotick", statusBarStyle: "default" },
-  icons: { icon: "/icon.svg", apple: "/icon.svg" },
+  // Favicon + apple icon come from the Invotick brand mark via the App Router
+  // file convention (src/app/icon.png, src/app/apple-icon.png).
 };
 
 export const viewport: Viewport = {
