@@ -37,6 +37,8 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Run on everything except Next internals, the API routes, and static assets.
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|manifest.webmanifest|sw.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|webmanifest|js|txt)$).*)"],
+  // Run on everything except Next internals, API routes, static assets, and the
+  // SEO/metadata routes (sitemap.xml, robots.txt, opengraph-image) — those must
+  // serve their own content, never get auth-redirected to /login.
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|manifest.webmanifest|sitemap.xml|robots.txt|opengraph-image|sw.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|webmanifest|js|txt|xml)$).*)"],
 };
