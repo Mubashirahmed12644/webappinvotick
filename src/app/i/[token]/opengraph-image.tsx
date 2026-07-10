@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import { ImageResponse } from "next/og";
 import { getSharedInvoice } from "@/lib/shared-invoice";
 
@@ -29,6 +30,11 @@ function ogCurrency(raw?: string | null): { text: string; pad: boolean } {
 export default async function Image({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
   const shared = await getSharedInvoice(token);
+
+  // Embed the brand icon as a data URL (co-located asset, read from disk) so the OG
+  // image needs no network fetch and renders the same locally and in production.
+  const iconBuffer = await readFile(new URL("./brand-icon.png", import.meta.url));
+  const brandIcon = `data:image/png;base64,${iconBuffer.toString("base64")}`;
 
   const business = shared?.businessName?.trim() || "A business";
   const number = shared?.invoiceNumber?.trim();
@@ -95,23 +101,14 @@ export default async function Image({ params }: { params: Promise<{ token: strin
         {/* Top row: brand + invoice number badge */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center" }}>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                width: 46,
-                height: 46,
-                borderRadius: 12,
-                background: "#ffffff",
-                color: "#1355D8",
-                fontSize: 30,
-                fontWeight: 800,
-                marginRight: 16,
-              }}
-            >
-              I
-            </div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={brandIcon}
+              width={52}
+              height={52}
+              style={{ borderRadius: 12, marginRight: 16 }}
+              alt=""
+            />
             <div style={{ display: "flex", fontSize: 40, fontWeight: 800 }}>Invotick</div>
           </div>
           <div
