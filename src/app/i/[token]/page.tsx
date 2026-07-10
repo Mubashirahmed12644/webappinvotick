@@ -72,9 +72,20 @@ export default async function SharedInvoicePage({
         </h1>
       </header>
 
-      {/* The exact rendered invoice (same document component as the free tool + app PDF). */}
+      {/* The exact invoice. When the app has uploaded its pixel-perfect render we show
+          that (100% same as the sender sees — builds trust); once that ephemeral image
+          is auto-deleted we fall back to the snapshot render, so the invoice always shows. */}
       <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
-        <InvoiceDocument data={shared.snapshot} />
+        {shared.imageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={shared.imageUrl}
+            alt={`Invoice ${shared.invoiceNumber ?? ""} from ${businessName}`.trim()}
+            className="block w-full"
+          />
+        ) : (
+          <InvoiceDocument data={shared.snapshot} />
+        )}
       </div>
 
       {/* Install CTA — the growth loop. Big, above the fold on mobile after the invoice. */}

@@ -15,6 +15,12 @@ export interface PublicSharedInvoice {
   totalAmount: number | null;
   status: string;
   createdAt: string;
+  // Approval loop. `imageUrl` is the app-rendered pixel-perfect invoice (ephemeral —
+  // may be null once auto-deleted, then the page falls back to the snapshot render).
+  approvalStatus?: "PENDING" | "APPROVED" | "REJECTED";
+  approvedAt?: string | null;
+  decisionNote?: string | null;
+  imageUrl?: string | null;
 }
 
 /**
