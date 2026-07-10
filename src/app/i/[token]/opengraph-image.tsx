@@ -44,6 +44,13 @@ export default async function Image({ params }: { params: Promise<{ token: strin
         })()
       : null;
 
+  // Responsive sizing: shrink long business names / big amounts so they always fit
+  // on the card and stay aligned, while short ones get the biggest, boldest size.
+  const bl = business.length;
+  const businessSize = bl <= 12 ? 104 : bl <= 18 ? 86 : bl <= 26 ? 66 : bl <= 36 ? 52 : 44;
+  const al = (amount ?? "").length;
+  const amountSize = al <= 10 ? 70 : al <= 14 ? 58 : al <= 18 ? 48 : 40;
+
   return new ImageResponse(
     (
       <div
@@ -105,15 +112,15 @@ export default async function Image({ params }: { params: Promise<{ token: strin
             >
               I
             </div>
-            <div style={{ display: "flex", fontSize: 34, fontWeight: 800 }}>Invotick</div>
+            <div style={{ display: "flex", fontSize: 40, fontWeight: 800 }}>Invotick</div>
           </div>
           <div
             style={{
               display: "flex",
-              fontSize: 26,
+              fontSize: 32,
               fontWeight: 700,
               background: "rgba(255,255,255,0.16)",
-              padding: "8px 22px",
+              padding: "10px 24px",
               borderRadius: 999,
             }}
           >
@@ -126,15 +133,15 @@ export default async function Image({ params }: { params: Promise<{ token: strin
           <div
             style={{
               display: "flex",
-              fontSize: 26,
+              fontSize: 32,
               fontWeight: 700,
               letterSpacing: 3,
-              opacity: 0.72,
+              opacity: 0.78,
             }}
           >
             INVOICE FROM
           </div>
-          <div style={{ display: "flex", fontSize: 96, fontWeight: 800, lineHeight: 1.0, marginTop: 10 }}>
+          <div style={{ display: "flex", fontSize: businessSize, fontWeight: 800, lineHeight: 1.04, marginTop: 12 }}>
             {business}
           </div>
           {amount && (
@@ -145,12 +152,12 @@ export default async function Image({ params }: { params: Promise<{ token: strin
                 alignSelf: "flex-start",
                 background: "rgba(255,255,255,0.14)",
                 borderRadius: 20,
-                padding: "18px 30px",
-                marginTop: 30,
+                padding: "18px 32px",
+                marginTop: 32,
               }}
             >
-              <div style={{ display: "flex", fontSize: 30, opacity: 0.85, marginRight: 18 }}>Total</div>
-              <div style={{ display: "flex", fontSize: 66, fontWeight: 800 }}>{amount}</div>
+              <div style={{ display: "flex", fontSize: 36, opacity: 0.88, marginRight: 20 }}>Total</div>
+              <div style={{ display: "flex", fontSize: amountSize, fontWeight: 800 }}>{amount}</div>
             </div>
           )}
         </div>
@@ -164,8 +171,8 @@ export default async function Image({ params }: { params: Promise<{ token: strin
             background: "#ffffff",
             color: "#1355D8",
             borderRadius: 24,
-            padding: "26px 26px 26px 40px",
-            fontSize: 40,
+            padding: "24px 24px 24px 40px",
+            fontSize: 42,
             fontWeight: 800,
           }}
         >
