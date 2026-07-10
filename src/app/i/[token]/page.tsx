@@ -21,14 +21,17 @@ export async function generateMetadata({
     .filter(Boolean)
     .join(" ");
   const description = "View this invoice and download it as a PDF. Made with Invotick.";
+  // OG image = the blob-backed route: rendered once, then served as a static,
+  // globally-cached PNG so every crawl (any region) is instant.
+  const ogImage = { url: `${SITE}/api/og/${token}`, width: 1200, height: 630 };
   return {
     title: `${title} | Invotick`,
     description,
     // Private by design — share links must not be indexed/searchable.
     robots: { index: false, follow: false },
     alternates: { canonical: `${SITE}/i/${token}` },
-    openGraph: { type: "website", title, description, url: `${SITE}/i/${token}` },
-    twitter: { card: "summary_large_image", title, description },
+    openGraph: { type: "website", title, description, url: `${SITE}/i/${token}`, images: [ogImage] },
+    twitter: { card: "summary_large_image", title, description, images: [ogImage.url] },
   };
 }
 
