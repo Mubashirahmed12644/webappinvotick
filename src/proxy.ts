@@ -4,8 +4,11 @@ import type { NextRequest } from "next/server";
 const COOKIE = process.env.AUTH_COOKIE ?? "invotick_session";
 // Auth pages: reachable when logged out; redirect logged-in users to the app.
 const AUTH_PATHS = ["/login", "/signup", "/forgot-password"];
-// Public marketing pages: reachable by anyone (crawlers included), no redirect.
-const PUBLIC_PREFIXES = ["/privacy"];
+// Public pages: reachable by anyone (crawlers included), no redirect.
+// "/i/" = shared invoice view (invotick.com/i/{token}) + its OG image — recipients
+// are never logged in, so this MUST stay public. Trailing slash is deliberate so
+// it can't ever match the authenticated "/invoices" route.
+const PUBLIC_PREFIXES = ["/privacy", "/i/"];
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
