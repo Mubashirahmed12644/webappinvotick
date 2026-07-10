@@ -1,0 +1,22 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "invotick.invoicemaker",
+      "sha256_cert_fingerprints": [
+        "REPLACE_WITH_PLAY_APP_SIGNING_SHA256_FROM_PLAY_CONSOLE"
+      ]
+    }
+  },
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "invotick.invoicemaker.debug",
+      "sha256_cert_fingerprints": [
+        "84:C2:E8:D8:B0:B1:60:8C:9B:95:24:9D:8B:98:14:E9:9C:77:24:F3:9D:AE:F9:E5:64:FE:F4:9C:C5:E8:67:15"
+      ]
+    }
+  }
+]

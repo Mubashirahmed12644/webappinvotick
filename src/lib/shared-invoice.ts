@@ -35,10 +35,10 @@ const PLAY_STORE_ID = "invotick.invoicemaker";
 
 /**
  * Play Store URL that carries the share token in the install referrer so the app
- * can open THIS invoice after install (deferred deep link, wired in B4). The app
- * already parses `iv_*` referrer params (task #16).
+ * can open THIS invoice after install (deferred deep link). The app's
+ * GooglePlayReferrer parses `iv_doc` → ReceivedInvoice(token) on first launch.
  */
 export function installUrlForToken(token: string): string {
-  const referrer = encodeURIComponent(`iv_shared_token=${token}&utm_source=shared_invoice&utm_medium=web`);
+  const referrer = encodeURIComponent(`iv_doc=${token}&utm_source=shared_invoice&utm_medium=web`);
   return `https://play.google.com/store/apps/details?id=${PLAY_STORE_ID}&referrer=${referrer}`;
 }

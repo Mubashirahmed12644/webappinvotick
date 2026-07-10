@@ -8,7 +8,8 @@ const AUTH_PATHS = ["/login", "/signup", "/forgot-password"];
 // "/i/" = shared invoice view (invotick.com/i/{token}) + its OG image — recipients
 // are never logged in, so this MUST stay public. Trailing slash is deliberate so
 // it can't ever match the authenticated "/invoices" route.
-const PUBLIC_PREFIXES = ["/privacy", "/i/"];
+// "/.well-known/" = Android App Links assetlinks.json (must be publicly fetchable).
+const PUBLIC_PREFIXES = ["/privacy", "/i/", "/.well-known/"];
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
