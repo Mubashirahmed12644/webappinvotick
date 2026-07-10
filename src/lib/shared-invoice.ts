@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { backendFetch } from "./backend";
 import type { InvoiceRenderData } from "./data";
 
@@ -16,13 +17,19 @@ export interface PublicSharedInvoice {
   createdAt: string;
 }
 
-/** Fetch a shared invoice by token; null when missing / revoked / expired. */
-export async function getSharedInvoice(token: string): Promise<PublicSharedInvoice | null> {
-  const res = await backendFetch<PublicSharedInvoice>(
-    `/v2/shared-invoice/${encodeURIComponent(token)}`,
-  );
-  return res.success && res.data ? res.data : null;
-}
+/**
+ * Fetch a shared invoice by token; null when missing / revoked / expired.
+ * Wrapped in React cache() so generateMetadata + the page component share a single
+ * backend round-trip per request (halves the crawler-path latency).
+ */
+export const getSharedInvoice = cache(
+  async (token: string): Promise<PublicSharedInvoice | null> => {
+    const res = await backendFetch<PublicSharedInvoice>(
+      `/v2/shared-invoice/${encodeURIComponent(token)}`,
+    );
+    return res.success && res.data ? res.data : null;
+  },
+);
 
 const PLAY_STORE_ID = "invotick.invoicemaker";
 
