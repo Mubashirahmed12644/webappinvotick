@@ -12,12 +12,22 @@ export default async function Image({ params }: { params: Promise<{ token: strin
 
   const business = shared?.businessName?.trim() || "A business";
   const number = shared?.invoiceNumber?.trim();
+  // Only Latin symbols render reliably in the OG image font — everything else
+  // shows the ISO code (e.g. "PKR 555.00") so we never get a tofu box.
+  const SAFE_SYMBOLS: Record<string, string> = {
+    USD: "$", AUD: "$", CAD: "$", NZD: "$", GBP: "£", EUR: "€",
+  };
+  const code = (shared?.currency || "").toUpperCase();
+  const sym = SAFE_SYMBOLS[code];
   const amount =
     shared?.totalAmount != null
-      ? `${shared.currency ? `${shared.currency} ` : ""}${shared.totalAmount.toLocaleString(undefined, {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        })}`
+      ? (() => {
+          const n = shared.totalAmount.toLocaleString("en-US", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          });
+          return sym ? `${sym}${n}` : code ? `${code} ${n}` : n;
+        })()
       : null;
 
   return new ImageResponse(
@@ -29,44 +39,61 @@ export default async function Image({ params }: { params: Promise<{ token: strin
           display: "flex",
           flexDirection: "column",
           justifyContent: "space-between",
-          padding: "80px",
+          padding: "64px 70px",
           background: "linear-gradient(135deg, #0D4DC0 0%, #0a3a94 100%)",
           color: "#ffffff",
           fontFamily: "sans-serif",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", fontSize: 34, fontWeight: 800, opacity: 0.95 }}>
-          Invotick
+        {/* Top row: brand + invoice number badge */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", alignItems: "center", fontSize: 36, fontWeight: 800 }}>Invotick</div>
+          <div
+            style={{
+              display: "flex",
+              fontSize: 26,
+              fontWeight: 700,
+              background: "rgba(255,255,255,0.16)",
+              padding: "8px 20px",
+              borderRadius: 999,
+            }}
+          >
+            {number ? `Invoice #${number}` : "Invoice"}
+          </div>
         </div>
 
+        {/* Hook: big business name + total — the eye-grabbers */}
         <div style={{ display: "flex", flexDirection: "column" }}>
-          <div style={{ display: "flex", fontSize: 30, opacity: 0.9 }}>
-            {number ? `Invoice ${number}` : "Invoice"} from
-          </div>
-          <div style={{ display: "flex", fontSize: 76, fontWeight: 800, lineHeight: 1.1, marginTop: 8 }}>
+          <div style={{ display: "flex", fontSize: 32, opacity: 0.82 }}>Invoice from</div>
+          <div style={{ display: "flex", fontSize: 94, fontWeight: 800, lineHeight: 1.02, marginTop: 6 }}>
             {business}
           </div>
           {amount && (
-            <div style={{ display: "flex", fontSize: 44, fontWeight: 700, marginTop: 20, opacity: 0.95 }}>
-              {amount}
+            <div style={{ display: "flex", alignItems: "flex-end", marginTop: 26 }}>
+              <div style={{ display: "flex", fontSize: 34, opacity: 0.8, marginRight: 16, paddingBottom: 8 }}>
+                Total
+              </div>
+              <div style={{ display: "flex", fontSize: 72, fontWeight: 800 }}>{amount}</div>
             </div>
           )}
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 16, fontSize: 28, opacity: 0.92 }}>
-          <div
-            style={{
-              display: "flex",
-              background: "#ffffff",
-              color: "#0D4DC0",
-              padding: "10px 22px",
-              borderRadius: 999,
-              fontWeight: 700,
-            }}
-          >
-            View &amp; download PDF
-          </div>
-          <div style={{ display: "flex" }}>www.invotick.com</div>
+        {/* Full-width CTA bar — biggest, brightest, click-me element */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            background: "#ffffff",
+            color: "#0D4DC0",
+            borderRadius: 22,
+            padding: "26px 40px",
+            fontSize: 40,
+            fontWeight: 800,
+          }}
+        >
+          <div style={{ display: "flex" }}>View &amp; download the invoice (PDF)</div>
+          <div style={{ display: "flex", fontSize: 46 }}>→</div>
         </div>
       </div>
     ),
