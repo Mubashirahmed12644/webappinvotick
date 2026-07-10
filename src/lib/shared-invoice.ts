@@ -1,6 +1,6 @@
 import "server-only";
 import { cache } from "react";
-import { backendFetch } from "./backend";
+import { config } from "./config";
 import type { InvoiceRenderData } from "./data";
 
 // Public (no-login) shared invoice, read from the Spring backend by its opaque
@@ -19,15 +19,30 @@ export interface PublicSharedInvoice {
 
 /**
  * Fetch a shared invoice by token; null when missing / revoked / expired.
- * Wrapped in React cache() so generateMetadata + the page component share a single
- * backend round-trip per request (halves the crawler-path latency).
+ *
+ * Speed: the endpoint is PUBLIC (no auth) and the snapshot is immutable, so we
+ * hit it with a plain fetch cached in the Next Data Cache (revalidate). The page
+ * HTML, the OG image, AND any social re-crawl then reuse the cached response
+ * instead of a fresh cross-network backend round-trip — so the WhatsApp preview
+ * resolves fast when the link is pasted. React cache() additionally dedupes the
+ * page's own generateMetadata + component into one call per request.
  */
 export const getSharedInvoice = cache(
   async (token: string): Promise<PublicSharedInvoice | null> => {
-    const res = await backendFetch<PublicSharedInvoice>(
-      `/v2/shared-invoice/${encodeURIComponent(token)}`,
-    );
-    return res.success && res.data ? res.data : null;
+    try {
+      const res = await fetch(
+        `${config.backendUrl}/v2/shared-invoice/${encodeURIComponent(token)}`,
+        {
+          headers: { "Content-Type": "application/json" },
+          next: { revalidate: 300, tags: [`shared-invoice:${token}`] },
+        },
+      );
+      if (!res.ok) return null;
+      const json = (await res.json()) as { success?: boolean; data?: PublicSharedInvoice } | null;
+      return json?.success && json.data ? json.data : null;
+    } catch {
+      return null;
+    }
   },
 );
 
