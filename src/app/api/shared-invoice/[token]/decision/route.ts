@@ -44,9 +44,10 @@ export async function POST(
     );
   }
 
-  // Invalidate the cached public read so future loads reflect the decision. (This is
-  // stale-while-revalidate; the client also renders the outcome optimistically so the
-  // receiver sees their own decision immediately.)
-  revalidateTag(`shared-invoice:${token}`, "max");
+  // Invalidate the cached public read so the VERY NEXT load reflects the decision.
+  // expire:0 = no stale-while-revalidate window — a decision is terminal, so serving a
+  // stale PENDING page (which would show Approve/Reject again on reopen) is wrong. With
+  // "max" the first reopen served stale; expire:0 forces the next read to be fresh.
+  revalidateTag(`shared-invoice:${token}`, { expire: 0 });
   return NextResponse.json({ success: true, data: json?.data ?? null });
 }
