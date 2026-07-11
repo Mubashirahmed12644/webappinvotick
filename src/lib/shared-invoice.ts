@@ -40,7 +40,11 @@ export const getSharedInvoice = cache(
         `${config.backendUrl}/v2/shared-invoice/${encodeURIComponent(token)}`,
         {
           headers: { "Content-Type": "application/json" },
-          next: { revalidate: 300, tags: [`shared-invoice:${token}`] },
+          // Short revalidate: the app uploads the pixel-perfect image a few seconds AFTER the
+          // share is minted, so a longer cache would keep serving the image-less (HTML-fallback)
+          // version. 15s keeps the page fresh so the real image appears on first open. The OG
+          // crawler image is separately Blob-cached, so this doesn't slow social previews.
+          next: { revalidate: 15, tags: [`shared-invoice:${token}`] },
         },
       );
       if (!res.ok) return null;

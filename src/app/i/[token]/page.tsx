@@ -5,6 +5,7 @@ import QRCode from "qrcode";
 import { getSharedInvoice, installUrlForToken } from "@/lib/shared-invoice";
 import { InvoiceDocument } from "@/components/invoice/InvoiceDocument";
 import { ApprovalActions } from "@/components/shared-invoice/ApprovalActions";
+import { ZoomableImage } from "@/components/shared-invoice/ZoomableImage";
 
 const SITE = "https://www.invotick.com";
 
@@ -97,11 +98,9 @@ export default async function SharedInvoicePage({
           is auto-deleted we fall back to the snapshot render, so the invoice always shows. */}
       <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
         {shared.imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <ZoomableImage
             src={shared.imageUrl}
             alt={`Invoice ${shared.invoiceNumber ?? ""} from ${businessName}`.trim()}
-            className="block w-full"
           />
         ) : (
           <InvoiceDocument data={shared.snapshot} />
