@@ -6,13 +6,22 @@ import { useEffect, useRef, useState } from "react";
 // so it lands fast). A receiver who opens the link immediately can arrive a beat before the upload
 // finishes, so we poll for it, show a progress state while we wait, and swap it in the moment it
 // lands. If it still never arrives (rare — upload failed / sender offline), we surface a retry +
-// "open in the app" nudge instead of spinning forever.
+// "open in app" nudge instead of spinning forever.
 const POLL_INTERVAL_MS = 1500;
 const GIVE_UP_AFTER_MS = 45000;
 
+// The uploaded image is A4 pages stacked top-to-bottom (~1.41 tall per page). One page fits the
+// placeholder; more than one is far taller — fitting that whole strip in the box makes it an
+// unreadable sliver, so past this ratio we show the image at full width and let it SCROLL inside
+// the placeholder (header + Approve/Reject stay put). Single-page is unchanged.
+const MULTIPAGE_RATIO = 1.9;
+
+type Mode = "fit" | "scroll";
+
 /**
- * The shared invoice image, sized to fit its (height-constrained) container so the WHOLE invoice
- * is visible at a glance — tap/click to zoom, tap again to fit. Works on touch and desktop.
+ * The shared invoice image, inside a bounded placeholder so zoom/scroll stay in the box (the page
+ * itself never scrolls). Single-page fits to view; multi-page scrolls vertically. Tap/click to
+ * zoom in and pan, tap again to reset. Works on touch and desktop.
  */
 export function ZoomableImage({
   token,
@@ -29,9 +38,11 @@ export function ZoomableImage({
   const [loaded, setLoaded] = useState(false);
   const [gaveUp, setGaveUp] = useState(false);
   const [zoomed, setZoomed] = useState(false);
+  const [mode, setMode] = useState<Mode>("fit");
   const [attempt, setAttempt] = useState(0); // bump to restart the poll cycle (Retry)
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
   const loadedRef = useRef(false);
   const erroredRef = useRef(false);
   const bustRef = useRef(0);
@@ -81,57 +92,61 @@ export function ZoomableImage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, initialSrc, attempt]);
 
+  function markLoaded(img: HTMLImageElement) {
+    if (loadedRef.current) return;
+    if (img.naturalWidth > 0) {
+      setMode(img.naturalHeight / img.naturalWidth > MULTIPAGE_RATIO ? "scroll" : "fit");
+    }
+    loadedRef.current = true;
+    setLoaded(true);
+    setGaveUp(false);
+  }
+
+  // A cached/already-complete image may not fire onLoad after React attaches the handler — detect
+  // it directly so a ready image isn't stuck behind the "Preparing…" state.
+  useEffect(() => {
+    const img = imgRef.current;
+    if (img && img.complete && img.naturalWidth > 0) markLoaded(img);
+  });
+
   function toggle(e: React.MouseEvent<HTMLDivElement>) {
     if (!loaded) return;
     const next = !zoomed;
     setZoomed(next);
-    if (next && containerRef.current) {
-      const el = containerRef.current;
+    const el = containerRef.current;
+    if (!el) return;
+    if (next) {
       requestAnimationFrame(() => {
         const x = e.nativeEvent.offsetX / el.clientWidth;
         const y = e.nativeEvent.offsetY / el.clientHeight;
         el.scrollLeft = x * (el.scrollWidth - el.clientWidth);
         el.scrollTop = y * (el.scrollHeight - el.clientHeight);
       });
-    } else if (containerRef.current) {
-      containerRef.current.scrollTo({ top: 0, left: 0 });
+    } else if (mode === "fit") {
+      el.scrollTo({ top: 0, left: 0 });
     }
   }
 
+  // Bounded placeholder: scrolls INSIDE the box (fit = hidden until zoomed; scroll/zoom = auto).
+  const containerClass = !loaded
+    ? "relative h-full w-full overflow-hidden"
+    : mode === "fit" && !zoomed
+      ? "relative flex h-full w-full cursor-zoom-in items-start justify-center overflow-hidden"
+      : `relative h-full w-full overflow-auto ${zoomed ? "cursor-zoom-out" : "cursor-zoom-in"}`;
+
+  const imgClass = !loaded
+    ? "hidden"
+    : zoomed
+      ? "block w-[180%] max-w-none select-none"
+      : mode === "scroll"
+        ? "block h-auto w-full max-w-none select-none" // full width, scroll vertically (multi-page)
+        : "block max-h-full max-w-full select-none object-contain"; // fit whole (single page)
+
   return (
-    <div
-      ref={containerRef}
-      onClick={toggle}
-      className={
-        loaded
-          ? zoomed
-            ? "relative h-full w-full cursor-zoom-out overflow-auto"
-            : "relative flex h-full w-full cursor-zoom-in items-start justify-center overflow-hidden"
-          : "relative h-full w-full overflow-hidden"
-      }
-    >
+    <div ref={containerRef} onClick={toggle} className={containerClass}>
       {src ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={src}
-          alt={alt}
-          draggable={false}
-          onLoad={() => {
-            loadedRef.current = true;
-            setLoaded(true);
-            setGaveUp(false);
-          }}
-          onError={() => {
-            erroredRef.current = true;
-          }}
-          className={
-            !loaded
-              ? "hidden"
-              : zoomed
-                ? "block w-[180%] max-w-none select-none"
-                : "block max-h-full max-w-full select-none object-contain"
-          }
-        />
+        <img ref={imgRef} src={src} alt={alt} draggable={false} onLoad={(e) => markLoaded(e.currentTarget)} onError={() => { erroredRef.current = true; }} className={imgClass} />
       ) : null}
 
       {!loaded && (gaveUp ? <TimeoutState installUrl={installUrl} onRetry={() => setAttempt((a) => a + 1)} /> : <PreparingState />)}
