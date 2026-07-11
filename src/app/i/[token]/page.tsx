@@ -3,7 +3,6 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import QRCode from "qrcode";
 import { getSharedInvoice, installUrlForToken } from "@/lib/shared-invoice";
-import { InvoiceDocument } from "@/components/invoice/InvoiceDocument";
 import { ApprovalActions } from "@/components/shared-invoice/ApprovalActions";
 import { ZoomableImage } from "@/components/shared-invoice/ZoomableImage";
 
@@ -97,21 +96,12 @@ export default async function SharedInvoicePage({
           App-rendered pixel-perfect image when present, else the snapshot render. */}
       <div className="min-h-0 flex-1 px-3">
         <div className="mx-auto h-full overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
-          {shared.imageUrl ? (
-            <ZoomableImage
-              src={shared.imageUrl}
-              alt={`Invoice ${shared.invoiceNumber ?? ""} from ${businessName}`.trim()}
-              fallback={
-                <div className="h-full overflow-auto">
-                  <InvoiceDocument data={shared.snapshot} />
-                </div>
-              }
-            />
-          ) : (
-            <div className="h-full overflow-auto">
-              <InvoiceDocument data={shared.snapshot} />
-            </div>
-          )}
+          <ZoomableImage
+            token={token}
+            initialSrc={shared.imageUrl ?? null}
+            alt={`Invoice ${shared.invoiceNumber ?? ""} from ${businessName}`.trim()}
+            installUrl={installUrl}
+          />
         </div>
       </div>
 
