@@ -45,7 +45,13 @@ export const getSharedInvoice = cache(
       );
       if (!res.ok) return null;
       const json = (await res.json()) as { success?: boolean; data?: PublicSharedInvoice } | null;
-      return json?.success && json.data ? json.data : null;
+      const data = json?.success && json.data ? json.data : null;
+      if (data?.imageUrl && data.imageUrl.startsWith("/")) {
+        // Resolve a relative "/uploads/..." path against the backend host (older shares
+        // stored a relative path; the browser would otherwise resolve it against this site).
+        data.imageUrl = `${config.backendUrl.replace(/\/$/, "")}${data.imageUrl}`;
+      }
+      return data;
     } catch {
       return null;
     }
