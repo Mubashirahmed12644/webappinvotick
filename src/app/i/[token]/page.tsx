@@ -101,6 +101,11 @@ export default async function SharedInvoicePage({
             <ZoomableImage
               src={shared.imageUrl}
               alt={`Invoice ${shared.invoiceNumber ?? ""} from ${businessName}`.trim()}
+              fallback={
+                <div className="h-full overflow-auto">
+                  <InvoiceDocument data={shared.snapshot} />
+                </div>
+              }
             />
           ) : (
             <div className="h-full overflow-auto">
