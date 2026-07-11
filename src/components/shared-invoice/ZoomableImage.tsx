@@ -1,6 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import {
+  TransformWrapper,
+  TransformComponent,
+  type ReactZoomPanPinchRef,
+} from "react-zoom-pan-pinch";
 
 // The app uploads the invoice image when the sender taps Share (kept light — a screen-res WebP —
 // so it lands fast). A receiver who opens the link immediately can arrive a beat before the upload
@@ -10,18 +15,15 @@ import { useEffect, useRef, useState } from "react";
 const POLL_INTERVAL_MS = 1500;
 const GIVE_UP_AFTER_MS = 45000;
 
-// The uploaded image is A4 pages stacked top-to-bottom (~1.41 tall per page). One page fits the
-// placeholder; more than one is far taller — fitting that whole strip in the box makes it an
-// unreadable sliver, so past this ratio we show the image at full width and let it SCROLL inside
-// the placeholder (header + Approve/Reject stay put). Single-page is unchanged.
+// Uploaded image = A4 pages stacked (~1.41 tall per page). More than one page is far taller than
+// the box, so it starts at the top (page 1) instead of centered; a single page is centered.
 const MULTIPAGE_RATIO = 1.9;
 
-type Mode = "fit" | "scroll";
-
 /**
- * The shared invoice image, inside a bounded placeholder so zoom/scroll stay in the box (the page
- * itself never scrolls). Single-page fits to view; multi-page scrolls vertically. Tap/click to
- * zoom in and pan, tap again to reset. Works on touch and desktop.
+ * The shared invoice image inside a bounded pan/zoom surface (react-zoom-pan-pinch), so all
+ * gestures live in the box and never move the page: ONE finger pans (drag through a multi-page
+ * invoice), TWO fingers pinch to zoom, double-tap toggles zoom, mouse wheel zooms on desktop.
+ * A unified gesture engine means panning and zooming never fight each other or flicker.
  */
 export function ZoomableImage({
   token,
@@ -37,12 +39,10 @@ export function ZoomableImage({
   const [src, setSrc] = useState<string | null>(initialSrc);
   const [loaded, setLoaded] = useState(false);
   const [gaveUp, setGaveUp] = useState(false);
-  const [zoomed, setZoomed] = useState(false);
-  const [mode, setMode] = useState<Mode>("fit");
   const [attempt, setAttempt] = useState(0); // bump to restart the poll cycle (Retry)
 
-  const containerRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
+  const transformRef = useRef<ReactZoomPanPinchRef>(null);
   const loadedRef = useRef(false);
   const erroredRef = useRef(false);
   const bustRef = useRef(0);
@@ -54,7 +54,6 @@ export function ZoomableImage({
     erroredRef.current = false;
     setLoaded(false);
     setGaveUp(false);
-    setZoomed(false);
     setSrc(initialSrc);
 
     let cancelled = false;
@@ -94,12 +93,20 @@ export function ZoomableImage({
 
   function markLoaded(img: HTMLImageElement) {
     if (loadedRef.current) return;
-    if (img.naturalWidth > 0) {
-      setMode(img.naturalHeight / img.naturalWidth > MULTIPAGE_RATIO ? "scroll" : "fit");
-    }
     loadedRef.current = true;
     setLoaded(true);
     setGaveUp(false);
+    const multipage = img.naturalWidth > 0 && img.naturalHeight / img.naturalWidth > MULTIPAGE_RATIO;
+    // Fit width; multi-page starts at the TOP (page 1), single-page is centered. Two frames so the
+    // library has measured the (now-visible) image before we position it.
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        const t = transformRef.current;
+        if (!t) return;
+        if (multipage) t.setTransform(0, 0, 1, 0);
+        else t.centerView(1, 0);
+      }),
+    );
   }
 
   // A cached/already-complete image may not fire onLoad after React attaches the handler — detect
@@ -109,44 +116,38 @@ export function ZoomableImage({
     if (img && img.complete && img.naturalWidth > 0) markLoaded(img);
   });
 
-  function toggle(e: React.MouseEvent<HTMLDivElement>) {
-    if (!loaded) return;
-    const next = !zoomed;
-    setZoomed(next);
-    const el = containerRef.current;
-    if (!el) return;
-    if (next) {
-      requestAnimationFrame(() => {
-        const x = e.nativeEvent.offsetX / el.clientWidth;
-        const y = e.nativeEvent.offsetY / el.clientHeight;
-        el.scrollLeft = x * (el.scrollWidth - el.clientWidth);
-        el.scrollTop = y * (el.scrollHeight - el.clientHeight);
-      });
-    } else if (mode === "fit") {
-      el.scrollTo({ top: 0, left: 0 });
-    }
-  }
-
-  // Bounded placeholder: scrolls INSIDE the box (fit = hidden until zoomed; scroll/zoom = auto).
-  const containerClass = !loaded
-    ? "relative h-full w-full overflow-hidden"
-    : mode === "fit" && !zoomed
-      ? "relative flex h-full w-full cursor-zoom-in items-start justify-center overflow-hidden"
-      : `relative h-full w-full overflow-auto ${zoomed ? "cursor-zoom-out" : "cursor-zoom-in"}`;
-
-  const imgClass = !loaded
-    ? "hidden"
-    : zoomed
-      ? "block w-[180%] max-w-none select-none"
-      : mode === "scroll"
-        ? "block h-auto w-full max-w-none select-none" // full width, scroll vertically (multi-page)
-        : "block max-h-full max-w-full select-none object-contain"; // fit whole (single page)
-
   return (
-    <div ref={containerRef} onClick={toggle} className={containerClass}>
+    <div className="relative h-full w-full select-none overflow-hidden">
       {src ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img ref={imgRef} src={src} alt={alt} draggable={false} onLoad={(e) => markLoaded(e.currentTarget)} onError={() => { erroredRef.current = true; }} className={imgClass} />
+        <TransformWrapper
+          ref={transformRef}
+          minScale={1}
+          maxScale={5}
+          initialScale={1}
+          limitToBounds
+          doubleClick={{ mode: "zoomIn", step: 0.9, animationTime: 200 }}
+          wheel={{ step: 0.15 }}
+          pinch={{ step: 6 }}
+          panning={{ velocityDisabled: false }}
+        >
+          <TransformComponent
+            wrapperStyle={{ width: "100%", height: "100%" }}
+            contentStyle={{ width: "100%" }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              ref={imgRef}
+              src={src}
+              alt={alt}
+              draggable={false}
+              onLoad={(e) => markLoaded(e.currentTarget)}
+              onError={() => {
+                erroredRef.current = true;
+              }}
+              style={{ width: "100%", height: "auto", display: "block", visibility: loaded ? "visible" : "hidden" }}
+            />
+          </TransformComponent>
+        </TransformWrapper>
       ) : null}
 
       {!loaded && (gaveUp ? <TimeoutState installUrl={installUrl} onRetry={() => setAttempt((a) => a + 1)} /> : <PreparingState />)}
@@ -184,10 +185,7 @@ function TimeoutState({ installUrl, onRetry }: { installUrl?: string; onRetry: (
       <div className="flex flex-wrap items-center justify-center gap-2">
         <button
           type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onRetry();
-          }}
+          onClick={onRetry}
           className="rounded-full bg-[#0D4DC0] px-5 py-2 text-sm font-semibold text-white"
         >
           Retry
@@ -195,7 +193,6 @@ function TimeoutState({ installUrl, onRetry }: { installUrl?: string; onRetry: (
         {installUrl ? (
           <a
             href={installUrl}
-            onClick={(e) => e.stopPropagation()}
             className="rounded-full border border-neutral-300 px-5 py-2 text-sm font-semibold text-neutral-800"
           >
             Open in app
