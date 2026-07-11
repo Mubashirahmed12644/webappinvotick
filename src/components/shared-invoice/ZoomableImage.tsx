@@ -3,9 +3,9 @@
 import { useRef, useState } from "react";
 
 /**
- * The shared invoice image with tap/click zoom. Tap to zoom in (and scroll/pan around the
- * enlarged invoice); tap again to return to the actual fit-to-width position. Works on both
- * touch (tap) and desktop (click).
+ * The shared invoice image, sized to fit its (height-constrained) container so the WHOLE invoice
+ * is visible at a glance — then tap/click to zoom in and scroll/pan the details, tap again to
+ * return to the fit-to-view state. Works on touch (tap) and desktop (click).
  */
 export function ZoomableImage({ src, alt }: { src: string; alt: string }) {
   const [zoomed, setZoomed] = useState(false);
@@ -14,7 +14,6 @@ export function ZoomableImage({ src, alt }: { src: string; alt: string }) {
   function toggle(e: React.MouseEvent<HTMLDivElement>) {
     const next = !zoomed;
     setZoomed(next);
-    // When zooming in, center the tapped point so the user zooms "into" what they touched.
     if (next && containerRef.current) {
       const el = containerRef.current;
       requestAnimationFrame(() => {
@@ -34,8 +33,8 @@ export function ZoomableImage({ src, alt }: { src: string; alt: string }) {
       onClick={toggle}
       className={
         zoomed
-          ? "max-h-[85vh] cursor-zoom-out overflow-auto"
-          : "cursor-zoom-in overflow-hidden"
+          ? "h-full w-full cursor-zoom-out overflow-auto"
+          : "flex h-full w-full cursor-zoom-in items-start justify-center overflow-hidden"
       }
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -43,8 +42,8 @@ export function ZoomableImage({ src, alt }: { src: string; alt: string }) {
         src={src}
         alt={alt}
         draggable={false}
-        className={`block select-none transition-[width] duration-200 ${
-          zoomed ? "w-[200%] max-w-none" : "w-full"
+        className={`block select-none ${
+          zoomed ? "w-[180%] max-w-none" : "max-h-full max-w-full object-contain"
         }`}
       />
     </div>

@@ -85,121 +85,78 @@ export default async function SharedInvoicePage({
       : null;
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-4 py-8 sm:py-12">
-      <header className="mb-6 text-center">
-        <p className="text-sm font-medium uppercase tracking-wide text-[#0D4DC0]">Invoice</p>
-        <h1 className="mt-1 text-2xl font-semibold text-neutral-900">
-          {shared.invoiceNumber ? `Invoice ${shared.invoiceNumber}` : "Invoice"} from {businessName}
+    <main className="mx-auto flex h-[100dvh] w-full max-w-2xl flex-col bg-neutral-50">
+      <header className="shrink-0 px-4 pt-3 pb-2 text-center">
+        <h1 className="truncate text-base font-semibold text-neutral-900 sm:text-lg">
+          {shared.invoiceNumber ? `Invoice ${shared.invoiceNumber}` : "Invoice"} ·{" "}
+          <span className="text-neutral-500">{businessName}</span>
         </h1>
       </header>
 
-      {/* The exact invoice. When the app has uploaded its pixel-perfect render we show
-          that (100% same as the sender sees — builds trust); once that ephemeral image
-          is auto-deleted we fall back to the snapshot render, so the invoice always shows. */}
-      <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
-        {shared.imageUrl ? (
-          <ZoomableImage
-            src={shared.imageUrl}
-            alt={`Invoice ${shared.invoiceNumber ?? ""} from ${businessName}`.trim()}
-          />
-        ) : (
-          <InvoiceDocument data={shared.snapshot} />
-        )}
+      {/* Invoice fills the available height (whole invoice visible; tap/pinch to zoom + read).
+          App-rendered pixel-perfect image when present, else the snapshot render. */}
+      <div className="min-h-0 flex-1 px-3">
+        <div className="mx-auto h-full overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
+          {shared.imageUrl ? (
+            <ZoomableImage
+              src={shared.imageUrl}
+              alt={`Invoice ${shared.invoiceNumber ?? ""} from ${businessName}`.trim()}
+            />
+          ) : (
+            <div className="h-full overflow-auto">
+              <InvoiceDocument data={shared.snapshot} />
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Decision: show the recorded outcome once decided, else the approve/reject controls. */}
-      {decided ? (
-        <section
-          className={`mt-6 rounded-2xl border p-6 text-center ${
-            status === "APPROVED"
-              ? "border-[#16A34A]/30 bg-[#16A34A]/5"
-              : "border-[#DC2626]/30 bg-[#DC2626]/5"
-          }`}
-        >
-          <p
-            className={`text-lg font-semibold ${
-              status === "APPROVED" ? "text-[#15803D]" : "text-[#DC2626]"
+      {/* Fixed footer — always visible without scrolling: decision + create CTA. */}
+      <footer className="shrink-0 space-y-2 px-4 pt-2 pb-4">
+        {decided ? (
+          <div
+            className={`rounded-2xl border p-3 text-center ${
+              status === "APPROVED"
+                ? "border-[#16A34A]/30 bg-[#16A34A]/5"
+                : "border-[#DC2626]/30 bg-[#DC2626]/5"
             }`}
           >
-            {status === "APPROVED" ? "✓ You approved this invoice" : "✕ You rejected this invoice"}
-          </p>
-          <p className="mt-1 text-sm text-neutral-600">The sender has been notified.</p>
-        </section>
-      ) : (
-        <ApprovalActions token={token} />
-      )}
-
-      {/* Growth CTA — platform-aware. Approving works on the web (above); the app is the
-          secondary step: install to approve in-app + make your own invoices. */}
-      <section className="mt-8 rounded-2xl border border-[#0D4DC0]/20 bg-[#0D4DC0]/5 p-6 text-center">
-        {platform === "android" ? (
-          <>
-            <h2 className="text-lg font-semibold text-neutral-900">Get the Invotick app</h2>
-            <p className="mt-2 text-neutral-600">
-              Save this invoice as a PDF and create your own — free, in seconds.
+            <p
+              className={`text-base font-semibold ${
+                status === "APPROVED" ? "text-[#15803D]" : "text-[#DC2626]"
+              }`}
+            >
+              {status === "APPROVED" ? "✓ You approved this invoice" : "✕ You rejected this invoice"}
             </p>
-            <div className="mt-5 flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <a
-                href={installUrl}
-                className="w-full rounded-full bg-[#0D4DC0] px-6 py-3 font-medium text-white sm:w-auto"
-              >
-                Install Invotick — free
-              </a>
-              <Link
-                href="/"
-                className="w-full rounded-full border border-neutral-300 px-6 py-3 font-medium text-neutral-800 sm:w-auto"
-              >
-                Create an invoice online
-              </Link>
-            </div>
-          </>
-        ) : platform === "ios" ? (
-          <>
-            <h2 className="text-lg font-semibold text-neutral-900">Make your own invoice — free</h2>
-            <p className="mt-2 text-neutral-600">
-              Create and download professional invoices right here in your browser. The Invotick app
-              is available on Android.
-            </p>
-            <div className="mt-5 flex justify-center">
-              <Link
-                href="/"
-                className="w-full rounded-full bg-[#0D4DC0] px-6 py-3 font-medium text-white sm:w-auto"
-              >
-                Create an invoice online
-              </Link>
-            </div>
-          </>
+            <p className="text-xs text-neutral-600">The sender has been notified.</p>
+          </div>
         ) : (
-          <>
-            <h2 className="text-lg font-semibold text-neutral-900">Make your own invoice — free</h2>
-            <p className="mt-2 text-neutral-600">
-              Create and download invoices in your browser, or scan to get the app on your Android
-              phone.
-            </p>
-            <div className="mt-5 flex flex-col items-center justify-center gap-6 sm:flex-row sm:items-center">
-              {qrDataUrl ? (
-                <div className="flex flex-col items-center">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={qrDataUrl}
-                    alt="Scan to install Invotick on Android"
-                    width={176}
-                    height={176}
-                    className="rounded-lg border border-neutral-200 bg-white p-2"
-                  />
-                  <span className="mt-2 text-xs text-neutral-500">Scan to install on Android</span>
-                </div>
-              ) : null}
-              <Link
-                href="/"
-                className="w-full rounded-full bg-[#0D4DC0] px-6 py-3 font-medium text-white sm:w-auto"
-              >
-                Create an invoice online
-              </Link>
-            </div>
-          </>
+          <ApprovalActions token={token} compact />
         )}
-      </section>
+
+        {platform === "android" ? (
+          <div className="flex gap-2">
+            <a
+              href={installUrl}
+              className="flex-1 rounded-full bg-[#0D4DC0] px-4 py-2.5 text-center text-sm font-medium text-white"
+            >
+              Install Invotick — free
+            </a>
+            <Link
+              href="/"
+              className="flex-1 rounded-full border border-neutral-300 px-4 py-2.5 text-center text-sm font-medium text-neutral-800"
+            >
+              Create an invoice online
+            </Link>
+          </div>
+        ) : (
+          <Link
+            href="/"
+            className="block w-full rounded-full bg-[#0D4DC0] px-4 py-2.5 text-center text-sm font-medium text-white"
+          >
+            Create an invoice online — free
+          </Link>
+        )}
+      </footer>
     </main>
   );
 }
