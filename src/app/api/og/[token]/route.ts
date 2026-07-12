@@ -9,12 +9,16 @@ import { renderOgCard } from "@/lib/og-card";
  * isn't configured (e.g. local dev without BLOB_READ_WRITE_TOKEN).
  */
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ token: string }> },
 ) {
   const { token } = await params;
   const safe = token.replace(/[^a-z0-9]/gi, "").slice(0, 40);
-  const blobPath = `og/${safe}.png`;
+  // Version by content: the page passes ?v=<hash of the invoice> so an edited invoice (e.g. a new
+  // total) maps to a NEW blob key and re-renders, instead of forever serving the first render. A
+  // changed OG image URL also makes crawlers re-fetch on re-share.
+  const v = (new URL(req.url).searchParams.get("v") ?? "").replace(/[^a-z0-9]/gi, "").slice(0, 20);
+  const blobPath = v ? `og/${safe}-${v}.png` : `og/${safe}.png`;
   const hasBlob = Boolean(process.env.BLOB_READ_WRITE_TOKEN);
 
   // 1. Already stored → redirect to the global Blob CDN.

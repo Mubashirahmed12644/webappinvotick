@@ -17,6 +17,19 @@ async function detectPlatform(): Promise<Platform> {
   return "desktop";
 }
 
+// Short, stable content hash of the invoice — changes whenever the invoice changes (total, items,
+// business, …) so the OG card and its blob cache key are versioned per content.
+function ogVersion(shared: {
+  totalAmount?: number | null;
+  invoiceNumber?: string | null;
+  snapshot?: unknown;
+}): string {
+  const basis = `${shared.totalAmount ?? ""}|${shared.invoiceNumber ?? ""}|${JSON.stringify(shared.snapshot ?? {})}`;
+  let h = 5381;
+  for (let i = 0; i < basis.length; i++) h = ((h * 33) ^ basis.charCodeAt(i)) >>> 0;
+  return h.toString(36);
+}
+
 export async function generateMetadata({
   params,
 }: {
@@ -33,9 +46,10 @@ export async function generateMetadata({
     .filter(Boolean)
     .join(" ");
   const description = "View this invoice and download it as a PDF. Made with Invotick.";
-  // OG image = the blob-backed route: rendered once, then served as a static,
-  // globally-cached PNG so every crawl (any region) is instant.
-  const ogImage = { url: `${SITE}/api/og/${token}`, width: 1200, height: 630 };
+  // OG image = the blob-backed route, versioned by content so an edited invoice (new total, more
+  // items) gets a fresh card instead of the first render forever. `v` changes whenever the invoice
+  // changes → new blob key + a new image URL crawlers re-fetch.
+  const ogImage = { url: `${SITE}/api/og/${token}?v=${ogVersion(shared)}`, width: 1200, height: 630 };
   return {
     title: `${title} | Invotick`,
     description,
