@@ -93,6 +93,11 @@ export default function EmbedRenderPage() {
           w.AndroidStamp?.onMoved?.(x, y);
           w.__onStampMoved?.(x, y);
         }}
+        onSignatureMove={(x, y) => {
+          const w = window as unknown as { AndroidStamp?: { onSignatureMoved?: (x: number, y: number) => void }; __onSignatureMoved?: (x: number, y: number) => void };
+          w.AndroidStamp?.onSignatureMoved?.(x, y);
+          w.__onSignatureMoved?.(x, y);
+        }}
       />
     </div>
   );

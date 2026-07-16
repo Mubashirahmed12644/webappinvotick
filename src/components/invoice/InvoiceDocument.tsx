@@ -8,7 +8,7 @@ import { BRAND_LOGO } from "@/lib/givens";
 // full-bleed header image + logo + title, decorative themed background,
 // From / Bill To / Details, an S#/Desc/Qty/Price/Disc/Tax/Amount table,
 // full totals block, signature + stamp, and a QR footer.
-export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hideStamp, padRows }: { data: InvoiceRenderData; qrDataUrl?: string | null; hideFooter?: boolean; hideSummary?: boolean; hideStamp?: boolean; padRows?: number }) {
+export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hideStamp, hideSignature, padRows }: { data: InvoiceRenderData; qrDataUrl?: string | null; hideFooter?: boolean; hideSummary?: boolean; hideStamp?: boolean; hideSignature?: boolean; padRows?: number }) {
   const color = data.color || "#0D4DC0";
   const onColor = contrastText(color);
   const cur = data.currency;
@@ -189,10 +189,10 @@ export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hide
 
         {/* Signature & stamp — part of the trailing summary section, so it only appears on the
             LAST page (never repeated on continuation pages). */}
-        {(signatureUrl || (stampUrl && !hideStamp)) && !hideSummary && (
+        {((signatureUrl && !hideSignature) || (stampUrl && !hideStamp)) && !hideSummary && (
           <div className="mt-12 flex items-end justify-between gap-8" data-block>
             <div>
-              {signatureUrl && (
+              {signatureUrl && !hideSignature && (
                 <>
                   <img src={signatureUrl} alt="Signature" draggable={false} className="pointer-events-none h-16 select-none object-contain" />
                   <p className="mt-1 border-t border-gray-300 pt-1 text-xs text-gray-500">Authorized signature</p>
