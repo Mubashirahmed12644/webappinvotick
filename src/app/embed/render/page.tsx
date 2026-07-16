@@ -98,6 +98,16 @@ export default function EmbedRenderPage() {
           w.AndroidStamp?.onSignatureMoved?.(x, y);
           w.__onSignatureMoved?.(x, y);
         }}
+        onStampRemove={() => {
+          const w = window as unknown as { AndroidStamp?: { onStampRemoved?: () => void }; __onStampRemoved?: () => void };
+          w.AndroidStamp?.onStampRemoved?.();
+          w.__onStampRemoved?.();
+        }}
+        onSignatureRemove={() => {
+          const w = window as unknown as { AndroidStamp?: { onSignatureRemoved?: () => void }; __onSignatureRemoved?: () => void };
+          w.AndroidStamp?.onSignatureRemoved?.();
+          w.__onSignatureRemoved?.();
+        }}
       />
     </div>
   );

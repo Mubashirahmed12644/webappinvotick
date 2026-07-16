@@ -60,7 +60,7 @@ function paginate(total: number, nNoSummary: number, nWithSummary: number): Page
  * final position to React state on release. This kills the vibration a static finger used to cause.
  */
 function DraggableOverlay({
-  url, alt, size, frac, selected, scale, sheetW, sheetH, onSelect, onCommit,
+  url, alt, size, frac, selected, scale, sheetW, sheetH, onSelect, onCommit, onRemove,
 }: {
   url: string;
   alt: string;
@@ -72,6 +72,7 @@ function DraggableOverlay({
   sheetH: number;
   onSelect: () => void;
   onCommit: (x: number, y: number) => void;
+  onRemove: () => void;
 }) {
   const elRef = useRef<HTMLDivElement>(null);
   const drag = useRef<{ sx: number; sy: number; fx: number; fy: number; cx: number; cy: number; moved: boolean } | null>(null);
@@ -128,6 +129,25 @@ function DraggableOverlay({
         ([[-4, -4], [-4, undefined], [undefined, -4], [undefined, undefined]] as const).map((c, ci) => (
           <span key={ci} style={{ position: "absolute", width: 8, height: 8, borderRadius: "50%", background: "rgba(37,99,235,1)", border: "1.5px solid #fff", left: c[0] === undefined ? undefined : c[0], right: c[0] === undefined ? -4 : undefined, top: c[1] === undefined ? undefined : c[1], bottom: c[1] === undefined ? -4 : undefined }} />
         ))}
+      {/* Remove (×) affordance — only while selected. Sits just above the top-right corner; its own
+          pointerdown is swallowed so it neither starts a drag nor bubbles to the sheet's deselect. */}
+      {selected && (
+        <button
+          type="button"
+          aria-label={`Remove ${alt.toLowerCase()}`}
+          onPointerDown={(e) => { e.stopPropagation(); }}
+          onClick={(e) => { e.stopPropagation(); onRemove(); }}
+          style={{
+            position: "absolute", top: -14, right: -14, width: 26, height: 26, padding: 0,
+            borderRadius: "50%", border: "1.5px solid #fff", background: "#e53935", color: "#fff",
+            fontSize: 16, lineHeight: "22px", fontWeight: 700, cursor: "pointer",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            boxShadow: "0 1px 4px rgba(0,0,0,0.3)", touchAction: "none",
+          }}
+        >
+          ×
+        </button>
+      )}
     </div>
   );
 }
@@ -139,6 +159,8 @@ export function A4PagedFrame({
   draggableStamp,
   onStampMove,
   onSignatureMove,
+  onStampRemove,
+  onSignatureRemove,
 }: {
   data: InvoiceRenderData;
   qrDataUrl?: string | null;
@@ -148,6 +170,9 @@ export function A4PagedFrame({
   // Report an overlay's new position as fractions of the sheet (0..1) so the app can persist it.
   onStampMove?: (xFrac: number, yFrac: number) => void;
   onSignatureMove?: (xFrac: number, yFrac: number) => void;
+  // Report that the user removed an overlay so the app can drop it from the invoice.
+  onStampRemove?: () => void;
+  onSignatureRemove?: () => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const withTotalsRef = useRef<HTMLDivElement>(null);
@@ -168,6 +193,9 @@ export function A4PagedFrame({
   const [stampFrac, setStampFrac] = useState({ x: 0.68, y: 0.521 });
   const [sigFrac, setSigFrac] = useState({ x: 0.09, y: 0.6 });
   const [selectedOverlay, setSelectedOverlay] = useState<"stamp" | "signature" | null>(null);
+  // Local removal — hides the overlay immediately; the app persists it via onStamp/SignatureRemove.
+  const [stampRemoved, setStampRemoved] = useState(false);
+  const [signatureRemoved, setSignatureRemoved] = useState(false);
 
   const totalItems = data.items.length;
 
@@ -282,7 +310,7 @@ export function A4PagedFrame({
                     {/* Draggable signature + stamp overlays — only on the summary (last) page. Each
                         lives inside the scaled sheet, so drag deltas are divided by the scale. Both
                         use select-then-drag (native parity) so unselected they never block zoom/pan. */}
-                    {draggableStamp && signatureUrl && pg.summary && (
+                    {draggableStamp && signatureUrl && !signatureRemoved && pg.summary && (
                       <DraggableOverlay
                         url={signatureUrl}
                         alt="Signature"
@@ -294,9 +322,10 @@ export function A4PagedFrame({
                         sheetH={SHEET_H}
                         onSelect={() => setSelectedOverlay("signature")}
                         onCommit={(x, y) => { setSigFrac({ x, y }); onSignatureMove?.(x, y); }}
+                        onRemove={() => { setSignatureRemoved(true); setSelectedOverlay(null); onSignatureRemove?.(); }}
                       />
                     )}
-                    {draggableStamp && stampUrl && pg.summary && (
+                    {draggableStamp && stampUrl && !stampRemoved && pg.summary && (
                       <DraggableOverlay
                         url={stampUrl}
                         alt="Stamp"
@@ -308,6 +337,7 @@ export function A4PagedFrame({
                         sheetH={SHEET_H}
                         onSelect={() => setSelectedOverlay("stamp")}
                         onCommit={(x, y) => { setStampFrac({ x, y }); onStampMove?.(x, y); }}
+                        onRemove={() => { setStampRemoved(true); setSelectedOverlay(null); onStampRemove?.(); }}
                       />
                     )}
                   </div>
