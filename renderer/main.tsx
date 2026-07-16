@@ -29,7 +29,7 @@ function render(data: InvoiceRenderData | null) {
   }
   // A4PagedFrame fills its positioned parent; a fixed full-screen wrapper makes it fill the WebView.
   root.render(
-    <div style={{ position: "fixed", top: 0, left: 0, width: "100vw", height: "100dvh" }}>
+    <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0 }}>
       <A4PagedFrame data={data} qrDataUrl={qrCode} />
     </div>,
   );
