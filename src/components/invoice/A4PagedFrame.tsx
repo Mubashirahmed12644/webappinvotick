@@ -165,7 +165,7 @@ export function A4PagedFrame({
   // Stamp default: inside the totals box, ~1.5dp right of where "SHIPPING" ends (0.676), over the
   // SUB TOTAL→SHIPPING rows. Signature default: the empty area to the LEFT of the totals box (native
   // places the signature to the left of the stamp).
-  const [stampFrac, setStampFrac] = useState({ x: 0.68, y: 0.5 });
+  const [stampFrac, setStampFrac] = useState({ x: 0.68, y: 0.521 });
   const [sigFrac, setSigFrac] = useState({ x: 0.09, y: 0.6 });
   const [selectedOverlay, setSelectedOverlay] = useState<"stamp" | "signature" | null>(null);
 
