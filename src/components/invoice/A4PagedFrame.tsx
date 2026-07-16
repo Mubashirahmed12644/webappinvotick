@@ -1,6 +1,7 @@
 "use client";
 
 import { useLayoutEffect, useRef, useState } from "react";
+import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import { InvoiceDocument, InvoiceFooter } from "./InvoiceDocument";
 import type { InvoiceRenderData } from "@/lib/data";
 
@@ -47,7 +48,7 @@ function paginate(total: number, nNoSummary: number, nWithSummary: number): Page
   return pages;
 }
 
-export function A4PagedFrame({ data, qrDataUrl }: { data: InvoiceRenderData; qrDataUrl?: string | null }) {
+export function A4PagedFrame({ data, qrDataUrl, zoomable }: { data: InvoiceRenderData; qrDataUrl?: string | null; zoomable?: boolean }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const withTotalsRef = useRef<HTMLDivElement>(null);
   const noTotalsRef = useRef<HTMLDivElement>(null);
@@ -95,62 +96,100 @@ export function A4PagedFrame({ data, qrDataUrl }: { data: InvoiceRenderData; qrD
   const multi = pages.length > 1;
 
   return (
-    <div ref={containerRef} style={{ position: "absolute", inset: 0, overflow: "auto", background: "#f7f7f7" }}>
+    <div ref={containerRef} className="a4-frame" style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", overflow: zoomable ? "hidden" : "auto", background: "#e9e9ec", touchAction: zoomable ? "none" : undefined }}>
+      {/* Each A4 sheet prints as one physical A4 page (single OR multi-invoice); the screen-only
+          scaling/scrolling is reset for print. */}
+      <style>{`
+        @media print {
+          @page { size: A4; margin: 0; }
+          html, body { background: #fff !important; }
+          .a4-frame { position: static !important; overflow: visible !important; background: #fff !important; }
+          .a4-measure { display: none !important; }
+          .a4-stack { display: block !important; gap: 0 !important; padding: 0 !important; }
+          .a4-page-outer { width: 794px !important; height: 1123px !important; }
+          .a4-sheet { transform: none !important; box-shadow: none !important; border: none !important; page-break-after: always; break-after: page; }
+          .a4-sheet:last-child { page-break-after: auto; break-after: auto; }
+        }
+      `}</style>
       {/* Off-screen measuring copies (natural height) — never shown. */}
-      <div ref={withTotalsRef} style={{ position: "absolute", left: -99999, top: 0, width: SHEET_W, visibility: "hidden", pointerEvents: "none" }} aria-hidden>
+      <div ref={withTotalsRef} className="a4-measure" style={{ position: "absolute", left: -99999, top: 0, width: SHEET_W, visibility: "hidden", pointerEvents: "none" }} aria-hidden>
         <InvoiceDocument data={data} qrDataUrl={qrDataUrl} hideFooter />
       </div>
-      <div ref={noTotalsRef} style={{ position: "absolute", left: -99999, top: 0, width: SHEET_W, visibility: "hidden", pointerEvents: "none" }} aria-hidden>
+      <div ref={noTotalsRef} className="a4-measure" style={{ position: "absolute", left: -99999, top: 0, width: SHEET_W, visibility: "hidden", pointerEvents: "none" }} aria-hidden>
         <InvoiceDocument data={data} qrDataUrl={qrDataUrl} hideFooter hideSummary />
       </div>
-      <div ref={footerMeasureRef} style={{ position: "absolute", left: -99999, top: 0, width: SHEET_W, visibility: "hidden", pointerEvents: "none" }} aria-hidden>
+      <div ref={footerMeasureRef} className="a4-measure" style={{ position: "absolute", left: -99999, top: 0, width: SHEET_W, visibility: "hidden", pointerEvents: "none" }} aria-hidden>
         <InvoiceFooter qrDataUrl={qrDataUrl} pageLabel="Page 1 of 1" />
       </div>
 
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 12 * s,
-          padding: `${12 * s}px 0`,
-          visibility: scale ? "visible" : "hidden",
-        }}
-      >
-        {pages.map((pg, i) => {
-          const pageData = { ...data, items: data.items.slice(pg.start, pg.start + pg.count) };
-          return (
-            // Outer box carries the SCALED footprint so pages stack cleanly (transform ≠ layout).
-            <div key={i} style={{ width: SHEET_W * s, height: SHEET_H * s, flex: "none" }}>
-              <div
-                style={{
-                  width: SHEET_W,
-                  height: SHEET_H,
-                  background: "#fff",
-                  border: "1px solid rgba(0,0,0,0.10)",
-                  overflow: "hidden",
-                  position: "relative",
-                  transform: `scale(${s})`,
-                  transformOrigin: "top left",
-                }}
-              >
-                {/* This page's invoice — totals only on the summary (last) page. */}
-                <div style={{ position: "absolute", top: 0, left: 0, width: SHEET_W }}>
-                  {/* Every page uses the native min-9 table (Math.max(9, items)): a page with ≥9
-                      items shows exactly that many (no blanks); a page with fewer pads up to 9
-                      (e.g. 2 items → 2 + 7 blank rows). No filling to the page capacity. */}
-                  <InvoiceDocument data={pageData} qrDataUrl={qrDataUrl} hideFooter hideSummary={!pg.summary} />
+      {(() => {
+        const stack = (
+          <div
+            className="a4-stack"
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 22 * s,
+              padding: `${22 * s}px 0`,
+              visibility: scale ? "visible" : "hidden",
+            }}
+          >
+            {pages.map((pg, i) => {
+              const pageData = { ...data, items: data.items.slice(pg.start, pg.start + pg.count) };
+              return (
+                // Outer box carries the SCALED footprint so pages stack cleanly (transform ≠ layout).
+                // The shadow (on the outer, unscaled footprint) gives each page a PDF-viewer look.
+                <div key={i} className="a4-page-outer" style={{ width: SHEET_W * s, height: SHEET_H * s, flex: "none", boxShadow: "0 3px 16px rgba(0,0,0,0.18)" }}>
+                  <div
+                    className="a4-sheet"
+                    style={{
+                      width: SHEET_W,
+                      height: SHEET_H,
+                      background: "#fff",
+                      overflow: "hidden",
+                      position: "relative",
+                      transform: `scale(${s})`,
+                      transformOrigin: "top left",
+                    }}
+                  >
+                    {/* This page's invoice — totals only on the summary (last) page. */}
+                    <div style={{ position: "absolute", top: 0, left: 0, width: SHEET_W }}>
+                      {/* Every page uses the native min-9 table (Math.max(9, items)): a page with ≥9
+                          items shows exactly that many (no blanks); a page with fewer pads up to 9. */}
+                      <InvoiceDocument data={pageData} qrDataUrl={qrDataUrl} hideFooter hideSummary={!pg.summary} />
+                    </div>
+                    {/* Footer + pagination pinned to the page bottom (32px sides match body px-8). */}
+                    <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, background: "#fff", paddingLeft: 32, paddingRight: 32 }}>
+                      <InvoiceFooter qrDataUrl={qrDataUrl} pageLabel={multi ? `Page ${i + 1} of ${pages.length}` : undefined} />
+                    </div>
+                  </div>
                 </div>
-                {/* Footer + pagination pinned to the page bottom. 32px side padding matches the
-                    body's px-8 so the footer band aligns with the invoice content width. */}
-                <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, background: "#fff", paddingLeft: 32, paddingRight: 32 }}>
-                  <InvoiceFooter qrDataUrl={qrDataUrl} pageLabel={multi ? `Page ${i + 1} of ${pages.length}` : undefined} />
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+              );
+            })}
+          </div>
+        );
+        if (!zoomable) return stack;
+        // Pinch/pan/double-tap/wheel zoom scoped to the invoice only (the shared page's header +
+        // Approve/Reject/Install footer stay put), like the old image viewer.
+        return (
+          <TransformWrapper
+            minScale={1}
+            maxScale={5}
+            initialScale={1}
+            limitToBounds
+            centerOnInit={false}
+            doubleClick={{ mode: "zoomIn", step: 0.9, animationTime: 200 }}
+            wheel={{ step: 0.15 }}
+            pinch={{ step: 6 }}
+            panning={{ velocityDisabled: false }}
+          >
+            <TransformComponent wrapperStyle={{ width: "100%", height: "100%" }} contentStyle={{ width: "100%" }}>
+              {stack}
+            </TransformComponent>
+          </TransformWrapper>
+        );
+      })()}
     </div>
   );
 }

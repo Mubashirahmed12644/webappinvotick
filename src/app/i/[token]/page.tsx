@@ -110,7 +110,7 @@ export default async function SharedInvoicePage({
           and free tool use (multi-page, fits width, scrolls). No image upload/wait. */}
       <div className="min-h-0 flex-1 px-3">
         <div className="relative mx-auto h-full overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
-          <A4PagedFrame data={shared.snapshot} qrDataUrl="/qr_code.jpg" />
+          <A4PagedFrame data={shared.snapshot} qrDataUrl="/qr_code.jpg" zoomable />
         </div>
       </div>
 
