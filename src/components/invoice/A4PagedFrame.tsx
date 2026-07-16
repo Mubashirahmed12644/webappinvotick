@@ -71,10 +71,11 @@ export function A4PagedFrame({
   const [scale, setScale] = useState<number | null>(null);
   const [pages, setPages] = useState<Page[]>([{ start: 0, count: 0, summary: true }]);
 
-  // Draggable stamp: position as a fraction of the sheet. Default sits in the EMPTY area to the LEFT
-  // of the summary/totals box (aligned with it vertically) — over blank space, not over any text.
+  // Draggable stamp: position as a fraction of the sheet. Default sits INSIDE the summary/totals box,
+  // in the empty gap just after the row labels (a few dp right of where "SHIPPING" ends, ~0.676) and
+  // over the SUB TOTAL→SHIPPING rows — an outline stamp that reads over blank space, above TOTAL.
   const stampUrl = draggableStamp ? imageProxyUrl(data.stampImage) : null;
-  const [stampFrac, setStampFrac] = useState({ x: 0.2, y: 0.58 });
+  const [stampFrac, setStampFrac] = useState({ x: 0.685, y: 0.5 });
   const dragRef = useRef<{ px: number; py: number } | null>(null);
 
   const totalItems = data.items.length;
