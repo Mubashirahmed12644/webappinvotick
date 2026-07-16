@@ -9,7 +9,9 @@ const AUTH_PATHS = ["/login", "/signup", "/forgot-password"];
 // are never logged in, so this MUST stay public. Trailing slash is deliberate so
 // it can't ever match the authenticated "/invoices" route.
 // "/.well-known/" = Android App Links assetlinks.json (must be publicly fetchable).
-const PUBLIC_PREFIXES = ["/privacy", "/i/", "/.well-known/"];
+// "/embed/" = headless invoice renderer loaded inside the app's WebView (and later the
+// single renderer for OG / shared-invoice) — the app WebView has no web session, so public.
+const PUBLIC_PREFIXES = ["/privacy", "/i/", "/.well-known/", "/embed/"];
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;

@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import QRCode from "qrcode";
 import { getSharedInvoice, installUrlForToken } from "@/lib/shared-invoice";
 import { ApprovalActions } from "@/components/shared-invoice/ApprovalActions";
-import { ZoomableImage } from "@/components/shared-invoice/ZoomableImage";
+import { A4PagedFrame } from "@/components/invoice/A4PagedFrame";
 
 const SITE = "https://www.invotick.com";
 
@@ -106,16 +106,11 @@ export default async function SharedInvoicePage({
         </h1>
       </header>
 
-      {/* Invoice fills the available height (whole invoice visible; tap/pinch to zoom + read).
-          App-rendered pixel-perfect image when present, else the snapshot render. */}
+      {/* Invoice rendered as HTML from the snapshot — the same <InvoiceDocument> / A4 paging the app
+          and free tool use (multi-page, fits width, scrolls). No image upload/wait. */}
       <div className="min-h-0 flex-1 px-3">
-        <div className="mx-auto h-full overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
-          <ZoomableImage
-            token={token}
-            initialSrc={shared.imageUrl ?? null}
-            alt={`Invoice ${shared.invoiceNumber ?? ""} from ${businessName}`.trim()}
-            installUrl={installUrl}
-          />
+        <div className="relative mx-auto h-full overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
+          <A4PagedFrame data={shared.snapshot} qrDataUrl="/qr_code.jpg" />
         </div>
       </div>
 

@@ -403,6 +403,9 @@ export interface InvoiceRenderData {
   taxAmount: number;
   shippingCost: number;
   total: number;
+  amountPaid?: number | null;
+  balanceDue?: number | null;
+  paymentStatus?: string | null;
   notes?: string | null;
   color: string;
   titleColor?: string | null;

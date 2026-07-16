@@ -1,0 +1,53 @@
+@import "tailwindcss";
+/* Scan the shared invoice component so Tailwind v4 emits the utility classes it uses. */
+@source "../src/components/invoice";
+
+/* The exact Nunito TTFs the native KMP render uses — inlined into the bundle (Vite) so the
+   offline HTML text matches the native invoice pixel-for-pixel. */
+@font-face {
+  font-family: "Nunito";
+  font-weight: 400;
+  font-style: normal;
+  src: url("./fonts/nunito_regular.ttf") format("truetype");
+}
+@font-face {
+  font-family: "Nunito";
+  font-weight: 600;
+  font-style: normal;
+  src: url("./fonts/nunito_semi_bold.ttf") format("truetype");
+}
+@font-face {
+  font-family: "Nunito";
+  font-weight: 700;
+  font-style: normal;
+  src: url("./fonts/nunito_bold.ttf") format("truetype");
+}
+@font-face {
+  font-family: "Nunito";
+  font-weight: 800;
+  font-style: normal;
+  src: url("./fonts/nunito_extra_bold.ttf") format("truetype");
+}
+@font-face {
+  font-family: "Nunito";
+  font-weight: 900;
+  font-style: normal;
+  src: url("./fonts/nunito_black.ttf") format("truetype");
+}
+
+/* Theme vars InvoiceDocument reads. */
+:root {
+  --font-nunito: "Nunito", ui-sans-serif, system-ui, sans-serif;
+  --color-primary: #0d4dc0;
+  --color-primary-container: #d6e2ff;
+  --color-outline-variant: #cac4d0;
+  --radius-md: 12px;
+}
+
+html,
+body {
+  margin: 0;
+  /* Same light grey the native canvas uses behind the invoice (Color 0xFFF7F7F7). */
+  background: #f7f7f7;
+  font-family: var(--font-nunito);
+}

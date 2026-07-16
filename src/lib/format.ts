@@ -11,7 +11,9 @@ export function formatMoney(amount: number | string, currency = "USD"): string {
   try {
     return new Intl.NumberFormat("en-US", { style: "currency", currency: code, currencyDisplay: "narrowSymbol" }).format(value);
   } catch {
-    return `${code} ${value.toFixed(2)}`;
+    // `currency` here is a raw symbol (e.g. "Rs") the app passes, not an ISO code — prepend it with
+    // NO space to match the native render ("Rs584.00", not "Rs 584.00").
+    return `${currency}${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   }
 }
 

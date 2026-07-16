@@ -6,6 +6,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
       "port": 3000
+    },
+    {
+      "name": "admin-panel",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "/Users/ahmedmubashir/Documents/invotick-admin-panel", "run", "dev", "--", "--port", "3100"],
+      "port": 3100
     }
   ]
 }
