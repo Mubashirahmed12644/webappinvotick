@@ -76,7 +76,12 @@ export function A4PagedFrame({
   // over the SUB TOTAL→SHIPPING rows — an outline stamp that reads over blank space, above TOTAL.
   const stampUrl = draggableStamp ? imageProxyUrl(data.stampImage) : null;
   const [stampFrac, setStampFrac] = useState({ x: 0.685, y: 0.5 });
+  // Native parity (SharedComponents.kt): the stamp must be SELECTED (single tap → light dashed
+  // container) before it can be dragged. While unselected it never grabs the pointer, so a finger
+  // landing on it during a pinch passes straight through to zoom/pan.
+  const [stampSelected, setStampSelected] = useState(false);
   const dragRef = useRef<{ px: number; py: number } | null>(null);
+  const downRef = useRef<{ x: number; y: number; moved: boolean } | null>(null);
 
   const totalItems = data.items.length;
 
@@ -165,6 +170,9 @@ export function A4PagedFrame({
                 <div key={i} className="a4-page-outer" style={{ width: SHEET_W * s, height: SHEET_H * s, flex: "none", boxShadow: "0 3px 16px rgba(0,0,0,0.18)" }}>
                   <div
                     className="a4-sheet"
+                    // Tapping anywhere on the sheet OTHER than the (selected) stamp deselects it. The
+                    // selected stamp stopPropagations its own pointerdown, so this doesn't fire for it.
+                    onPointerDown={draggableStamp && pg.summary ? () => setStampSelected(false) : undefined}
                     style={{
                       width: SHEET_W,
                       height: SHEET_H,
@@ -186,19 +194,25 @@ export function A4PagedFrame({
                       <InvoiceFooter qrDataUrl={qrDataUrl} pageLabel={multi ? `Page ${i + 1} of ${pages.length}` : undefined} />
                     </div>
                     {/* Draggable stamp overlay — only on the summary (last) page. Lives inside the
-                        scaled sheet, so screen drag deltas are divided by the scale to get sheet px. */}
+                        scaled sheet, so screen drag deltas are divided by the scale to get sheet px.
+                        Select-first, then drag (native parity): unselected it stays inert so zoom/pan
+                        work with a finger on it; a single tap selects it (light dashed container). */}
                     {draggableStamp && stampUrl && pg.summary && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={stampUrl}
-                        alt="Stamp"
-                        draggable={false}
+                      <div
                         onPointerDown={(e) => {
-                          e.stopPropagation();
-                          dragRef.current = { px: e.clientX, py: e.clientY };
-                          try { (e.target as HTMLElement).setPointerCapture(e.pointerId); } catch { /* no active pointer */ }
+                          downRef.current = { x: e.clientX, y: e.clientY, moved: false };
+                          // Only a SELECTED stamp captures the pointer to drag — and only then do we
+                          // stop the event so the host (WebView pinch/pan) is left alone otherwise.
+                          if (stampSelected) {
+                            e.stopPropagation();
+                            dragRef.current = { px: e.clientX, py: e.clientY };
+                            try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); } catch { /* no active pointer */ }
+                          }
                         }}
                         onPointerMove={(e) => {
+                          if (downRef.current) {
+                            if (Math.hypot(e.clientX - downRef.current.x, e.clientY - downRef.current.y) > 6) downRef.current.moved = true;
+                          }
                           if (!dragRef.current || !scale) return;
                           const dxFrac = (e.clientX - dragRef.current.px) / scale / SHEET_W;
                           const dyFrac = (e.clientY - dragRef.current.py) / scale / SHEET_H;
@@ -209,9 +223,16 @@ export function A4PagedFrame({
                           }));
                         }}
                         onPointerUp={(e) => {
+                          const wasDragging = dragRef.current != null;
+                          const tap = downRef.current != null && !downRef.current.moved;
                           dragRef.current = null;
-                          try { (e.target as HTMLElement).releasePointerCapture?.(e.pointerId); } catch { /* not captured */ }
-                          onStampMove?.(stampFrac.x, stampFrac.y);
+                          downRef.current = null;
+                          try { (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId); } catch { /* not captured */ }
+                          if (wasDragging) {
+                            onStampMove?.(stampFrac.x, stampFrac.y);
+                          } else if (tap && !stampSelected) {
+                            setStampSelected(true); // first tap selects → light container appears
+                          }
                         }}
                         style={{
                           position: "absolute",
@@ -219,12 +240,23 @@ export function A4PagedFrame({
                           top: stampFrac.y * SHEET_H,
                           width: 150,
                           height: 150,
-                          objectFit: "contain",
-                          cursor: "grab",
-                          touchAction: "none",
                           zIndex: 20,
+                          cursor: stampSelected ? "grab" : "pointer",
+                          // Selected → we own the gesture (drag). Unselected → let the host zoom/pan.
+                          touchAction: stampSelected ? "none" : "auto",
+                          // Light dashed selection container (mirrors native drawSelectionUI).
+                          border: stampSelected ? "1.5px dashed rgba(37,99,235,0.85)" : undefined,
+                          background: stampSelected ? "rgba(37,99,235,0.10)" : undefined,
+                          borderRadius: stampSelected ? 4 : undefined,
                         }}
-                      />
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={stampUrl} alt="Stamp" draggable={false} style={{ width: "100%", height: "100%", objectFit: "contain", pointerEvents: "none", userSelect: "none" }} />
+                        {stampSelected &&
+                          ([[-4, -4], [-4, undefined], [undefined, -4], [undefined, undefined]] as const).map((c, ci) => (
+                            <span key={ci} style={{ position: "absolute", width: 8, height: 8, borderRadius: "50%", background: "rgba(37,99,235,1)", border: "1.5px solid #fff", left: c[0] === undefined ? undefined : c[0], right: c[0] === undefined ? -4 : undefined, top: c[1] === undefined ? undefined : c[1], bottom: c[1] === undefined ? -4 : undefined }} />
+                          ))}
+                      </div>
                     )}
                   </div>
                 </div>

@@ -194,13 +194,15 @@ export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hide
             <div>
               {signatureUrl && (
                 <>
-                  <img src={signatureUrl} alt="Signature" className="h-16 object-contain" />
+                  <img src={signatureUrl} alt="Signature" draggable={false} className="pointer-events-none h-16 select-none object-contain" />
                   <p className="mt-1 border-t border-gray-300 pt-1 text-xs text-gray-500">Authorized signature</p>
                 </>
               )}
             </div>
-            {/* When hideStamp is set, the stamp is drawn as a draggable overlay by A4PagedFrame. */}
-            {stampUrl && !hideStamp && <img src={stampUrl} alt="Stamp" className="h-24 w-24 object-contain" />}
+            {/* When hideStamp is set, the stamp is drawn as a draggable overlay by A4PagedFrame.
+                Otherwise it's display-only — pointer-events:none so a finger landing on it during a
+                pinch passes through to the zoom surface (react-zoom-pan-pinch needs both fingers). */}
+            {stampUrl && !hideStamp && <img src={stampUrl} alt="Stamp" draggable={false} className="pointer-events-none h-24 w-24 select-none object-contain" />}
           </div>
         )}
 
