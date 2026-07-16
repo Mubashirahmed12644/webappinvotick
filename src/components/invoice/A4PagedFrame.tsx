@@ -3,6 +3,7 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import { InvoiceDocument, InvoiceFooter } from "./InvoiceDocument";
+import { imageProxyUrl } from "@/lib/image";
 import type { InvoiceRenderData } from "@/lib/data";
 
 /**
@@ -48,13 +49,32 @@ function paginate(total: number, nNoSummary: number, nWithSummary: number): Page
   return pages;
 }
 
-export function A4PagedFrame({ data, qrDataUrl, zoomable }: { data: InvoiceRenderData; qrDataUrl?: string | null; zoomable?: boolean }) {
+export function A4PagedFrame({
+  data,
+  qrDataUrl,
+  zoomable,
+  draggableStamp,
+  onStampMove,
+}: {
+  data: InvoiceRenderData;
+  qrDataUrl?: string | null;
+  zoomable?: boolean;
+  // When true the stamp becomes a draggable overlay (app editing WebView, not the receiver view).
+  draggableStamp?: boolean;
+  // Reports the stamp's new position as fractions of the sheet (0..1) so the app can persist it.
+  onStampMove?: (xFrac: number, yFrac: number) => void;
+}) {
   const containerRef = useRef<HTMLDivElement>(null);
   const withTotalsRef = useRef<HTMLDivElement>(null);
   const noTotalsRef = useRef<HTMLDivElement>(null);
   const footerMeasureRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState<number | null>(null);
   const [pages, setPages] = useState<Page[]>([{ start: 0, count: 0, summary: true }]);
+
+  // Draggable stamp: position as a fraction of the sheet (default ≈ native's lower-right slot).
+  const stampUrl = draggableStamp ? imageProxyUrl(data.stampImage) : null;
+  const [stampFrac, setStampFrac] = useState({ x: 0.68, y: 0.6 });
+  const dragRef = useRef<{ px: number; py: number } | null>(null);
 
   const totalItems = data.items.length;
 
@@ -113,7 +133,7 @@ export function A4PagedFrame({ data, qrDataUrl, zoomable }: { data: InvoiceRende
       `}</style>
       {/* Off-screen measuring copies (natural height) — never shown. */}
       <div ref={withTotalsRef} className="a4-measure" style={{ position: "absolute", left: -99999, top: 0, width: SHEET_W, visibility: "hidden", pointerEvents: "none" }} aria-hidden>
-        <InvoiceDocument data={data} qrDataUrl={qrDataUrl} hideFooter />
+        <InvoiceDocument data={data} qrDataUrl={qrDataUrl} hideFooter hideStamp={draggableStamp} />
       </div>
       <div ref={noTotalsRef} className="a4-measure" style={{ position: "absolute", left: -99999, top: 0, width: SHEET_W, visibility: "hidden", pointerEvents: "none" }} aria-hidden>
         <InvoiceDocument data={data} qrDataUrl={qrDataUrl} hideFooter hideSummary />
@@ -157,12 +177,53 @@ export function A4PagedFrame({ data, qrDataUrl, zoomable }: { data: InvoiceRende
                     <div style={{ position: "absolute", top: 0, left: 0, width: SHEET_W }}>
                       {/* Every page uses the native min-9 table (Math.max(9, items)): a page with ≥9
                           items shows exactly that many (no blanks); a page with fewer pads up to 9. */}
-                      <InvoiceDocument data={pageData} qrDataUrl={qrDataUrl} hideFooter hideSummary={!pg.summary} />
+                      <InvoiceDocument data={pageData} qrDataUrl={qrDataUrl} hideFooter hideSummary={!pg.summary} hideStamp={draggableStamp} />
                     </div>
                     {/* Footer + pagination pinned to the page bottom (32px sides match body px-8). */}
                     <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, background: "#fff", paddingLeft: 32, paddingRight: 32 }}>
                       <InvoiceFooter qrDataUrl={qrDataUrl} pageLabel={multi ? `Page ${i + 1} of ${pages.length}` : undefined} />
                     </div>
+                    {/* Draggable stamp overlay — only on the summary (last) page. Lives inside the
+                        scaled sheet, so screen drag deltas are divided by the scale to get sheet px. */}
+                    {draggableStamp && stampUrl && pg.summary && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={stampUrl}
+                        alt="Stamp"
+                        draggable={false}
+                        onPointerDown={(e) => {
+                          e.stopPropagation();
+                          dragRef.current = { px: e.clientX, py: e.clientY };
+                          try { (e.target as HTMLElement).setPointerCapture(e.pointerId); } catch { /* no active pointer */ }
+                        }}
+                        onPointerMove={(e) => {
+                          if (!dragRef.current || !scale) return;
+                          const dxFrac = (e.clientX - dragRef.current.px) / scale / SHEET_W;
+                          const dyFrac = (e.clientY - dragRef.current.py) / scale / SHEET_H;
+                          dragRef.current = { px: e.clientX, py: e.clientY };
+                          setStampFrac((p) => ({
+                            x: Math.min(0.96, Math.max(0, p.x + dxFrac)),
+                            y: Math.min(0.96, Math.max(0, p.y + dyFrac)),
+                          }));
+                        }}
+                        onPointerUp={(e) => {
+                          dragRef.current = null;
+                          try { (e.target as HTMLElement).releasePointerCapture?.(e.pointerId); } catch { /* not captured */ }
+                          onStampMove?.(stampFrac.x, stampFrac.y);
+                        }}
+                        style={{
+                          position: "absolute",
+                          left: stampFrac.x * SHEET_W,
+                          top: stampFrac.y * SHEET_H,
+                          width: 120,
+                          height: 120,
+                          objectFit: "contain",
+                          cursor: "grab",
+                          touchAction: "none",
+                          zIndex: 20,
+                        }}
+                      />
+                    )}
                   </div>
                 </div>
               );

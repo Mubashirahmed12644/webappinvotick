@@ -84,7 +84,16 @@ export default function EmbedRenderPage() {
   // A4PagedFrame fills its positioned parent; a fixed full-screen wrapper makes it fill the WebView.
   return (
     <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0 }}>
-      <A4PagedFrame data={data} qrDataUrl="/qr_code.jpg" />
+      <A4PagedFrame
+        data={data}
+        qrDataUrl="/qr_code.jpg"
+        draggableStamp
+        onStampMove={(x, y) => {
+          const w = window as unknown as { AndroidStamp?: { onMoved?: (x: number, y: number) => void }; __onStampMoved?: (x: number, y: number) => void };
+          w.AndroidStamp?.onMoved?.(x, y);
+          w.__onStampMoved?.(x, y);
+        }}
+      />
     </div>
   );
 }

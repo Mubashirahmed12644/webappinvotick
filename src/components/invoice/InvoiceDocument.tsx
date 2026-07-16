@@ -8,7 +8,7 @@ import { BRAND_LOGO } from "@/lib/givens";
 // full-bleed header image + logo + title, decorative themed background,
 // From / Bill To / Details, an S#/Desc/Qty/Price/Disc/Tax/Amount table,
 // full totals block, signature + stamp, and a QR footer.
-export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, padRows }: { data: InvoiceRenderData; qrDataUrl?: string | null; hideFooter?: boolean; hideSummary?: boolean; padRows?: number }) {
+export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hideStamp, padRows }: { data: InvoiceRenderData; qrDataUrl?: string | null; hideFooter?: boolean; hideSummary?: boolean; hideStamp?: boolean; padRows?: number }) {
   const color = data.color || "#0D4DC0";
   const onColor = contrastText(color);
   const cur = data.currency;
@@ -189,7 +189,7 @@ export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, padR
 
         {/* Signature & stamp — part of the trailing summary section, so it only appears on the
             LAST page (never repeated on continuation pages). */}
-        {(signatureUrl || stampUrl) && !hideSummary && (
+        {(signatureUrl || (stampUrl && !hideStamp)) && !hideSummary && (
           <div className="mt-12 flex items-end justify-between gap-8" data-block>
             <div>
               {signatureUrl && (
@@ -199,7 +199,8 @@ export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, padR
                 </>
               )}
             </div>
-            {stampUrl && <img src={stampUrl} alt="Stamp" className="h-24 w-24 object-contain" />}
+            {/* When hideStamp is set, the stamp is drawn as a draggable overlay by A4PagedFrame. */}
+            {stampUrl && !hideStamp && <img src={stampUrl} alt="Stamp" className="h-24 w-24 object-contain" />}
           </div>
         )}
 
