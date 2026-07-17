@@ -3,6 +3,7 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import { InvoiceDocument, InvoiceFooter } from "./InvoiceDocument";
+import type { InvoiceLabels } from "@/lib/invoice-labels";
 import { imageProxyUrl } from "@/lib/image";
 import type { InvoiceRenderData } from "@/lib/data";
 
@@ -161,6 +162,8 @@ export function A4PagedFrame({
   onSignatureMove,
   onStampRemove,
   onSignatureRemove,
+  labels,
+  dir,
 }: {
   data: InvoiceRenderData;
   qrDataUrl?: string | null;
@@ -173,6 +176,9 @@ export function A4PagedFrame({
   // Report that the user removed an overlay so the app can drop it from the invoice.
   onStampRemove?: () => void;
   onSignatureRemove?: () => void;
+  // Localised invoice labels + reading direction (shared invoice → receiver's language).
+  labels?: InvoiceLabels;
+  dir?: "ltr" | "rtl";
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const withTotalsRef = useRef<HTMLDivElement>(null);
@@ -254,13 +260,13 @@ export function A4PagedFrame({
       `}</style>
       {/* Off-screen measuring copies (natural height) — never shown. */}
       <div ref={withTotalsRef} className="a4-measure" style={{ position: "absolute", left: -99999, top: 0, width: SHEET_W, visibility: "hidden", pointerEvents: "none" }} aria-hidden>
-        <InvoiceDocument data={data} qrDataUrl={qrDataUrl} hideFooter hideStamp={draggableStamp} hideSignature={draggableStamp} />
+        <InvoiceDocument data={data} qrDataUrl={qrDataUrl} hideFooter hideStamp={draggableStamp} hideSignature={draggableStamp} labels={labels} dir={dir} />
       </div>
       <div ref={noTotalsRef} className="a4-measure" style={{ position: "absolute", left: -99999, top: 0, width: SHEET_W, visibility: "hidden", pointerEvents: "none" }} aria-hidden>
-        <InvoiceDocument data={data} qrDataUrl={qrDataUrl} hideFooter hideSummary />
+        <InvoiceDocument data={data} qrDataUrl={qrDataUrl} hideFooter hideSummary labels={labels} dir={dir} />
       </div>
       <div ref={footerMeasureRef} className="a4-measure" style={{ position: "absolute", left: -99999, top: 0, width: SHEET_W, visibility: "hidden", pointerEvents: "none" }} aria-hidden>
-        <InvoiceFooter qrDataUrl={qrDataUrl} pageLabel="Page 1 of 1" />
+        <InvoiceFooter qrDataUrl={qrDataUrl} pageLabel="Page 1 of 1" labels={labels} />
       </div>
 
       {(() => {
@@ -301,11 +307,11 @@ export function A4PagedFrame({
                     <div style={{ position: "absolute", top: 0, left: 0, width: SHEET_W }}>
                       {/* Every page uses the native min-9 table (Math.max(9, items)): a page with ≥9
                           items shows exactly that many (no blanks); a page with fewer pads up to 9. */}
-                      <InvoiceDocument data={pageData} qrDataUrl={qrDataUrl} hideFooter hideSummary={!pg.summary} hideStamp={draggableStamp} hideSignature={draggableStamp} />
+                      <InvoiceDocument data={pageData} qrDataUrl={qrDataUrl} hideFooter hideSummary={!pg.summary} hideStamp={draggableStamp} hideSignature={draggableStamp} labels={labels} dir={dir} />
                     </div>
                     {/* Footer + pagination pinned to the page bottom (32px sides match body px-8). */}
                     <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, background: "#fff", paddingLeft: 32, paddingRight: 32 }}>
-                      <InvoiceFooter qrDataUrl={qrDataUrl} pageLabel={multi ? `Page ${i + 1} of ${pages.length}` : undefined} />
+                      <InvoiceFooter qrDataUrl={qrDataUrl} pageLabel={multi ? `Page ${i + 1} of ${pages.length}` : undefined} labels={labels} />
                     </div>
                     {/* Draggable signature + stamp overlays — only on the summary (last) page. Each
                         lives inside the scaled sheet, so drag deltas are divided by the scale. Both
