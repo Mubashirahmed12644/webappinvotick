@@ -30,6 +30,8 @@ export async function translateInvoice(data: InvoiceRenderData, target: string):
     c?.country ?? "",
     ...data.items.map((it) => it.name ?? ""),
     data.notes ?? "",
+    data.paymentInstructions ?? "",
+    data.terms ?? "",
   ];
 
   let translated: string[];
@@ -74,6 +76,8 @@ export async function translateInvoice(data: InvoiceRenderData, target: string):
   out.items = data.items.map((it, i) => ({ ...it, name: next[p + i] || it.name }));
   p += data.items.length;
   out.notes = data.notes ? next[p] || data.notes : data.notes;
+  out.paymentInstructions = data.paymentInstructions ? next[p + 1] || data.paymentInstructions : data.paymentInstructions;
+  out.terms = data.terms ? next[p + 2] || data.terms : data.terms;
 
   return { data: out, labels, dir };
 }

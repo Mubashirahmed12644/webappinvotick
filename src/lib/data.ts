@@ -407,6 +407,12 @@ export interface InvoiceRenderData {
   balanceDue?: number | null;
   paymentStatus?: string | null;
   notes?: string | null;
+  // Terms & Conditions + Payment Instructions text (native TermsModule / PaymentInstructionsModule);
+  // rendered when present + toggled on. Column alignment mirrors the native item-table config.
+  terms?: string | null;
+  paymentInstructions?: string | null;
+  itemTableHeaderAlignment?: string | null;
+  itemTableBodyAlignment?: string | null;
   color: string;
   titleColor?: string | null;
   toggles: Record<string, boolean>;
@@ -457,6 +463,8 @@ export async function getInvoiceRenderData(id: string): Promise<InvoiceRenderDat
     stamp: template?.showStamp ?? true,
     total: template?.showTotal ?? true,
     items: template?.showItemsTable ?? true,
+    terms: template?.showTerms ?? true,
+    payment: template?.showPayment ?? true,
   };
 
   return {
@@ -473,6 +481,10 @@ export async function getInvoiceRenderData(id: string): Promise<InvoiceRenderDat
     shippingCost: num(inv.shippingCost),
     total: num(inv.totalAmount),
     notes: inv.notes,
+    terms: null,
+    paymentInstructions: null,
+    itemTableHeaderAlignment: template?.itemTableHeaderAlignment ?? null,
+    itemTableBodyAlignment: template?.itemTableBodyAlignment ?? null,
     color: template?.color || "#0D4DC0",
     titleColor: template?.titleColor ?? null, // auto-applies when mobile/server sends it
     toggles,

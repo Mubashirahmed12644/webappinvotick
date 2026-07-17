@@ -25,6 +25,14 @@ export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hide
   const c = data.client;
   const pct = (n: number) => `${n.toFixed(2)}%`;
   const label = "text-[15px] font-extrabold text-[#1c1b1f]";
+  // Item-table Description column alignment from the template config (native itemTable*Alignment).
+  // Numeric columns always stay end-aligned. Logical start/end so RTL still mirrors.
+  const alignClass = (a?: string | null) => {
+    const v = (a ?? "").toLowerCase();
+    return v === "right" ? "text-end" : v === "center" ? "text-center" : "text-start";
+  };
+  const descHead = alignClass(data.itemTableHeaderAlignment);
+  const descBody = alignClass(data.itemTableBodyAlignment);
 
   return (
     // flex column so the footer can pin to the bottom of an A4-height sheet
@@ -118,7 +126,7 @@ export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hide
               <thead>
                 <tr style={{ backgroundColor: color, color: onColor }}>
                   <th className="px-2 py-1.5 text-center font-extrabold">{labels.colSn}</th>
-                  <th className="px-2 py-1.5 text-start font-extrabold">{labels.colDescription}</th>
+                  <th className={`px-2 py-1.5 font-extrabold ${descHead}`}>{labels.colDescription}</th>
                   <th className="px-2 py-1.5 text-end font-extrabold">{labels.colQty}</th>
                   <th className="px-2 py-1.5 text-end font-extrabold">{labels.colPrice}</th>
                   <th className="px-2 py-1.5 text-end font-extrabold">{labels.colDisc}</th>
@@ -135,7 +143,7 @@ export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hide
                   return (
                     <tr key={i} style={{ backgroundColor: tint, height: 28 }}>
                       <td className="px-2 align-middle text-center font-bold">{it ? it.sn : ""}</td>
-                      <td className="px-2 align-middle text-start font-bold">{it ? it.name : ""}</td>
+                      <td className={`px-2 align-middle font-bold ${descBody}`}>{it ? it.name : ""}</td>
                       <td className="px-2 align-middle text-end font-bold">{it ? it.quantity.toFixed(2) : ""}</td>
                       <td className="px-2 align-middle text-end font-bold">{it ? formatMoney(it.unitPrice, cur) : ""}</td>
                       <td className="px-2 align-middle text-end font-bold">{it ? it.discountValue.toFixed(2) : ""}</td>
@@ -188,6 +196,22 @@ export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hide
           <div className="mt-8 border-t border-gray-200 pt-4" data-block>
             <p className={label}>{labels.notes}</p>
             <p className="mt-1 text-sm">{data.notes}</p>
+          </div>
+        )}
+
+        {/* Payment Instructions (native PaymentInstructionsModule) */}
+        {t.payment && data.paymentInstructions && !hideSummary && (
+          <div className="mt-6 border-t border-gray-200 pt-4" data-block>
+            <p className={label}>{labels.paymentInstructions}</p>
+            <p className="mt-1 whitespace-pre-line text-sm">{data.paymentInstructions}</p>
+          </div>
+        )}
+
+        {/* Terms & Conditions (native TermsModule) */}
+        {t.terms && data.terms && !hideSummary && (
+          <div className="mt-6 border-t border-gray-200 pt-4" data-block>
+            <p className={label}>{labels.terms}</p>
+            <p className="mt-1 whitespace-pre-line text-sm">{data.terms}</p>
           </div>
         )}
 

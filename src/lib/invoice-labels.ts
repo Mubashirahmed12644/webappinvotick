@@ -30,6 +30,8 @@ export type InvoiceLabels = {
   amountPaid: string;
   balanceDue: string;
   notes: string;
+  terms: string;
+  paymentInstructions: string;
   authorizedSignature: string;
   footerGenerated: string;
   footerTagline: string;
@@ -62,6 +64,8 @@ export const LABELS: InvoiceLabels = {
   amountPaid: "AMOUNT PAID",
   balanceDue: "BALANCE DUE",
   notes: "Notes",
+  terms: "Terms & Conditions",
+  paymentInstructions: "Payment Instructions",
   authorizedSignature: "Authorized signature",
   footerGenerated: "Invoice generated using Invotick",
   footerTagline: "Create professional invoices in seconds",
