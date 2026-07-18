@@ -30,6 +30,7 @@ export interface InvoiceSummary {
   id: string;
   clientId: string | null;
   clientName?: string | null;
+  businessId?: string | null;
   invoiceNumber: string;
   invoiceDate: string; // YYYY-MM-DD
   dueDate?: string | null; // YYYY-MM-DD

@@ -588,6 +588,7 @@ export const getWorkspace = cache(async (): Promise<WorkspaceData> => {
       id: i.id,
       clientId: i.clientId,
       clientName: i.clientId ? clientNameById.get(i.clientId) ?? "—" : "—",
+      businessId: i.businessId,
       invoiceNumber: i.invoiceNumber,
       invoiceDate: i.invoiceDate,
       dueDate: i.dueDate,

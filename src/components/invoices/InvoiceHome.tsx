@@ -262,18 +262,30 @@ function WelcomeHome({ userName }: { userName: string | null }) {
 
 export function InvoiceHome({
   invoices,
-  businessName,
+  businesses,
   currency,
   userName,
 }: {
   invoices: InvoiceSummary[];
-  businessName: string | null;
+  businesses: { id: string; name: string; currencyCode?: string | null }[];
   currency: string;
   userName?: string | null;
 }) {
   const [filter, setFilter] = useState<string>("ALL");
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const sym = symbolOf(currency);
+  // null = "All Businesses" (combined). Users with several businesses switch here.
+  const [businessId, setBusinessId] = useState<string | null>(null);
+
+  const activeBusiness = businesses.find((b) => b.id === businessId) ?? null;
+  const activeName = activeBusiness?.name ?? "All Businesses";
+  const activeCurrency = activeBusiness?.currencyCode || currency;
+  const sym = symbolOf(activeCurrency);
+
+  // Invoices scoped to the selected business (or all).
+  const businessInvoices = useMemo(
+    () => (businessId ? invoices.filter((i) => i.businessId === businessId) : invoices),
+    [invoices, businessId]
+  );
 
   const totals = useMemo(() => {
     let revenue = 0;
@@ -281,7 +293,7 @@ export function InvoiceHome({
     let overdue = 0;
     let sent = 0;
     const counts: Record<string, number> = {};
-    for (const inv of invoices) {
+    for (const inv of businessInvoices) {
       const amt = n(inv.totalAmount);
       const st = (inv.status || "").toUpperCase();
       revenue += amt;
@@ -291,16 +303,16 @@ export function InvoiceHome({
       counts[st] = (counts[st] ?? 0) + 1;
     }
     return { revenue, collected, outstanding: revenue - collected, overdue, sent, counts };
-  }, [invoices]);
+  }, [businessInvoices]);
 
   const filters = useMemo(() => {
-    const present = new Set(invoices.map((i) => (i.status || "").toUpperCase()));
+    const present = new Set(businessInvoices.map((i) => (i.status || "").toUpperCase()));
     const ordered = FILTER_ORDER.filter((s) => present.has(s));
     for (const s of present) if (!FILTER_ORDER.includes(s)) ordered.push(s);
     return ["ALL", ...ordered];
-  }, [invoices]);
+  }, [businessInvoices]);
 
-  const shown = filter === "ALL" ? invoices : invoices.filter((i) => (i.status || "").toUpperCase() === filter);
+  const shown = filter === "ALL" ? businessInvoices : businessInvoices.filter((i) => (i.status || "").toUpperCase() === filter);
   const selected = shown.find((i) => i.id === selectedId) ?? shown[0] ?? null;
 
   // First-time user (no invoices yet) → friendly welcome + onboarding.
@@ -316,33 +328,51 @@ export function InvoiceHome({
           <div className="flex items-stretch gap-4">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2.5">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[13px] text-[13px] font-extrabold" style={{ background: "rgba(255,255,255,0.18)" }}>{initials(businessName)}</div>
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[13px] text-[13px] font-extrabold" style={{ background: "rgba(255,255,255,0.18)" }}>{initials(activeName)}</div>
                 <div className="min-w-0">
-                  <p className="truncate text-[16px] font-bold leading-tight">{businessName ?? "Business"}</p>
-                  <span className="mt-1 inline-block rounded-md px-2 py-0.5 text-[11px] font-semibold" style={{ background: "rgba(255,255,255,0.18)" }}>{currency} ({sym})</span>
+                  {/* Business switcher — "All Businesses" + each business (mirrors the mobile app). */}
+                  {businesses.length > 1 ? (
+                    <div className="relative inline-flex items-center">
+                      <select
+                        value={businessId ?? ""}
+                        onChange={(e) => { setBusinessId(e.target.value || null); setSelectedId(null); }}
+                        aria-label="Business"
+                        className="max-w-[220px] cursor-pointer truncate rounded-md bg-white/10 py-0.5 pl-2 pr-6 text-[16px] font-bold leading-tight text-white outline-none hover:bg-white/20 [&>option]:text-neutral-900"
+                      >
+                        <option value="">All Businesses</option>
+                        {businesses.map((b) => (
+                          <option key={b.id} value={b.id}>{b.name}</option>
+                        ))}
+                      </select>
+                      <svg className="pointer-events-none absolute right-1.5" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg>
+                    </div>
+                  ) : (
+                    <p className="truncate text-[16px] font-bold leading-tight">{activeName}</p>
+                  )}
+                  <span className="mt-1 inline-block rounded-md px-2 py-0.5 text-[11px] font-semibold" style={{ background: "rgba(255,255,255,0.18)" }}>{activeCurrency} ({sym})</span>
                 </div>
               </div>
               <div className="mt-3 flex items-center gap-4 text-[12.5px]" style={{ color: "rgba(255,255,255,0.9)" }}>
-                <span className="flex items-center gap-1"><DocIcon color="#fff" size={13} /> {invoices.length} Invoices</span>
+                <span className="flex items-center gap-1"><DocIcon color="#fff" size={13} /> {businessInvoices.length} Invoices</span>
                 <span>➤ {totals.sent} Sent</span>
               </div>
               <div className="mt-3">
                 <p className="text-[12px]" style={{ color: "rgba(255,255,255,0.75)" }}>Total Revenue</p>
-                <p className="text-[24px] font-extrabold leading-tight">{formatMoney(totals.revenue, currency)}</p>
+                <p className="text-[24px] font-extrabold leading-tight">{formatMoney(totals.revenue, activeCurrency)}</p>
               </div>
             </div>
             <div className="flex flex-col justify-center gap-2.5 border-l pl-4 text-right" style={{ borderColor: "rgba(255,255,255,0.2)" }}>
               <div>
                 <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.75)" }}>Collected</p>
-                <p className="text-[14px] font-bold">{formatMoney(totals.collected, currency)}</p>
+                <p className="text-[14px] font-bold">{formatMoney(totals.collected, activeCurrency)}</p>
               </div>
               <div>
                 <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.75)" }}>Outstanding</p>
-                <p className="text-[14px] font-bold">{formatMoney(totals.outstanding, currency)}</p>
+                <p className="text-[14px] font-bold">{formatMoney(totals.outstanding, activeCurrency)}</p>
               </div>
               <div>
                 <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.75)" }}>Overdue</p>
-                <p className="text-[14px] font-bold" style={{ color: "#FCD34D" }}>{formatMoney(totals.overdue, currency)}</p>
+                <p className="text-[14px] font-bold" style={{ color: "#FCD34D" }}>{formatMoney(totals.overdue, activeCurrency)}</p>
               </div>
             </div>
           </div>
@@ -353,7 +383,7 @@ export function InvoiceHome({
           {filters.map((f) => {
             const active = filter === f;
             const label = f === "ALL" ? "All" : statusStyle(f).label;
-            const count = f === "ALL" ? invoices.length : totals.counts[f] ?? 0;
+            const count = f === "ALL" ? businessInvoices.length : totals.counts[f] ?? 0;
             return (
               <button
                 key={f}
