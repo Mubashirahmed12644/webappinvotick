@@ -4,7 +4,18 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { User } from "@/lib/types";
 
-export function Topbar({ user }: { user: User }) {
+/**
+ * @param entitlement what the backend says this account is entitled to, or null when it could not
+ *        be asked. Passed in rather than fetched here: the layout already asks the backend once
+ *        per page, and a second call from the browser would say the same thing more slowly.
+ */
+export function Topbar({
+  user,
+  entitlement,
+}: {
+  user: User;
+  entitlement: { premium: boolean; plan?: string | null } | null;
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const initials = (user.username || user.email).slice(0, 2).toUpperCase();
@@ -17,8 +28,23 @@ export function Topbar({ user }: { user: User }) {
 
   return (
     <header className="no-print flex h-16 items-center justify-between border-b border-[var(--color-outline-variant)] bg-[var(--color-surface)] px-4 sm:px-6">
-      <div className="text-sm font-semibold text-[var(--color-on-surface-variant)]">
-        {user.isEmailVerified ? "" : "⚠ Verify your email to unlock all features"}
+      <div className="flex items-center gap-3">
+        <div className="text-sm font-semibold text-[var(--color-on-surface-variant)]">
+          {user.isEmailVerified ? "" : "⚠ Verify your email to unlock all features"}
+        </div>
+        {/* The smallest thing that proves the whole chain works.
+            A purchase happens on the phone, is verified against Google by the backend, and stored
+            against the account. Until something on the web reads that, none of it is observable
+            here — and a signal nobody can see is a signal nobody can trust. This badge is that one
+            reader; anything else premium needs on the web can hang off the same answer. */}
+        {entitlement?.premium && (
+          <span
+            className="rounded-full bg-[var(--color-primary)] px-2.5 py-1 text-xs font-bold text-[var(--color-on-primary)]"
+            title={entitlement.plan ? `Plan: ${entitlement.plan}` : "Premium"}
+          >
+            Premium
+          </span>
+        )}
       </div>
       <div className="relative">
         <button

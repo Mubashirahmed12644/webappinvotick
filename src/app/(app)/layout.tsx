@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
-import { backendFetchWithStatus } from "@/lib/backend";
+import { backendFetch, backendFetchWithStatus } from "@/lib/backend";
 import { Sidebar } from "@/components/app/Sidebar";
 import { Topbar } from "@/components/app/Topbar";
 import { MobileNav } from "@/components/app/MobileNav";
@@ -28,6 +28,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const probe = await backendFetchWithStatus("/v1/profile/me");
   if (probe.status === 401) redirect("/login?signout=1");
 
+  // What this account is entitled to, asked once for the whole authenticated app.
+  //
+  // A failure here is not a reason to block anybody — it means premium is not shown, not that the
+  // app stops. The purchase itself lives on the server either way.
+  const entitlement = await backendFetch<{ premium: boolean; plan?: string | null }>(
+    "/v1/billing/entitlement",
+  ).catch(() => null);
+
   return (
     <div className="flex min-h-screen w-full">
       {/* The check above runs once, while this renders. Moving around inside the app is a soft
@@ -36,7 +44,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <SessionWatch />
       <Sidebar />
       <div className="flex min-w-0 flex-1 flex-col">
-        <Topbar user={session.user} />
+        <Topbar user={session.user} entitlement={entitlement?.data ?? null} />
         <main className="flex-1 overflow-y-auto p-4 pb-20 sm:p-6 lg:p-8 lg:pb-8">{children}</main>
       </div>
       <MobileNav />
