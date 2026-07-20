@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
+import { backendFetchWithStatus } from "@/lib/backend";
 import { Sidebar } from "@/components/app/Sidebar";
 import { Topbar } from "@/components/app/Topbar";
 import { MobileNav } from "@/components/app/MobileNav";
@@ -14,6 +15,17 @@ export const metadata: Metadata = {
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession();
   if (!session) redirect("/login");
+
+  // A cookie is not proof the session still works.
+  //
+  // Signing this browser out happens on the phone, so nothing here hears about it — the cookie
+  // stays, and every page rendered on it came back empty. That is worse than an error: the account
+  // looked intact and wiped, rather than signed out. Asking the backend once, at the top of the
+  // authenticated app, is what turns that into being sent back to sign in.
+  //
+  // `?signout=1` is what drops the cookie; without it the redirect below bounces straight back here.
+  const probe = await backendFetchWithStatus("/v1/profile/me");
+  if (probe.status === 401) redirect("/login?signout=1");
 
   return (
     <div className="flex min-h-screen w-full">
