@@ -21,7 +21,18 @@ function LoginView() {
   const router = useRouter();
   const params = useSearchParams();
   const [loading, setLoading] = useState(false);
-  const [showPhoneSignIn, setShowPhoneSignIn] = useState(false);
+  /**
+   * Which way in is offered first — and one at a time.
+   *
+   * The phone starts open because for almost every Invotick account it is the only way in at all:
+   * a guest has no email, no password and no Google account, so the form below is closed to them.
+   * Somebody who does have an email pays one tap for that; somebody who does not used to have to
+   * find a link they had no reason to look for.
+   *
+   * Both were on screen together before, which made the toggle read as a lie — it offered "use
+   * email instead" while the email fields sat above it, untouched.
+   */
+  const [showPhoneSignIn, setShowPhoneSignIn] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -78,72 +89,74 @@ function LoginView() {
           </div>
           <h2 className="text-2xl font-extrabold text-[var(--color-on-surface)]">Welcome back</h2>
           <p className="mt-1 text-sm text-[var(--color-on-surface-variant)]">
-            Sign in to your Invotick account.
+            {showPhoneSignIn
+              ? "Scan the code with the Invotick app on your phone."
+              : "Sign in to your Invotick account."}
           </p>
 
-          <form onSubmit={handleSubmit} className="mt-8 space-y-4">
-            <TextField
-              name="email"
-              type="email"
-              label="Email"
-              placeholder="you@company.com"
-              autoComplete="email"
-              required
-            />
-            <TextField
-              name="password"
-              type="password"
-              label="Password"
-              placeholder="••••••••"
-              autoComplete="current-password"
-              required
-            />
+          {/* One way in at a time. Showing both stacked made the page long and the toggle
+              meaningless — it said "use email instead" with the email fields already on screen. */}
+          {showPhoneSignIn ? (
+            <div className="mt-8">
+              <PhoneSignIn next={params.get("next") || "/invoices"} />
+            </div>
+          ) : (
+            <>
+            <form onSubmit={handleSubmit} className="mt-8 space-y-4">
+              <TextField
+                name="email"
+                type="email"
+                label="Email"
+                placeholder="you@company.com"
+                autoComplete="email"
+                required
+              />
+              <TextField
+                name="password"
+                type="password"
+                label="Password"
+                placeholder="••••••••"
+                autoComplete="current-password"
+                required
+              />
 
-            {error && (
-              <div className="rounded-[var(--radius-sm)] bg-[var(--color-error-container)] px-3 py-2 text-sm font-medium text-[var(--color-on-error-container)]">
-                {error}
+              {error && (
+                <div className="rounded-[var(--radius-sm)] bg-[var(--color-error-container)] px-3 py-2 text-sm font-medium text-[var(--color-on-error-container)]">
+                  {error}
+                </div>
+              )}
+
+              <div className="flex justify-end">
+                <Link
+                  href="/forgot-password"
+                  className="text-sm font-semibold text-[var(--color-primary)] hover:underline"
+                >
+                  Forgot password?
+                </Link>
               </div>
-            )}
 
-            <div className="flex justify-end">
-              <Link
-                href="/forgot-password"
-                className="text-sm font-semibold text-[var(--color-primary)] hover:underline"
-              >
-                Forgot password?
-              </Link>
+              <Button type="submit" size="lg" loading={loading} className="w-full">
+                Sign in
+              </Button>
+            </form>
+            <div className="my-6 flex items-center gap-3 text-xs text-[var(--color-on-surface-variant)]">
+              <span className="h-px flex-1 bg-[var(--color-outline-variant)]" />
+              <span>or</span>
+              <span className="h-px flex-1 bg-[var(--color-outline-variant)]" />
             </div>
 
-            <Button type="submit" size="lg" loading={loading} className="w-full">
-              Sign in
-            </Button>
-          </form>
+            <GoogleButton onError={setError} label="signin_with" />
 
-          <div className="my-6 flex items-center gap-3 text-xs text-[var(--color-on-surface-variant)]">
-            <span className="h-px flex-1 bg-[var(--color-outline-variant)]" />
-            <span>or</span>
-            <span className="h-px flex-1 bg-[var(--color-outline-variant)]" />
-          </div>
+            </>
+          )}
 
-          <GoogleButton onError={setError} label="signin_with" />
-
-          {/* The only route in for most accounts.
-              Almost every Invotick user is a guest — no email, no password, no Google account — so
-              both options above are closed to them, and until this existed the web app was
-              something they could never open. */}
           <button
             type="button"
             onClick={() => setShowPhoneSignIn((v) => !v)}
-            className="mt-4 w-full text-center text-sm font-semibold text-[var(--color-primary)] hover:underline"
+            className="mt-6 w-full text-center text-sm font-semibold text-[var(--color-primary)] hover:underline"
           >
-            {showPhoneSignIn ? "Use email instead" : "Sign in with your phone"}
+            {showPhoneSignIn ? "Use email or Google instead" : "Sign in with your phone"}
           </button>
-
-          {showPhoneSignIn && (
-            <div className="mt-6">
-              <PhoneSignIn next={params.get("next") || "/invoices"} />
-            </div>
-          )}
 
           <p className="mt-6 text-center text-sm text-[var(--color-on-surface-variant)]">
             New to Invotick?{" "}
