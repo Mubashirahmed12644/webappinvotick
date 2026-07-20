@@ -30,6 +30,20 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // A way out of a session the server has already ended.
+  //
+  // Signing a browser out happens on the phone, so this browser learns nothing about it: the cookie
+  // stays, every API call comes back 401, and asking for /login only bounces the user to an app that
+  // no longer works. `?signout=1` drops the cookie and leaves them on the sign-in page — which is
+  // where the redirect below would otherwise never let them reach.
+  if (hasSession && isAuthPage && request.nextUrl.searchParams.get("signout") === "1") {
+    const url = request.nextUrl.clone();
+    url.search = "";
+    const response = NextResponse.redirect(url);
+    response.cookies.delete(COOKIE);
+    return response;
+  }
+
   // Already logged in and visiting an auth page -> go to Home (but let logged-in
   // users still view the public landing / marketing pages).
   if (hasSession && isAuthPage) {
