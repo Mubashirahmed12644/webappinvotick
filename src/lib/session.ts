@@ -7,6 +7,15 @@ import type { User } from "./types";
 interface SessionData {
   token: string;
   user: User;
+  /**
+   * Which linked device this session is, so the backend can refuse it once it is signed out.
+   *
+   * Revocation is enforced per device: the backend only checks whether a session has been ended if
+   * the request says which device it belongs to. Without this the phone's "sign out" marked the row
+   * revoked, reported success, and the browser carried on working — a control that says it did
+   * something and did not.
+   */
+  deviceId?: string;
 }
 
 const MAX_AGE = 60 * 60 * 24 * 60; // 60 days (backend token lives 90)

@@ -115,6 +115,10 @@ export async function PUT(request: Request) {
 
     await createSession({
       token: data.data.accessToken,
+      // Kept for the life of the session so every later call can name this device. Held server-side
+      // in the cookie rather than read from localStorage, because the proxy that makes those calls
+      // runs on the server and never sees the browser's storage.
+      deviceId,
       user: {
         id: data.data.userId,
         // A guest has no name or email to show; the Invotick id is what they can recognise, and
