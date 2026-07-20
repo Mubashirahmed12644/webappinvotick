@@ -5,6 +5,7 @@ import { backendFetchWithStatus } from "@/lib/backend";
 import { Sidebar } from "@/components/app/Sidebar";
 import { Topbar } from "@/components/app/Topbar";
 import { MobileNav } from "@/components/app/MobileNav";
+import { SessionWatch } from "@/components/app/SessionWatch";
 
 // The whole authenticated app is login-gated — keep it out of search indexes so
 // all SEO authority stays on the public landing ("/").
@@ -29,6 +30,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex min-h-screen w-full">
+      {/* The check above runs once, while this renders. Moving around inside the app is a soft
+          navigation that never re-renders it, so without something watching, a browser signed out
+          on the phone kept working until the page happened to reload. */}
+      <SessionWatch />
       <Sidebar />
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar user={session.user} />
