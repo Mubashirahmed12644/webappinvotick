@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { headers } from "next/headers";
 import { config } from "@/lib/config";
 import { createSession } from "@/lib/session";
 import type { ApiResponse } from "@/lib/types";
@@ -15,15 +16,52 @@ import type { ApiResponse } from "@/lib/types";
  * session of its own.
  */
 
+/**
+ * A name the person approving will recognise.
+ *
+ * The approval screen on the phone asks them to hand over the whole account, and "Web browser"
+ * tells them nothing they can check against — every browser is a web browser. "Chrome on Windows"
+ * is something they can compare with the machine actually in front of them, which is the only way
+ * that screen protects anybody.
+ *
+ * Deliberately coarse. The point is recognition, not fingerprinting, and a full user-agent string
+ * would be both unreadable and more than is needed.
+ */
+function describeBrowser(userAgent: string): string {
+  const browser =
+    /Edg\//.test(userAgent) ? "Edge"
+    : /OPR\/|Opera/.test(userAgent) ? "Opera"
+    : /Firefox\//.test(userAgent) ? "Firefox"
+    // Chrome's user-agent also claims Safari, so Safari is only what is left after ruling Chrome out.
+    : /Chrome\/|CriOS/.test(userAgent) ? "Chrome"
+    : /Safari\//.test(userAgent) ? "Safari"
+    : "Browser";
+
+  const os =
+    /Windows/.test(userAgent) ? "Windows"
+    // iOS before Mac: an iPhone's user-agent says "like Mac OS X", so checking for Mac first
+    // labels every iPhone a Mac — and the whole point of this name is that it matches the thing
+    // the user is looking at.
+    : /iPhone|iPad|iPod/.test(userAgent) ? "iOS"
+    : /Android/.test(userAgent) ? "Android"
+    : /Macintosh|Mac OS X/.test(userAgent) ? "Mac"
+    : /Linux/.test(userAgent) ? "Linux"
+    : null;
+
+  return os ? `${browser} on ${os}` : browser;
+}
+
 /** Asks the backend for a code to display. */
 export async function POST() {
   try {
+    const userAgent = (await headers()).get("user-agent") ?? "";
+
     const res = await fetch(`${config.backendUrl}/v1/device-link/request`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      // Tells the backend this is a browser, which gives it a shorter session than a phone gets:
-      // a browser is often someone else's computer.
-      body: JSON.stringify({ deviceName: "Web browser", platform: "WEB" }),
+      // WEB also tells the backend to issue a shorter session than a phone gets: a browser is
+      // often someone else's computer.
+      body: JSON.stringify({ deviceName: describeBrowser(userAgent), platform: "WEB" }),
     });
     const data = (await res.json()) as ApiResponse<{ code: string; expiresAt: string }>;
 
