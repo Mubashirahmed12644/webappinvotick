@@ -338,10 +338,11 @@ const POLL_MS = 3000;
 /**
  * When to replace the code, against a server that keeps one for two minutes.
  *
- * Thirty seconds early, so the code survives the gap between a scan and the Approve tap that
- * follows it.
+ * A full minute of margin, so the code on screen is never close to its own expiry: it has to
+ * survive not just the scan but the taps between the scan and Approve, on a phone the scanner has
+ * possibly not even been opened on yet.
  */
-const REFRESH_MS = 90_000;
+const REFRESH_MS = 60_000;
 
 /** How long the server keeps a code — used to know when to stop asking about an old one. */
 const CODE_TTL_MS = 120_000;
@@ -361,10 +362,11 @@ const SHIMMER_MS = 2_500;
 /**
  * How many cycles before assuming the tab was left open and abandoned.
  *
- * Ten is about fifteen minutes — far longer than signing in needs, short enough that a forgotten
- * tab stops asking the server for codes until it is closed.
+ * Counted in cycles, so it has to move whenever the cycle does — this number exists to bound how
+ * long a forgotten tab keeps asking for codes, and that limit should stay about a quarter of an
+ * hour whether a cycle is a minute or a minute and a half.
  */
-const MAX_CYCLES = 10;
+const MAX_CYCLES = 15;
 
 const RING_STYLES = `
 @keyframes qr-ring-drain { from { stroke-dashoffset: 0; } to { stroke-dashoffset: 1; } }
