@@ -136,7 +136,7 @@ export function PhoneSignIn({ next }: { next: string }) {
           const claim = await fetch("/api/auth/device-link", {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ code }),
+            body: JSON.stringify({ code, deviceId: browserDeviceId() }),
           }).catch(() => null);
 
           const result = await claim?.json().catch(() => null);
@@ -292,6 +292,30 @@ export function PhoneSignIn({ next }: { next: string }) {
       {error && <p className="text-sm text-red-600">{error}</p>}
     </div>
   );
+}
+
+/**
+ * A name this browser keeps, so the account owner can sign it out later.
+ *
+ * Stored rather than generated per visit: a device the owner cannot find twice is a device they
+ * cannot revoke, and the whole point of the list is that ending a session actually ends it.
+ *
+ * Not an identifier of the person — it says nothing about them and is only ever seen by the account
+ * they chose to link it to.
+ */
+function browserDeviceId(): string {
+  const KEY = "invotick.device-id";
+  try {
+    const existing = localStorage.getItem(KEY);
+    if (existing) return existing;
+    const fresh = crypto.randomUUID();
+    localStorage.setItem(KEY, fresh);
+    return fresh;
+  } catch {
+    // Private browsing, or storage refused. A session that cannot be revoked from the list is
+    // still better than no sign-in at all — and it expires on its own in a week.
+    return crypto.randomUUID();
+  }
 }
 
 type Phase = "loading" | "live" | "shimmer" | "idle" | "claimed" | "error";

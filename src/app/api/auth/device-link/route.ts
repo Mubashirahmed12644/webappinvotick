@@ -86,7 +86,10 @@ export async function POST() {
  * exactly as intended.
  */
 export async function PUT(request: Request) {
-  const { code } = (await request.json().catch(() => ({}))) as { code?: string };
+  const { code, deviceId } = (await request.json().catch(() => ({}))) as {
+    code?: string;
+    deviceId?: string;
+  };
   if (!code) {
     return NextResponse.json({ success: false, message: "No code." }, { status: 400 });
   }
@@ -95,7 +98,10 @@ export async function PUT(request: Request) {
     const res = await fetch(`${config.backendUrl}/v1/device-link/claim`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code }),
+      // Sent so the browser is registered as a linked device. Without it the session worked but
+      // never appeared in the owner's device list, which meant they could neither see the sign-in
+      // nor end it.
+      body: JSON.stringify({ code, deviceId }),
     });
     const data = (await res.json()) as ApiResponse<{
       accessToken: string;
