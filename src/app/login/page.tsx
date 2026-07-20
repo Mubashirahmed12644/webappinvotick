@@ -7,6 +7,7 @@ import { Logo } from "@/components/ui/Logo";
 import { Button } from "@/components/ui/Button";
 import { TextField } from "@/components/ui/TextField";
 import { GoogleButton } from "@/components/auth/GoogleButton";
+import { PhoneSignIn } from "@/components/auth/PhoneSignIn";
 
 export default function LoginPage() {
   return (
@@ -20,6 +21,7 @@ function LoginView() {
   const router = useRouter();
   const params = useSearchParams();
   const [loading, setLoading] = useState(false);
+  const [showPhoneSignIn, setShowPhoneSignIn] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -124,6 +126,24 @@ function LoginView() {
           </div>
 
           <GoogleButton onError={setError} label="signin_with" />
+
+          {/* The only route in for most accounts.
+              Almost every Invotick user is a guest — no email, no password, no Google account — so
+              both options above are closed to them, and until this existed the web app was
+              something they could never open. */}
+          <button
+            type="button"
+            onClick={() => setShowPhoneSignIn((v) => !v)}
+            className="mt-4 w-full text-center text-sm font-semibold text-[var(--color-primary)] hover:underline"
+          >
+            {showPhoneSignIn ? "Use email instead" : "Sign in with your phone"}
+          </button>
+
+          {showPhoneSignIn && (
+            <div className="mt-6">
+              <PhoneSignIn next={params.get("next") || "/invoices"} />
+            </div>
+          )}
 
           <p className="mt-6 text-center text-sm text-[var(--color-on-surface-variant)]">
             New to Invotick?{" "}
