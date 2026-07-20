@@ -5,6 +5,23 @@ import { imageProxyUrl } from "@/lib/image";
 import { BRAND_LOGO } from "@/lib/givens";
 import { LABELS, type InvoiceLabels } from "@/lib/invoice-labels";
 
+// Terms & Conditions sits in the space beside the totals, which is short and narrow, so its body
+// font scales with length: a one-line term reads large; a multi-paragraph term shrinks to stay in
+// that space — clamped so it never turns oversized or illegibly small. Character count is a
+// deterministic proxy for area here (no post-mount measuring), so it won't fight A4PagedFrame's
+// pagination pass. Tuned so the built-in example (~180 chars) lands around 12.5px.
+function termsFontPx(text: string): number {
+  const len = text.trim().length;
+  const MAX = 13; // short terms
+  const MIN = 8.5; // long terms
+  const LO = 140; // <= this many chars → MAX
+  const HI = 620; // >= this many chars → MIN
+  if (len <= LO) return MAX;
+  if (len >= HI) return MIN;
+  // Linear between the anchors, snapped to 0.5px steps.
+  return Math.round((MAX - ((len - LO) / (HI - LO)) * (MAX - MIN)) * 2) / 2;
+}
+
 // Faithful invoice document — mirrors the mobile app's rendered PDF:
 // full-bleed header image + logo + title, decorative themed background,
 // From / Bill To / Details, an S#/Desc/Qty/Price/Disc/Tax/Amount table,
@@ -157,37 +174,53 @@ export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hide
           </div>
         )}
 
-        {/* Totals: emphasis ladder (TOTAL light → AMOUNT PAID medium → BALANCE DUE dark hero).
-            The payment stamp is NOT drawn here — it's the auto PAID/PARTIALLY PAID stamp that comes
-            through `stampImage` (rendered by the app's StampFactory) and is placed like any stamp. */}
-        {t.total && !hideSummary && (
-          <div className="mt-4 flex justify-end" data-block>
-            <div
-              className="relative w-full max-w-[300px]"
-              // Outer border = theme.totalsAccent = primary (FULL), like native.
-              style={{ border: `1px solid ${color}` }}
-            >
-              <TotalRow label={labels.subTotal} value={formatMoney(data.subtotal, cur)} tint={hexToRgba(color, 0.05)} />
-              <TotalRow label={labels.discount} value={formatMoney(data.discountAmount, cur)} tint={hexToRgba(color, 0.05)} />
-              <TotalRow label={labels.tax} value={formatMoney(data.taxAmount, cur)} tint={hexToRgba(color, 0.05)} />
-              <TotalRow label={labels.shipping} value={formatMoney(data.shippingCost, cur)} tint={hexToRgba(color, 0.05)} />
-              {/* Emphasis ladder — TOTAL light tint + accent text (lowest rung). */}
-              <div className="flex items-center justify-between px-3 py-2 text-[15px] font-extrabold" style={{ backgroundColor: hexToRgba(color, 0.16), color }}>
-                <span>{labels.total}</span>
-                <span>{formatMoney(data.total, cur)}</span>
-              </div>
-              {/* AMOUNT PAID — medium tint + dark text (middle rung). Always shown (0 when nothing paid). */}
-              <div className="flex items-center justify-between px-3 py-2 text-[15px] font-extrabold" style={{ backgroundColor: hexToRgba(color, 0.34), color: "#1c1b1f" }}>
-                <span>{labels.amountPaid}</span>
-                <span>{formatMoney(data.amountPaid ?? 0, cur)}</span>
-              </div>
-              {/* BALANCE DUE = the dark hero (full primary + onColor), final amount owed; always last
-                  so nothing dangles below the dark fill. */}
-              <div className="flex items-center justify-between px-3 py-2 text-[15px] font-extrabold" style={{ backgroundColor: color, color: onColor }}>
-                <span>{labels.balanceDue}</span>
-                <span>{formatMoney(data.balanceDue ?? data.total, cur)}</span>
-              </div>
+        {/* Summary row — totals emphasis ladder on the right (TOTAL light → AMOUNT PAID medium →
+            BALANCE DUE dark hero), with Terms & Conditions (and, once it ships, Payment Method)
+            tucked into the otherwise-empty space on its left so the sheet stays balanced instead of
+            leaving a blank column. `items-start` keeps both aligned to the top; the terms body
+            auto-scales with length (termsFontPx). The payment stamp is NOT drawn here — it arrives
+            through `stampImage` (the app's StampFactory) and is placed like any stamp. */}
+        {!hideSummary && (t.total || (t.terms && data.terms)) && (
+          <div className="mt-4 flex items-start justify-between gap-6" data-block>
+            {/* LEFT — Terms & Conditions; Payment Method slots in here when that module ships. */}
+            <div className="min-w-0 flex-1">
+              {t.terms && data.terms && (
+                <div>
+                  <p className={label}>{labels.terms}</p>
+                  <p
+                    className="mt-1 whitespace-pre-line break-words leading-snug"
+                    style={{ fontSize: `${termsFontPx(data.terms)}px` }}
+                  >
+                    {data.terms}
+                  </p>
+                </div>
+              )}
             </div>
+
+            {/* RIGHT — totals ladder. Outer border = theme.totalsAccent = primary (FULL), like native. */}
+            {t.total && (
+              <div className="relative w-full max-w-[300px] shrink-0" style={{ border: `1px solid ${color}` }}>
+                <TotalRow label={labels.subTotal} value={formatMoney(data.subtotal, cur)} tint={hexToRgba(color, 0.05)} />
+                <TotalRow label={labels.discount} value={formatMoney(data.discountAmount, cur)} tint={hexToRgba(color, 0.05)} />
+                <TotalRow label={labels.tax} value={formatMoney(data.taxAmount, cur)} tint={hexToRgba(color, 0.05)} />
+                <TotalRow label={labels.shipping} value={formatMoney(data.shippingCost, cur)} tint={hexToRgba(color, 0.05)} />
+                {/* TOTAL — light tint + accent text (lowest rung). */}
+                <div className="flex items-center justify-between px-3 py-2 text-[15px] font-extrabold" style={{ backgroundColor: hexToRgba(color, 0.16), color }}>
+                  <span>{labels.total}</span>
+                  <span>{formatMoney(data.total, cur)}</span>
+                </div>
+                {/* AMOUNT PAID — medium tint + dark text (middle rung). Always shown (0 when nothing paid). */}
+                <div className="flex items-center justify-between px-3 py-2 text-[15px] font-extrabold" style={{ backgroundColor: hexToRgba(color, 0.34), color: "#1c1b1f" }}>
+                  <span>{labels.amountPaid}</span>
+                  <span>{formatMoney(data.amountPaid ?? 0, cur)}</span>
+                </div>
+                {/* BALANCE DUE = dark hero (full primary + onColor); always last so nothing dangles below. */}
+                <div className="flex items-center justify-between px-3 py-2 text-[15px] font-extrabold" style={{ backgroundColor: color, color: onColor }}>
+                  <span>{labels.balanceDue}</span>
+                  <span>{formatMoney(data.balanceDue ?? data.total, cur)}</span>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -204,14 +237,6 @@ export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hide
           <div className="mt-6 border-t border-gray-200 pt-4" data-block>
             <p className={label}>{labels.paymentInstructions}</p>
             <p className="mt-1 whitespace-pre-line text-sm">{data.paymentInstructions}</p>
-          </div>
-        )}
-
-        {/* Terms & Conditions (native TermsModule) */}
-        {t.terms && data.terms && !hideSummary && (
-          <div className="mt-6 border-t border-gray-200 pt-4" data-block>
-            <p className={label}>{labels.terms}</p>
-            <p className="mt-1 whitespace-pre-line text-sm">{data.terms}</p>
           </div>
         )}
 
