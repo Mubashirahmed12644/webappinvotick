@@ -186,6 +186,9 @@ export function A4PagedFrame({
   const footerMeasureRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState<number | null>(null);
   const [pages, setPages] = useState<Page[]>([{ start: 0, count: 0, summary: true }]);
+  // Measured footer height — the per-page content area is (SHEET_H − footerH) so the trailing
+  // summary can anchor (mt-auto) to just above the footer instead of floating under the table.
+  const [footerH, setFooterH] = useState(110);
 
   // Draggable overlays (stamp + signature) — positions as fractions of the sheet. Native parity
   // (SharedComponents.kt): an overlay must be SELECTED (single tap → light dashed container) before it
@@ -215,8 +218,9 @@ export function A4PagedFrame({
       const ch = container.clientHeight;
       if (cw <= 0 || ch <= 0) return;
 
-      const footerH = footerMeasureRef.current?.offsetHeight ?? 100;
-      const usableH = SHEET_H - footerH - 10;
+      const footerHMeasured = footerMeasureRef.current?.offsetHeight ?? 100;
+      setFooterH(footerHMeasured);
+      const usableH = SHEET_H - footerHMeasured - 10;
 
       const rowH = (withT.querySelector("tbody tr") as HTMLElement | null)?.offsetHeight ?? 28;
       const renderedRows = Math.max(9, totalItems);
@@ -303,8 +307,10 @@ export function A4PagedFrame({
                       transformOrigin: "top left",
                     }}
                   >
-                    {/* This page's invoice — totals only on the summary (last) page. */}
-                    <div style={{ position: "absolute", top: 0, left: 0, width: SHEET_W }}>
+                    {/* This page's invoice — totals only on the summary (last) page. The wrapper is
+                        bounded to the area above the footer (SHEET_H − footerH) and is a flex column,
+                        so InvoiceDocument's mt-auto trailing block anchors to just above the footer. */}
+                    <div style={{ position: "absolute", top: 0, left: 0, width: SHEET_W, height: SHEET_H - footerH, display: "flex", flexDirection: "column" }}>
                       {/* Every page uses the native min-9 table (Math.max(9, items)): a page with ≥9
                           items shows exactly that many (no blanks); a page with fewer pads up to 9. */}
                       <InvoiceDocument data={pageData} qrDataUrl={qrDataUrl} hideFooter hideSummary={!pg.summary} hideStamp={draggableStamp} hideSignature={draggableStamp} labels={labels} dir={dir} />

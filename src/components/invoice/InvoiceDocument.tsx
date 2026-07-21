@@ -181,7 +181,11 @@ export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hide
             auto-scales with length (termsFontPx). The payment stamp is NOT drawn here — it arrives
             through `stampImage` (the app's StampFactory) and is placed like any stamp. */}
         {!hideSummary && (t.total || (t.terms && data.terms)) && (
-          <div className="mt-4 flex items-start justify-between gap-6" data-block>
+          // mt-auto anchors the whole trailing block (terms + totals, then notes/payment/signature
+          // below) to the bottom of the sheet, just above the footer — instead of letting it float
+          // right under the item table. In the pagination measure pass (unbounded height) there's no
+          // free space, so mt-auto collapses to 0 and the natural height is measured unchanged.
+          <div className="mt-auto flex items-start justify-between gap-6 pt-4" data-block>
             {/* LEFT — Terms & Conditions; Payment Method slots in here when that module ships. */}
             <div className="min-w-0 flex-1">
               {t.terms && data.terms && (
@@ -274,24 +278,41 @@ export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hide
 // Invotick branding footer — rendered at the bottom of every A4 page (see A4PagedFrame).
 // `pageLabel` ("Page 1 of 3") is the multi-page pagination line, shown centred under the band.
 export function InvoiceFooter({ qrDataUrl, pageLabel, labels = LABELS }: { qrDataUrl?: string | null; pageLabel?: string; labels?: InvoiceLabels }) {
+  // Pixel-parity with the native promotional footer (SharedComponents.drawPromotionalFooter), whose
+  // sizes are all fractions of the sheet width. On the 794px A4 sheet those resolve to:
+  //   band height 0.12·W ≈ 95, icon/QR 0.65·band ≈ 62, inner pad 0.6·32 ≈ 19, line gap 0.35·32 ≈ 11.
+  // Font sizes: generated 0.016·W, tagline 0.011·W, scan 0.0144·W, link 0.0168·W (bold).
+  const tile = 62;
   return (
     <div>
-      {/* Matches the native promotional footer (SharedComponents.drawPromotionalFooter):
-          flat #F5F5F5 grey band, square corners, a #E0E0E0 divider line on top, no shadow/ring. */}
-      <div className="mb-1 flex items-center justify-between gap-4 px-5 py-3" style={{ backgroundColor: "#F5F5F5", borderTop: "1px solid #E0E0E0" }}>
-        <div className="flex items-center gap-3">
-          <img src={BRAND_LOGO} alt="Invotick" className="h-9 w-9 rounded-md object-contain" />
-          <div className="text-xs text-[#666666]">
-            <p className="font-bold text-[#212121]">{labels.footerGenerated}</p>
-            <p>{labels.footerTagline}</p>
+      {/* #E0E0E0 divider, an 11px gap, then the flat #F5F5F5 band (square corners, no shadow). */}
+      <div style={{ borderTop: "1px solid #E0E0E0" }} />
+      <div
+        className="mb-1 flex items-center justify-between"
+        style={{ backgroundColor: "#F5F5F5", height: 95, marginTop: 11, paddingLeft: 19, paddingRight: 19 }}
+      >
+        {/* LEFT — app icon on a white rounded tile (native draws a white round-rect then the icon), + text. */}
+        <div className="flex items-center" style={{ gap: 19 }}>
+          <div style={{ width: tile, height: tile, borderRadius: tile * 0.15, background: "#fff", overflow: "hidden", flex: "none" }}>
+            <img src={BRAND_LOGO} alt="Invotick" style={{ width: tile, height: tile, objectFit: "contain" }} />
+          </div>
+          <div>
+            <p style={{ fontSize: 12.7, fontWeight: 700, color: "#212121", lineHeight: 1.2 }}>{labels.footerGenerated}</p>
+            <p style={{ fontSize: 8.7, color: "#666666", lineHeight: 1.2, marginTop: 2 }}>{labels.footerTagline}</p>
           </div>
         </div>
-        <div className="flex items-center gap-2 text-end text-[10px] text-[#666666]">
-          <div>
-            <p className="font-semibold">{labels.footerScan}</p>
-            <p className="text-[#0D4DC0]">https://gw.invotick.com/r/2/RefCode</p>
+        {/* RIGHT — "Scan…" over a fading gradient rule over the bold primary link, then a rounded QR tile. */}
+        <div className="flex items-center" style={{ gap: 12 }}>
+          <div style={{ textAlign: "end" }}>
+            <p style={{ fontSize: 11.4, color: "#666666", lineHeight: 1.3 }}>{labels.footerScan}</p>
+            <div style={{ height: 1, margin: "3px 0", background: "linear-gradient(to right, transparent, #DDDDDD 20%, #DDDDDD 80%, transparent)" }} />
+            <p style={{ fontSize: 13.3, fontWeight: 700, color: "#0D4DC0", lineHeight: 1.3 }}>https://gw.invotick.com/r/2/RefCode</p>
           </div>
-          {qrDataUrl && <img src={qrDataUrl} alt="QR" className="h-14 w-14" />}
+          {qrDataUrl && (
+            <div style={{ width: tile, height: tile, borderRadius: tile * 0.15, background: "#fff", overflow: "hidden", flex: "none" }}>
+              <img src={qrDataUrl} alt="QR" style={{ width: tile, height: tile, objectFit: "contain" }} />
+            </div>
+          )}
         </div>
       </div>
       {pageLabel && <div className="pb-1 text-center text-[11px] font-medium text-gray-400">{pageLabel}</div>}
