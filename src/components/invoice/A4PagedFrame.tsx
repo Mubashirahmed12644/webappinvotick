@@ -25,6 +25,9 @@ import type { InvoiceRenderData } from "@/lib/data";
 const SHEET_W = 794;
 const SHEET_H = 1123;
 const FIT_FACTOR = 0.92;
+// Blank margin below the promotional footer. Equal to the footer's side inset (the footer wrapper's
+// paddingLeft/Right = 32) so the footer sits with the same gap on the left, right and bottom.
+const FOOTER_BOTTOM_MARGIN = 32;
 
 type Page = { start: number; count: number; summary: boolean };
 
@@ -221,7 +224,7 @@ export function A4PagedFrame({
 
       const footerHMeasured = footerMeasureRef.current?.offsetHeight ?? 100;
       setFooterH(footerHMeasured);
-      const usableH = SHEET_H - footerHMeasured - 10;
+      const usableH = SHEET_H - footerHMeasured - FOOTER_BOTTOM_MARGIN - 10;
 
       const rowH = (withT.querySelector("tbody tr") as HTMLElement | null)?.offsetHeight ?? 28;
       const renderedRows = Math.max(9, totalItems);
@@ -330,13 +333,14 @@ export function A4PagedFrame({
                     {/* This page's invoice — totals only on the summary (last) page. The wrapper is
                         bounded to the area above the footer (SHEET_H − footerH) and is a flex column,
                         so InvoiceDocument's mt-auto trailing block anchors to just above the footer. */}
-                    <div style={{ position: "absolute", top: 0, left: 0, width: SHEET_W, height: SHEET_H - footerH, display: "flex", flexDirection: "column" }}>
+                    <div style={{ position: "absolute", top: 0, left: 0, width: SHEET_W, height: SHEET_H - footerH - FOOTER_BOTTOM_MARGIN, display: "flex", flexDirection: "column" }}>
                       {/* Every page uses the native min-9 table (Math.max(9, items)): a page with ≥9
                           items shows exactly that many (no blanks); a page with fewer pads up to 9. */}
                       <InvoiceDocument data={pageData} qrDataUrl={qrDataUrl} hideFooter hideSummary={!pg.summary} hideStamp={draggableStamp} hideSignature={draggableStamp} labels={labels} dir={dir} />
                     </div>
-                    {/* Footer + pagination pinned to the page bottom (32px sides match body px-8). */}
-                    <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, background: "#fff", paddingLeft: 32, paddingRight: 32 }}>
+                    {/* Footer + pagination pinned near the page bottom, kept off the very edge by
+                        FOOTER_BOTTOM_MARGIN (native parity). 32px sides match body px-8. */}
+                    <div style={{ position: "absolute", left: 0, right: 0, bottom: FOOTER_BOTTOM_MARGIN, background: "#fff", paddingLeft: 32, paddingRight: 32 }}>
                       <InvoiceFooter qrDataUrl={qrDataUrl} pageLabel={multi ? `Page ${i + 1} of ${pages.length}` : undefined} labels={labels} />
                     </div>
                     {/* Draggable signature + stamp overlays — only on the summary (last) page. Each
