@@ -24,7 +24,12 @@ import type { InvoiceRenderData } from "@/lib/data";
  */
 const SHEET_W = 794;
 const SHEET_H = 1123;
-const FIT_FACTOR = 0.92;
+// Fit the whole page as LARGE as it goes (default zoom = maximum). 1.0 = fill the pane; the small
+// top/bottom stack padding (below) is what keeps a hair of breathing room, and it's accounted for in
+// the scale so the full page still fits without scrolling.
+const FIT_FACTOR = 1.0;
+// Top/bottom breathing padding around the page stack, in sheet units (× scale at render).
+const STACK_PAD_Y = 8;
 // Blank margin below the promotional footer. Equal to the footer's side inset (the footer wrapper's
 // paddingLeft/Right = 32) so the footer sits with the same gap on the left, right and bottom.
 const FOOTER_BOTTOM_MARGIN = 32;
@@ -237,7 +242,9 @@ export function A4PagedFrame({
       const pg = paginate(totalItems, nNo, nWith);
       setPages(pg);
 
-      const s = (pg.length > 1 ? cw / SHEET_W : Math.min(cw / SHEET_W, ch / SHEET_H)) * FIT_FACTOR;
+      // Single page: fit to width OR height (whichever is tighter), accounting for the top/bottom
+      // stack padding so the full page fills the pane at max zoom without overflowing.
+      const s = (pg.length > 1 ? cw / SHEET_W : Math.min(cw / SHEET_W, ch / (SHEET_H + STACK_PAD_Y * 2))) * FIT_FACTOR;
       if (s > 0 && isFinite(s)) setScale(s);
     };
     measure();
@@ -306,7 +313,7 @@ export function A4PagedFrame({
               flexDirection: "column",
               alignItems: "center",
               gap: 22 * s,
-              padding: `${22 * s}px 0`,
+              padding: `${STACK_PAD_Y * s}px 0`,
               visibility: scale ? "visible" : "hidden",
             }}
           >
