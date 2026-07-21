@@ -64,7 +64,7 @@ export const LABELS: InvoiceLabels = {
   amountPaid: "AMOUNT PAID",
   balanceDue: "BALANCE DUE",
   notes: "Notes",
-  terms: "Terms & Conditions",
+  terms: "Terms and Conditions",
   paymentInstructions: "Payment Instructions",
   authorizedSignature: "Authorized signature",
   footerGenerated: "Invoice generated using Invotick",
