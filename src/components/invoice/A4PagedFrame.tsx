@@ -184,6 +184,7 @@ export function A4PagedFrame({
   const withTotalsRef = useRef<HTMLDivElement>(null);
   const noTotalsRef = useRef<HTMLDivElement>(null);
   const footerMeasureRef = useRef<HTMLDivElement>(null);
+  const summarySheetRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState<number | null>(null);
   const [pages, setPages] = useState<Page[]>([{ start: 0, count: 0, summary: true }]);
   // Measured footer height — the per-page content area is (SHEET_H − footerH) so the trailing
@@ -243,6 +244,24 @@ export function A4PagedFrame({
     return () => ro.disconnect();
   }, [data, qrDataUrl, totalItems]);
 
+  // Align the payment stamp's TOP edge to the totals box's top line (native parity — the auto stamp
+  // sits over the totals). Measured from the rendered summary page so it tracks the totals wherever
+  // pagination places it (single- or multi-page last page). Only y is derived; x keeps the
+  // over-totals slot. Scale cancels out in the top/height ratio. Runs after layout, before paint.
+  useLayoutEffect(() => {
+    if (!draggableStamp || !stampUrl) return;
+    const sheet = summarySheetRef.current;
+    if (!sheet) return;
+    const totals = sheet.querySelector("[data-totals]") as HTMLElement | null;
+    if (!totals) return;
+    const sr = sheet.getBoundingClientRect();
+    const tr = totals.getBoundingClientRect();
+    if (sr.height <= 0) return;
+    const yFrac = (tr.top - sr.top) / sr.height;
+    // Guard avoids a render loop and won't nudge an already-aligned stamp.
+    setStampFrac((f) => (Math.abs(f.y - yFrac) < 0.002 ? f : { x: f.x, y: yFrac }));
+  }, [pages, scale, data, stampUrl, draggableStamp]);
+
   const s = scale ?? 0;
   const multi = pages.length > 1;
 
@@ -294,6 +313,7 @@ export function A4PagedFrame({
                 <div key={i} className="a4-page-outer" style={{ width: SHEET_W * s, height: SHEET_H * s, flex: "none", boxShadow: "0 3px 16px rgba(0,0,0,0.18)" }}>
                   <div
                     className="a4-sheet"
+                    ref={pg.summary ? summarySheetRef : undefined}
                     // Tapping anywhere on the sheet OTHER than a selected overlay deselects it. A
                     // selected overlay stopPropagations its own pointerdown, so this doesn't fire for it.
                     onPointerDown={draggableStamp && pg.summary ? () => setSelectedOverlay(null) : undefined}

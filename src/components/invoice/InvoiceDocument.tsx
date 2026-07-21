@@ -165,8 +165,9 @@ export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hide
             totals like native. */}
         {t.total && !hideSummary && (
           <div className="-mt-px flex justify-end" data-block>
-            {/* Outer border = theme.totalsAccent = primary (FULL), like native. */}
-            <div className="relative w-full max-w-[300px]" style={{ border: `1px solid ${color}` }}>
+            {/* Outer border = theme.totalsAccent = primary (FULL), like native. `data-totals` lets
+                A4PagedFrame align the payment stamp's top edge to this box's top line. */}
+            <div data-totals className="relative w-full max-w-[300px]" style={{ border: `1px solid ${color}` }}>
               <TotalRow label={labels.subTotal} value={formatMoney(data.subtotal, cur)} tint={hexToRgba(color, 0.05)} />
               <TotalRow label={labels.discount} value={formatMoney(data.discountAmount, cur)} tint={hexToRgba(color, 0.05)} />
               <TotalRow label={labels.tax} value={formatMoney(data.taxAmount, cur)} tint={hexToRgba(color, 0.05)} />
