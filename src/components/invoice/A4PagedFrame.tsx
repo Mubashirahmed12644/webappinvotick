@@ -292,7 +292,9 @@ export function A4PagedFrame({
         <InvoiceDocument data={data} qrDataUrl={qrDataUrl} hideFooter hideSummary labels={labels} dir={dir} />
       </div>
       <div ref={footerMeasureRef} className="a4-measure" style={{ position: "absolute", left: -99999, top: 0, width: SHEET_W, visibility: "hidden", pointerEvents: "none" }} aria-hidden>
-        <InvoiceFooter qrDataUrl={qrDataUrl} pageLabel="Page 1 of 1" labels={labels} />
+        {/* Band only — the "Page X of Y" line lives inside FOOTER_BOTTOM_MARGIN, so it must NOT add
+            to the measured footer height (else multi-page invoices reserve extra space for it). */}
+        <InvoiceFooter qrDataUrl={qrDataUrl} labels={labels} />
       </div>
 
       {(() => {
@@ -338,11 +340,19 @@ export function A4PagedFrame({
                           items shows exactly that many (no blanks); a page with fewer pads up to 9. */}
                       <InvoiceDocument data={pageData} qrDataUrl={qrDataUrl} hideFooter hideSummary={!pg.summary} hideStamp={draggableStamp} hideSignature={draggableStamp} labels={labels} dir={dir} />
                     </div>
-                    {/* Footer + pagination pinned near the page bottom, kept off the very edge by
-                        FOOTER_BOTTOM_MARGIN (native parity). 32px sides match body px-8. */}
+                    {/* Footer band pinned FOOTER_BOTTOM_MARGIN above the sheet's bottom edge (equal to
+                        its 32px side inset). No pageLabel here — it sits in the margin below. */}
                     <div style={{ position: "absolute", left: 0, right: 0, bottom: FOOTER_BOTTOM_MARGIN, background: "#fff", paddingLeft: 32, paddingRight: 32 }}>
-                      <InvoiceFooter qrDataUrl={qrDataUrl} pageLabel={multi ? `Page ${i + 1} of ${pages.length}` : undefined} labels={labels} />
+                      <InvoiceFooter qrDataUrl={qrDataUrl} labels={labels} />
                     </div>
+                    {/* "Page X of Y" printed INSIDE the bottom margin (centred in the FOOTER_BOTTOM_MARGIN
+                        gap between the band and the sheet edge) — so multi-page invoices reserve no
+                        extra space for it. */}
+                    {multi && (
+                      <div style={{ position: "absolute", left: 0, right: 0, bottom: (FOOTER_BOTTOM_MARGIN - 13) / 2, textAlign: "center", fontSize: 11, fontWeight: 500, color: "#9ca3af" }}>
+                        Page {i + 1} of {pages.length}
+                      </div>
+                    )}
                     {/* Draggable signature + stamp overlays — only on the summary (last) page. Each
                         lives inside the scaled sheet, so drag deltas are divided by the scale. Both
                         use select-then-drag (native parity) so unselected they never block zoom/pan. */}
