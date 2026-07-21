@@ -198,6 +198,8 @@ export function A4PagedFrame({
   // Measured footer height — the per-page content area is (SHEET_H − footerH) so the trailing
   // summary can anchor (mt-auto) to just above the footer instead of floating under the table.
   const [footerH, setFooterH] = useState(110);
+  // Which page (1-based) is currently in view — drives the "N / total" scroll indicator on multi-page.
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Draggable overlays (stamp + signature) — positions as fractions of the sheet. Native parity
   // (SharedComponents.kt): an overlay must be SELECTED (single tap → light dashed container) before it
@@ -242,9 +244,10 @@ export function A4PagedFrame({
       const pg = paginate(totalItems, nNo, nWith);
       setPages(pg);
 
-      // Single page: fit to width OR height (whichever is tighter), accounting for the top/bottom
-      // stack padding so the full page fills the pane at max zoom without overflowing.
-      const s = (pg.length > 1 ? cw / SHEET_W : Math.min(cw / SHEET_W, ch / (SHEET_H + STACK_PAD_Y * 2))) * FIT_FACTOR;
+      // Fit ONE whole page to the pane (width OR height, whichever is tighter) at max zoom —
+      // single- and multi-page alike, so a multi-page invoice opens on its full first page and the
+      // rest are reached by scrolling down. Accounts for the top/bottom stack padding.
+      const s = Math.min(cw / SHEET_W, ch / (SHEET_H + STACK_PAD_Y * 2)) * FIT_FACTOR;
       if (s > 0 && isFinite(s)) setScale(s);
     };
     measure();
@@ -275,11 +278,30 @@ export function A4PagedFrame({
   const s = scale ?? 0;
   const multi = pages.length > 1;
 
+  // Track the page currently under the viewport centre so the "N / total" indicator updates on scroll.
+  // Page stride = one page's scaled height + the inter-page gap; the stack has STACK_PAD_Y×s on top.
+  const handleScroll = () => {
+    const el = containerRef.current;
+    if (!el || s <= 0) return;
+    const stride = (SHEET_H + 22) * s;
+    if (stride <= 0) return;
+    const centerY = el.scrollTop + el.clientHeight / 2 - STACK_PAD_Y * s;
+    const idx = Math.min(pages.length, Math.max(1, Math.floor(centerY / stride) + 1));
+    setCurrentPage((p) => (p === idx ? p : idx));
+  };
+
   return (
-    <div ref={containerRef} className="a4-frame" style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", overflow: zoomable ? "hidden" : "auto", background: "#e9e9ec", touchAction: zoomable ? "none" : undefined }}>
+    <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%" }}>
+    <div ref={containerRef} className="a4-frame" onScroll={!zoomable ? handleScroll : undefined} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", overflow: zoomable ? "hidden" : "auto", background: "#e9e9ec", touchAction: zoomable ? "none" : undefined }}>
       {/* Each A4 sheet prints as one physical A4 page (single OR multi-invoice); the screen-only
           scaling/scrolling is reset for print. */}
       <style>{`
+        /* Visible side scroll bar for the multi-page stack (WebView hides the overlay one). */
+        .a4-frame::-webkit-scrollbar { width: 8px; }
+        .a4-frame::-webkit-scrollbar-track { background: transparent; }
+        .a4-frame::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.28); border-radius: 4px; }
+        .a4-frame::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.42); }
+        .a4-frame { scrollbar-width: thin; scrollbar-color: rgba(0,0,0,0.28) transparent; }
         @media print {
           @page { size: A4; margin: 0; }
           html, body { background: #fff !important; }
@@ -420,6 +442,20 @@ export function A4PagedFrame({
           </TransformWrapper>
         );
       })()}
+    </div>
+    {/* Page indicator — "N / total" pill, pinned bottom-right, only for multi-page. Updates as the
+        user scrolls through the stacked pages. */}
+    {multi && (
+      <div
+        style={{
+          position: "absolute", right: 12, bottom: 12, zIndex: 30, pointerEvents: "none",
+          background: "rgba(0,0,0,0.72)", color: "#fff", fontSize: 13, fontWeight: 700,
+          padding: "4px 12px", borderRadius: 999, fontFamily: "var(--font-nunito), sans-serif",
+        }}
+      >
+        {currentPage} / {pages.length}
+      </div>
+    )}
     </div>
   );
 }
