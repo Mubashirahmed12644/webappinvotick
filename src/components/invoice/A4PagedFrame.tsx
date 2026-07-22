@@ -205,13 +205,27 @@ export function A4PagedFrame({
   // (SharedComponents.kt): an overlay must be SELECTED (single tap → light dashed container) before it
   // can be dragged; while unselected it never grabs the pointer, so a finger landing on it during a
   // pinch passes straight through to zoom/pan. Only ONE overlay is selected at a time.
+  // The user's OWN (company) stamp + signature — draggable overlays.
   const stampUrl = draggableStamp ? imageProxyUrl(data.stampImage) : null;
   const signatureUrl = draggableStamp ? imageProxyUrl(data.signatureImage) : null;
-  // Stamp default: inside the totals box, ~1.5dp right of where "SHIPPING" ends (0.676), over the
-  // SUB TOTAL→SHIPPING rows. Signature default: the empty area to the LEFT of the totals box (native
-  // places the signature to the left of the stamp).
-  const [stampFrac, setStampFrac] = useState({ x: 0.68, y: 0.521 });
-  const [sigFrac, setSigFrac] = useState({ x: 0.09, y: 0.6 });
+  // The auto PAID / PARTIALLY-PAID stamp — a SEPARATE overlay pinned to the totals box, shown
+  // alongside (not instead of) the company stamp.
+  const paymentStampUrl = draggableStamp ? imageProxyUrl(data.paymentStampImage) : null;
+  // Overlay sizes (px) from the saved fractions; payment stamp keeps its own slightly larger size.
+  const stampSizePx = (data.stampSize ?? 0.189) * SHEET_W;
+  const sigSizePx = (data.signatureSize ?? 0.189) * SHEET_W;
+  // Company stamp: start where the user last dragged it (data.stampOffset); if it's a newly-added
+  // stamp with no saved position, drop it in the empty space to the LEFT of the totals.
+  const [stampFrac, setStampFrac] = useState(() =>
+    data.stampOffsetX != null && data.stampOffsetY != null
+      ? { x: data.stampOffsetX, y: data.stampOffsetY }
+      : { x: 0.1, y: 0.52 });
+  const [sigFrac, setSigFrac] = useState(() =>
+    data.signatureOffsetX != null && data.signatureOffsetY != null
+      ? { x: data.signatureOffsetX, y: data.signatureOffsetY }
+      : { x: 0.09, y: 0.6 });
+  // Payment stamp lives on the totals box (its top line is aligned by the effect below).
+  const [paymentStampFrac, setPaymentStampFrac] = useState({ x: 0.68, y: 0.521 });
   const [selectedOverlay, setSelectedOverlay] = useState<"stamp" | "signature" | null>(null);
   // Local removal — hides the overlay immediately; the app persists it via onStamp/SignatureRemove.
   const [stampRemoved, setStampRemoved] = useState(false);
@@ -262,7 +276,7 @@ export function A4PagedFrame({
   // pagination places it (single- or multi-page last page). Only y is derived; x keeps the
   // over-totals slot. Scale cancels out in the top/height ratio. Runs after layout, before paint.
   useLayoutEffect(() => {
-    if (!draggableStamp || !stampUrl) return;
+    if (!draggableStamp || !paymentStampUrl) return;
     const sheet = summarySheetRef.current;
     if (!sheet) return;
     const totals = sheet.querySelector("[data-totals]") as HTMLElement | null;
@@ -272,8 +286,18 @@ export function A4PagedFrame({
     if (sr.height <= 0) return;
     const yFrac = (tr.top - sr.top) / sr.height;
     // Guard avoids a render loop and won't nudge an already-aligned stamp.
-    setStampFrac((f) => (Math.abs(f.y - yFrac) < 0.002 ? f : { x: f.x, y: yFrac }));
-  }, [pages, scale, data, stampUrl, draggableStamp]);
+    setPaymentStampFrac((f) => (Math.abs(f.y - yFrac) < 0.002 ? f : { x: f.x, y: yFrac }));
+  }, [pages, scale, data, paymentStampUrl, draggableStamp]);
+
+  // Keep the COMPANY stamp / signature at their saved positions when a new invoice snapshot arrives.
+  // (Local drags update these too; the drag round-trips through the app and re-injects the same
+  // offset, so this converges instead of fighting the drag.)
+  useLayoutEffect(() => {
+    if (data.stampOffsetX != null && data.stampOffsetY != null) setStampFrac({ x: data.stampOffsetX, y: data.stampOffsetY });
+  }, [data.stampOffsetX, data.stampOffsetY]);
+  useLayoutEffect(() => {
+    if (data.signatureOffsetX != null && data.signatureOffsetY != null) setSigFrac({ x: data.signatureOffsetX, y: data.signatureOffsetY });
+  }, [data.signatureOffsetX, data.signatureOffsetY]);
 
   const s = scale ?? 0;
   const multi = pages.length > 1;
@@ -389,7 +413,7 @@ export function A4PagedFrame({
                       <DraggableOverlay
                         url={signatureUrl}
                         alt="Signature"
-                        size={150}
+                        size={sigSizePx}
                         frac={sigFrac}
                         selected={selectedOverlay === "signature"}
                         scale={s}
@@ -400,11 +424,12 @@ export function A4PagedFrame({
                         onRemove={() => { setSignatureRemoved(true); setSelectedOverlay(null); onSignatureRemove?.(); }}
                       />
                     )}
+                    {/* Company stamp — draggable, at the user's saved position. */}
                     {draggableStamp && stampUrl && !stampRemoved && pg.summary && (
                       <DraggableOverlay
                         url={stampUrl}
                         alt="Stamp"
-                        size={150}
+                        size={stampSizePx}
                         frac={stampFrac}
                         selected={selectedOverlay === "stamp"}
                         scale={s}
@@ -413,6 +438,28 @@ export function A4PagedFrame({
                         onSelect={() => setSelectedOverlay("stamp")}
                         onCommit={(x, y) => { setStampFrac({ x, y }); onStampMove?.(x, y); }}
                         onRemove={() => { setStampRemoved(true); setSelectedOverlay(null); onStampRemove?.(); }}
+                      />
+                    )}
+                    {/* Auto PAID / PARTIALLY-PAID stamp — SEPARATE from the company stamp, pinned to the
+                        totals box (paymentStampFrac). Display-only: it tracks payment status, so it's
+                        not draggable. */}
+                    {draggableStamp && paymentStampUrl && pg.summary && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={paymentStampUrl}
+                        alt="Payment stamp"
+                        draggable={false}
+                        style={{
+                          position: "absolute",
+                          left: paymentStampFrac.x * SHEET_W,
+                          top: paymentStampFrac.y * SHEET_H,
+                          width: 0.189 * SHEET_W,
+                          height: 0.189 * SHEET_W,
+                          objectFit: "contain",
+                          pointerEvents: "none",
+                          userSelect: "none",
+                          zIndex: 15,
+                        }}
                       />
                     )}
                   </div>

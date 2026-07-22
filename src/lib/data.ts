@@ -422,7 +422,18 @@ export interface InvoiceRenderData {
   backgroundImage?: string | null;
   backgroundOpacity: number;
   signatureImage?: string | null;
+  // Signature/company-stamp position (fraction of the sheet, 0..1) + size, so the render places them
+  // where the user dragged them instead of a hardcoded default.
+  signatureOffsetX?: number | null;
+  signatureOffsetY?: number | null;
+  signatureSize?: number | null;
   stampImage?: string | null;
+  stampOffsetX?: number | null;
+  stampOffsetY?: number | null;
+  stampSize?: number | null;
+  // Auto PAID / PARTIALLY-PAID stamp — a SEPARATE stamp pinned to the totals box, shown alongside the
+  // company stamp above.
+  paymentStampImage?: string | null;
   items: RenderItem[];
 }
 
