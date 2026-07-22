@@ -161,6 +161,43 @@ function DraggableOverlay({
   );
 }
 
+/**
+ * Read-only positioned overlay — same footprint/position as DraggableOverlay (left/top = frac×sheet,
+ * size px) but no selection/drag. Used for the receiver-facing views (OG-link /i/{token}) so the
+ * stamp/signature render at the SAME saved position as the editable app WebView, instead of falling
+ * back to InvoiceDocument's inline slot. Keeps all HTML views pixel-identical.
+ */
+function StaticOverlay({
+  url, alt, size, frac, sheetW, sheetH,
+}: {
+  url: string;
+  alt: string;
+  size: number;
+  frac: { x: number; y: number };
+  sheetW: number;
+  sheetH: number;
+}) {
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={url}
+      alt={alt}
+      draggable={false}
+      style={{
+        position: "absolute",
+        left: frac.x * sheetW,
+        top: frac.y * sheetH,
+        width: size,
+        height: size,
+        objectFit: "contain",
+        pointerEvents: "none",
+        userSelect: "none",
+        zIndex: 20,
+      }}
+    />
+  );
+}
+
 export function A4PagedFrame({
   data,
   qrDataUrl,
@@ -206,11 +243,16 @@ export function A4PagedFrame({
   // can be dragged; while unselected it never grabs the pointer, so a finger landing on it during a
   // pinch passes straight through to zoom/pan. Only ONE overlay is selected at a time.
   // The user's OWN (company) stamp + signature — draggable overlays.
-  const stampUrl = draggableStamp ? imageProxyUrl(data.stampImage) : null;
-  const signatureUrl = draggableStamp ? imageProxyUrl(data.signatureImage) : null;
+  // Always rendered as positioned overlays (draggable in the app WebView, static elsewhere) so every
+  // HTML view — offline bundle, online /embed/render, AND the OG-link — places the stamp/signature at
+  // the user's saved fraction. (Previously these were null unless draggable, which forced the OG view
+  // onto InvoiceDocument's inline slot: fixed position + an "Authorized signature" label native never
+  // shows. The inline slot is now always hidden below.)
+  const stampUrl = imageProxyUrl(data.stampImage);
+  const signatureUrl = imageProxyUrl(data.signatureImage);
   // The auto PAID / PARTIALLY-PAID stamp — a SEPARATE overlay pinned to the totals box, shown
   // alongside (not instead of) the company stamp.
-  const paymentStampUrl = draggableStamp ? imageProxyUrl(data.paymentStampImage) : null;
+  const paymentStampUrl = imageProxyUrl(data.paymentStampImage);
   // Overlay sizes (px) from the saved fractions; payment stamp keeps its own slightly larger size.
   const stampSizePx = (data.stampSize ?? 0.189) * SHEET_W;
   const sigSizePx = (data.signatureSize ?? 0.189) * SHEET_W;
@@ -276,7 +318,7 @@ export function A4PagedFrame({
   // pagination places it (single- or multi-page last page). Only y is derived; x keeps the
   // over-totals slot. Scale cancels out in the top/height ratio. Runs after layout, before paint.
   useLayoutEffect(() => {
-    if (!draggableStamp || !paymentStampUrl) return;
+    if (!paymentStampUrl) return;
     const sheet = summarySheetRef.current;
     if (!sheet) return;
     const totals = sheet.querySelector("[data-totals]") as HTMLElement | null;
@@ -287,7 +329,7 @@ export function A4PagedFrame({
     const yFrac = (tr.top - sr.top) / sr.height;
     // Guard avoids a render loop and won't nudge an already-aligned stamp.
     setPaymentStampFrac((f) => (Math.abs(f.y - yFrac) < 0.002 ? f : { x: f.x, y: yFrac }));
-  }, [pages, scale, data, paymentStampUrl, draggableStamp]);
+  }, [pages, scale, data, paymentStampUrl]);
 
   // Keep the COMPANY stamp / signature at their saved positions when a new invoice snapshot arrives.
   // (Local drags update these too; the drag round-trips through the app and re-injects the same
@@ -339,7 +381,7 @@ export function A4PagedFrame({
       `}</style>
       {/* Off-screen measuring copies (natural height) — never shown. */}
       <div ref={withTotalsRef} className="a4-measure" style={{ position: "absolute", left: -99999, top: 0, width: SHEET_W, visibility: "hidden", pointerEvents: "none" }} aria-hidden>
-        <InvoiceDocument data={data} qrDataUrl={qrDataUrl} hideFooter hideStamp={draggableStamp} hideSignature={draggableStamp} labels={labels} dir={dir} />
+        <InvoiceDocument data={data} qrDataUrl={qrDataUrl} hideFooter hideStamp hideSignature labels={labels} dir={dir} />
       </div>
       <div ref={noTotalsRef} className="a4-measure" style={{ position: "absolute", left: -99999, top: 0, width: SHEET_W, visibility: "hidden", pointerEvents: "none" }} aria-hidden>
         <InvoiceDocument data={data} qrDataUrl={qrDataUrl} hideFooter hideSummary labels={labels} dir={dir} />
@@ -391,7 +433,7 @@ export function A4PagedFrame({
                     <div style={{ position: "absolute", top: 0, left: 0, width: SHEET_W, height: SHEET_H - footerH - FOOTER_BOTTOM_MARGIN, display: "flex", flexDirection: "column" }}>
                       {/* Every page uses the native min-9 table (Math.max(9, items)): a page with ≥9
                           items shows exactly that many (no blanks); a page with fewer pads up to 9. */}
-                      <InvoiceDocument data={pageData} qrDataUrl={qrDataUrl} hideFooter hideSummary={!pg.summary} hideStamp={draggableStamp} hideSignature={draggableStamp} labels={labels} dir={dir} />
+                      <InvoiceDocument data={pageData} qrDataUrl={qrDataUrl} hideFooter hideSummary={!pg.summary} hideStamp hideSignature labels={labels} dir={dir} />
                     </div>
                     {/* Footer band pinned FOOTER_BOTTOM_MARGIN above the sheet's bottom edge (equal to
                         its 32px side inset). No pageLabel here — it sits in the margin below. */}
@@ -409,41 +451,49 @@ export function A4PagedFrame({
                     {/* Draggable signature + stamp overlays — only on the summary (last) page. Each
                         lives inside the scaled sheet, so drag deltas are divided by the scale. Both
                         use select-then-drag (native parity) so unselected they never block zoom/pan. */}
-                    {draggableStamp && signatureUrl && !signatureRemoved && pg.summary && (
-                      <DraggableOverlay
-                        url={signatureUrl}
-                        alt="Signature"
-                        size={sigSizePx}
-                        frac={sigFrac}
-                        selected={selectedOverlay === "signature"}
-                        scale={s}
-                        sheetW={SHEET_W}
-                        sheetH={SHEET_H}
-                        onSelect={() => setSelectedOverlay("signature")}
-                        onCommit={(x, y) => { setSigFrac({ x, y }); onSignatureMove?.(x, y); }}
-                        onRemove={() => { setSignatureRemoved(true); setSelectedOverlay(null); onSignatureRemove?.(); }}
-                      />
+                    {signatureUrl && !signatureRemoved && pg.summary && (
+                      draggableStamp ? (
+                        <DraggableOverlay
+                          url={signatureUrl}
+                          alt="Signature"
+                          size={sigSizePx}
+                          frac={sigFrac}
+                          selected={selectedOverlay === "signature"}
+                          scale={s}
+                          sheetW={SHEET_W}
+                          sheetH={SHEET_H}
+                          onSelect={() => setSelectedOverlay("signature")}
+                          onCommit={(x, y) => { setSigFrac({ x, y }); onSignatureMove?.(x, y); }}
+                          onRemove={() => { setSignatureRemoved(true); setSelectedOverlay(null); onSignatureRemove?.(); }}
+                        />
+                      ) : (
+                        <StaticOverlay url={signatureUrl} alt="Signature" size={sigSizePx} frac={sigFrac} sheetW={SHEET_W} sheetH={SHEET_H} />
+                      )
                     )}
-                    {/* Company stamp — draggable, at the user's saved position. */}
-                    {draggableStamp && stampUrl && !stampRemoved && pg.summary && (
-                      <DraggableOverlay
-                        url={stampUrl}
-                        alt="Stamp"
-                        size={stampSizePx}
-                        frac={stampFrac}
-                        selected={selectedOverlay === "stamp"}
-                        scale={s}
-                        sheetW={SHEET_W}
-                        sheetH={SHEET_H}
-                        onSelect={() => setSelectedOverlay("stamp")}
-                        onCommit={(x, y) => { setStampFrac({ x, y }); onStampMove?.(x, y); }}
-                        onRemove={() => { setStampRemoved(true); setSelectedOverlay(null); onStampRemove?.(); }}
-                      />
+                    {/* Company stamp — draggable in the app WebView, static (same saved position) elsewhere. */}
+                    {stampUrl && !stampRemoved && pg.summary && (
+                      draggableStamp ? (
+                        <DraggableOverlay
+                          url={stampUrl}
+                          alt="Stamp"
+                          size={stampSizePx}
+                          frac={stampFrac}
+                          selected={selectedOverlay === "stamp"}
+                          scale={s}
+                          sheetW={SHEET_W}
+                          sheetH={SHEET_H}
+                          onSelect={() => setSelectedOverlay("stamp")}
+                          onCommit={(x, y) => { setStampFrac({ x, y }); onStampMove?.(x, y); }}
+                          onRemove={() => { setStampRemoved(true); setSelectedOverlay(null); onStampRemove?.(); }}
+                        />
+                      ) : (
+                        <StaticOverlay url={stampUrl} alt="Stamp" size={stampSizePx} frac={stampFrac} sheetW={SHEET_W} sheetH={SHEET_H} />
+                      )
                     )}
                     {/* Auto PAID / PARTIALLY-PAID stamp — SEPARATE from the company stamp, pinned to the
                         totals box (paymentStampFrac). Display-only: it tracks payment status, so it's
                         not draggable. */}
-                    {draggableStamp && paymentStampUrl && pg.summary && (
+                    {paymentStampUrl && pg.summary && (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={paymentStampUrl}
