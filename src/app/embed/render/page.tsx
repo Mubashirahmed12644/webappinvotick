@@ -21,8 +21,35 @@ import type { InvoiceRenderData } from "@/lib/data";
 export default function EmbedRenderPage() {
   const [data, setData] = useState<InvoiceRenderData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Server-data mode: `?token=X` fetches the SERVER-STORED snapshot (what OG-link / webapp / iOS get)
+  // and renders it read-only (non-draggable) — the app's "Online" verify tab uses this to confirm the
+  // server round-trip renders identically to the offline bundle. No token → local hash/postMessage
+  // data with draggable overlays (the editing harness).
+  const [serverMode, setServerMode] = useState(false);
 
   useEffect(() => {
+    const token = new URLSearchParams(window.location.search).get("token");
+    if (!token) return;
+    setServerMode(true);
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/shared-invoice/${encodeURIComponent(token)}/snapshot`, { cache: "no-store" });
+        if (!res.ok) throw new Error(`status ${res.status}`);
+        const json = (await res.json()) as { snapshot?: InvoiceRenderData };
+        if (!cancelled && json.snapshot) { setData(json.snapshot); setError(null); }
+        else if (!cancelled) setError("No snapshot on server for this token");
+      } catch (e) {
+        if (!cancelled) setError(`Server fetch failed: ${(e as Error).message}`);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    // Effects run client-side only, so window is safe here. In token mode the fetch above owns the
+    // data — skip the local hash/postMessage listeners entirely (no state-timing race).
+    if (new URLSearchParams(window.location.search).has("token")) return;
     function decodeHash(): InvoiceRenderData | null {
       const raw = window.location.hash.replace(/^#/, "");
       if (!raw) return null;
@@ -87,7 +114,9 @@ export default function EmbedRenderPage() {
       <A4PagedFrame
         data={data}
         qrDataUrl="/qr_code.jpg"
-        draggableStamp
+        // Server (token) mode renders read-only — exactly like the receiver's OG-link. Local (hash)
+        // mode keeps the draggable editing overlays.
+        draggableStamp={!serverMode}
         onStampMove={(x, y) => {
           const w = window as unknown as { AndroidStamp?: { onMoved?: (x: number, y: number) => void }; __onStampMoved?: (x: number, y: number) => void };
           w.AndroidStamp?.onMoved?.(x, y);
