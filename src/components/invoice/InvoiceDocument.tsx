@@ -146,7 +146,7 @@ export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hide
                       <td className={`px-2 align-middle font-bold ${descBody}`}>{it ? it.name : ""}</td>
                       <td className="px-2 align-middle text-end font-bold">{it ? it.quantity.toFixed(2) : ""}</td>
                       <td className="px-2 align-middle text-end font-bold">{it ? formatMoney(it.unitPrice, cur) : ""}</td>
-                      <td className="px-2 align-middle text-end font-bold">{it ? it.discountValue.toFixed(2) : ""}</td>
+                      <td className="px-2 align-middle text-end font-bold">{it ? (it.discountType === "PERCENTAGE" ? pct(it.discountValue) : it.discountValue.toFixed(2)) : ""}</td>
                       <td className="px-2 align-middle text-end font-bold">{it ? pct(it.taxRate) : ""}</td>
                       <td className="px-2 align-middle text-end font-bold">{it ? formatMoney(it.amount, cur) : ""}</td>
                     </tr>
