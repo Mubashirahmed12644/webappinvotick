@@ -45,7 +45,7 @@ export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hide
 
       {/* Header: full-bleed image (or solid color) with logo + title — kept slim
           so the invoice stays compact and the details sit near the top. */}
-      <div className="relative flex items-center justify-between gap-4 px-8" style={{ height: 165, backgroundColor: headerUrl ? undefined : backgroundUrl ? "transparent" : color }}>
+      <div className="relative flex items-center justify-between gap-4 px-8" style={{ height: 190, backgroundColor: headerUrl ? undefined : backgroundUrl ? "transparent" : color }}>
         {headerUrl && <img src={headerUrl} alt="" className="absolute inset-0 h-full w-full object-cover" style={{ objectPosition: "center 30%" }} />}
         <div className="relative z-10">
           {/* Logo drawn directly (native LogoModule clipShape=NONE) — no white box/border. */}
@@ -80,6 +80,12 @@ export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hide
             <div>
               <p className={label}>{labels.from}</p>
               <p className="mt-1 text-[14px] font-medium">{data.business?.name ?? "—"}</p>
+              {/* Full sender detail — mirrors Bill To, so "From" matches native instead of name-only. */}
+              {[data.business?.addressLine1, data.business?.addressLine2, data.business?.city, data.business?.country].filter(Boolean).length > 0 && (
+                <p className="text-[13px] font-medium">{[data.business?.addressLine1, data.business?.addressLine2, data.business?.city, data.business?.country].filter(Boolean).join(", ")}</p>
+              )}
+              {data.business?.phone && <p className="text-[13px] font-medium">{labels.phone}: {data.business.phone}</p>}
+              {data.business?.emailAddress && <p className="text-[13px] font-medium">{labels.email}: {data.business.emailAddress}</p>}
             </div>
           )}
           {t.receiver && (
@@ -199,13 +205,7 @@ export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hide
           </div>
         )}
 
-        {/* Payment Instructions (native PaymentInstructionsModule) */}
-        {t.payment && data.paymentInstructions && !hideSummary && (
-          <div className="mt-6 border-t border-gray-200 pt-4" data-block>
-            <p className={label}>{labels.paymentInstructions}</p>
-            <p className="mt-1 whitespace-pre-line text-sm">{data.paymentInstructions}</p>
-          </div>
-        )}
+        {/* Payment Instructions render below with Terms — both are native BOTTOM_LEFT_LAST_PAGE. */}
 
         {/* Signature & stamp — part of the trailing summary section, so it only appears on the
             LAST page (never repeated on continuation pages). */}
@@ -226,15 +226,27 @@ export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hide
           </div>
         )}
 
-        {/* Terms & Conditions — native TermsModule parity (BOTTOM_LEFT_LAST_PAGE): anchored (mt-auto)
-            to just above the footer, left-aligned, half the sheet width (native widthRatio 0.5). Fixed
-            native font ratios on the 794px sheet — header ~16px ExtraBold (0.02·W), body ~14px
-            (0.0175·W). Only terms anchors; the totals stay joined to the table. In the pagination
-            measure pass (unbounded height) mt-auto collapses to 0, so measured height is unchanged. */}
-        {t.terms && data.terms && !hideSummary && (
-          <div className="mt-auto w-1/2 pt-4" data-block>
-            <p className="font-extrabold text-[#1c1b1f]" style={{ fontSize: 16 }}>{labels.terms}</p>
-            <p className="mt-1 whitespace-pre-line break-words" style={{ fontSize: 14, lineHeight: 1.4 }}>{data.terms}</p>
+        {/* Payment Instructions + Terms & Conditions — BOTH native BOTTOM_LEFT_LAST_PAGE, so they
+            anchor TOGETHER (mt-auto) to just above the footer, left-aligned, half the sheet width
+            (native widthRatio 0.5), stacked. Payment used to sit in the normal flow (floating mid-page)
+            which is why its position looked off — now it lives with terms at the bottom-left like
+            native. Fixed native font ratios on the 794px sheet: header ~16px ExtraBold, body ~14px. In
+            the pagination measure pass (unbounded height) mt-auto collapses to 0, so measured height is
+            unchanged. */}
+        {((t.payment && data.paymentInstructions) || (t.terms && data.terms)) && !hideSummary && (
+          <div className="mt-auto w-1/2 space-y-3 pt-4" data-block>
+            {t.payment && data.paymentInstructions && (
+              <div>
+                <p className="font-extrabold text-[#1c1b1f]" style={{ fontSize: 16 }}>{labels.paymentInstructions}</p>
+                <p className="mt-1 whitespace-pre-line break-words" style={{ fontSize: 14, lineHeight: 1.4 }}>{data.paymentInstructions}</p>
+              </div>
+            )}
+            {t.terms && data.terms && (
+              <div>
+                <p className="font-extrabold text-[#1c1b1f]" style={{ fontSize: 16 }}>{labels.terms}</p>
+                <p className="mt-1 whitespace-pre-line break-words" style={{ fontSize: 14, lineHeight: 1.4 }}>{data.terms}</p>
+              </div>
+            )}
           </div>
         )}
 

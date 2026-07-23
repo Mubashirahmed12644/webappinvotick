@@ -416,7 +416,17 @@ export interface InvoiceRenderData {
   color: string;
   titleColor?: string | null;
   toggles: Record<string, boolean>;
-  business: { name: string; logo?: string | null } | null;
+  business: {
+    name: string;
+    logo?: string | null;
+    // Full sender detail (mirrors the client) so the "From" block matches native.
+    emailAddress?: string | null;
+    phone?: string | null;
+    addressLine1?: string | null;
+    addressLine2?: string | null;
+    city?: string | null;
+    country?: string | null;
+  } | null;
   client: ClientDetail | null;
   headerImage?: string | null;
   backgroundImage?: string | null;
