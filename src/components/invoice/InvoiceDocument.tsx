@@ -45,7 +45,7 @@ export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hide
 
       {/* Header: full-bleed image (or solid color) with logo + title — kept slim
           so the invoice stays compact and the details sit near the top. */}
-      <div className="relative flex items-center justify-between gap-4 px-8" style={{ height: 190, backgroundColor: headerUrl ? undefined : backgroundUrl ? "transparent" : color }}>
+      <div className="relative flex items-center justify-between gap-4 px-8" style={{ height: 165, backgroundColor: headerUrl ? undefined : backgroundUrl ? "transparent" : color }}>
         {headerUrl && <img src={headerUrl} alt="" className="absolute inset-0 h-full w-full object-cover" style={{ objectPosition: "center 30%" }} />}
         <div className="relative z-10">
           {/* Logo drawn directly (native LogoModule clipShape=NONE) — no white box/border. */}
