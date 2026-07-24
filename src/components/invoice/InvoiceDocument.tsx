@@ -45,7 +45,7 @@ export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hide
 
       {/* Header: full-bleed image (or solid color) with logo + title — kept slim
           so the invoice stays compact and the details sit near the top. */}
-      <div className="relative flex items-center justify-between gap-4 px-8" style={{ height: 165, backgroundColor: headerUrl ? undefined : backgroundUrl ? "transparent" : color }}>
+      <div className="relative flex shrink-0 items-center justify-between gap-4 px-8" style={{ height: 165, backgroundColor: headerUrl ? undefined : backgroundUrl ? "transparent" : color }}>
         {headerUrl && <img src={headerUrl} alt="" className="absolute inset-0 h-full w-full object-cover" style={{ objectPosition: "center 30%" }} />}
         <div className="relative z-10">
           {/* Logo drawn directly (native LogoModule clipShape=NONE) — no white box/border. */}
@@ -169,31 +169,54 @@ export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hide
             totals box shares the table's bottom edge instead of floating below it. The payment stamp
             is NOT drawn here — it arrives via `stampImage` (the app's StampFactory), placed over the
             totals like native. */}
-        {t.total && !hideSummary && (
-          <div className="-mt-px flex justify-end" data-block>
-            {/* Outer border = theme.totalsAccent = primary (FULL), like native. `data-totals` lets
-                A4PagedFrame align the payment stamp's top edge to this box's top line. */}
-            <div data-totals className="relative w-full max-w-[300px]" style={{ border: `1px solid ${color}` }}>
-              <TotalRow label={labels.subTotal} value={formatMoney(data.subtotal, cur)} tint={hexToRgba(color, 0.05)} />
-              <TotalRow label={labels.discount} value={formatMoney(data.discountAmount, cur)} tint={hexToRgba(color, 0.05)} />
-              <TotalRow label={labels.tax} value={formatMoney(data.taxAmount, cur)} tint={hexToRgba(color, 0.05)} />
-              <TotalRow label={labels.shipping} value={formatMoney(data.shippingCost, cur)} tint={hexToRgba(color, 0.05)} />
-              {/* TOTAL — light tint + accent text (lowest rung). */}
-              <div className="flex items-center justify-between px-3 py-2 text-[15px] font-extrabold" style={{ backgroundColor: hexToRgba(color, 0.16), color }}>
-                <span>{labels.total}</span>
-                <span>{formatMoney(data.total, cur)}</span>
-              </div>
-              {/* AMOUNT PAID — medium tint + dark text (middle rung). Always shown (0 when nothing paid). */}
-              <div className="flex items-center justify-between px-3 py-2 text-[15px] font-extrabold" style={{ backgroundColor: hexToRgba(color, 0.34), color: "#1c1b1f" }}>
-                <span>{labels.amountPaid}</span>
-                <span>{formatMoney(data.amountPaid ?? 0, cur)}</span>
-              </div>
-              {/* BALANCE DUE = dark hero (full primary + onColor); always last so nothing dangles below. */}
-              <div className="flex items-center justify-between px-3 py-2 text-[15px] font-extrabold" style={{ backgroundColor: color, color: onColor }}>
-                <span>{labels.balanceDue}</span>
-                <span>{formatMoney(data.balanceDue ?? data.total, cur)}</span>
-              </div>
+        {/* Summary band — NATIVE PARITY: Payment Instructions + Terms (native BOTTOM_LEFT) on the
+            LEFT and the totals box (BOTTOM_RIGHT) on the RIGHT, SIDE BY SIDE on one row directly
+            under the table — NOT stacked below it. Native's Canvas draws payment-left + totals-right
+            together, which keeps the block short so it fits without overflowing the page and
+            flex-shrinking the fixed header (the old layout stacked payment/terms below the totals via
+            mt-auto → on long text it overflowed → header image height "shrank"). */}
+        {((t.total) || (t.payment && data.paymentInstructions) || (t.terms && data.terms)) && !hideSummary && (
+          <div className="-mt-px flex items-start justify-between gap-6" data-block>
+            {/* LEFT — Payment Instructions + Terms & Conditions, half width (native widthRatio 0.5). */}
+            <div className="w-1/2 space-y-3 pt-3">
+              {t.payment && data.paymentInstructions && (
+                <div>
+                  <p className="font-extrabold text-[#1c1b1f]" style={{ fontSize: 16 }}>{labels.paymentInstructions}</p>
+                  <p className="mt-1 whitespace-pre-line break-words" style={{ fontSize: 14, lineHeight: 1.4 }}>{data.paymentInstructions}</p>
+                </div>
+              )}
+              {t.terms && data.terms && (
+                <div>
+                  <p className="font-extrabold text-[#1c1b1f]" style={{ fontSize: 16 }}>{labels.terms}</p>
+                  <p className="mt-1 whitespace-pre-line break-words" style={{ fontSize: 14, lineHeight: 1.4 }}>{data.terms}</p>
+                </div>
+              )}
             </div>
+            {/* RIGHT — totals box. Border = theme primary (FULL), like native. `data-totals` lets
+                A4PagedFrame align the payment stamp's top edge to this box's top line. */}
+            {t.total ? (
+              <div data-totals className="relative w-full max-w-[300px]" style={{ border: `1px solid ${color}` }}>
+                <TotalRow label={labels.subTotal} value={formatMoney(data.subtotal, cur)} tint={hexToRgba(color, 0.05)} />
+                <TotalRow label={labels.discount} value={formatMoney(data.discountAmount, cur)} tint={hexToRgba(color, 0.05)} />
+                <TotalRow label={labels.tax} value={formatMoney(data.taxAmount, cur)} tint={hexToRgba(color, 0.05)} />
+                <TotalRow label={labels.shipping} value={formatMoney(data.shippingCost, cur)} tint={hexToRgba(color, 0.05)} />
+                {/* TOTAL — light tint + accent text (lowest rung). */}
+                <div className="flex items-center justify-between px-3 py-2 text-[15px] font-extrabold" style={{ backgroundColor: hexToRgba(color, 0.16), color }}>
+                  <span>{labels.total}</span>
+                  <span>{formatMoney(data.total, cur)}</span>
+                </div>
+                {/* AMOUNT PAID — medium tint + dark text (middle rung). Always shown (0 when nothing paid). */}
+                <div className="flex items-center justify-between px-3 py-2 text-[15px] font-extrabold" style={{ backgroundColor: hexToRgba(color, 0.34), color: "#1c1b1f" }}>
+                  <span>{labels.amountPaid}</span>
+                  <span>{formatMoney(data.amountPaid ?? 0, cur)}</span>
+                </div>
+                {/* BALANCE DUE = dark hero (full primary + onColor); always last so nothing dangles below. */}
+                <div className="flex items-center justify-between px-3 py-2 text-[15px] font-extrabold" style={{ backgroundColor: color, color: onColor }}>
+                  <span>{labels.balanceDue}</span>
+                  <span>{formatMoney(data.balanceDue ?? data.total, cur)}</span>
+                </div>
+              </div>
+            ) : null}
           </div>
         )}
 
@@ -204,8 +227,6 @@ export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hide
             <p className="mt-1 text-sm">{data.notes}</p>
           </div>
         )}
-
-        {/* Payment Instructions render below with Terms — both are native BOTTOM_LEFT_LAST_PAGE. */}
 
         {/* Signature & stamp — part of the trailing summary section, so it only appears on the
             LAST page (never repeated on continuation pages). */}
@@ -223,30 +244,6 @@ export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hide
                 Otherwise it's display-only — pointer-events:none so a finger landing on it during a
                 pinch passes through to the zoom surface (react-zoom-pan-pinch needs both fingers). */}
             {stampUrl && !hideStamp && <img src={stampUrl} alt="Stamp" draggable={false} className="pointer-events-none h-24 w-24 select-none object-contain" />}
-          </div>
-        )}
-
-        {/* Payment Instructions + Terms & Conditions — BOTH native BOTTOM_LEFT_LAST_PAGE, so they
-            anchor TOGETHER (mt-auto) to just above the footer, left-aligned, half the sheet width
-            (native widthRatio 0.5), stacked. Payment used to sit in the normal flow (floating mid-page)
-            which is why its position looked off — now it lives with terms at the bottom-left like
-            native. Fixed native font ratios on the 794px sheet: header ~16px ExtraBold, body ~14px. In
-            the pagination measure pass (unbounded height) mt-auto collapses to 0, so measured height is
-            unchanged. */}
-        {((t.payment && data.paymentInstructions) || (t.terms && data.terms)) && !hideSummary && (
-          <div className="mt-auto w-1/2 space-y-3 pt-4" data-block>
-            {t.payment && data.paymentInstructions && (
-              <div>
-                <p className="font-extrabold text-[#1c1b1f]" style={{ fontSize: 16 }}>{labels.paymentInstructions}</p>
-                <p className="mt-1 whitespace-pre-line break-words" style={{ fontSize: 14, lineHeight: 1.4 }}>{data.paymentInstructions}</p>
-              </div>
-            )}
-            {t.terms && data.terms && (
-              <div>
-                <p className="font-extrabold text-[#1c1b1f]" style={{ fontSize: 16 }}>{labels.terms}</p>
-                <p className="mt-1 whitespace-pre-line break-words" style={{ fontSize: 14, lineHeight: 1.4 }}>{data.terms}</p>
-              </div>
-            )}
           </div>
         )}
 

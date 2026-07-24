@@ -232,6 +232,13 @@ export function A4PagedFrame({
   const summarySheetRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState<number | null>(null);
   const [pages, setPages] = useState<Page[]>([{ start: 0, count: 0, summary: true }]);
+  // Row capacity of the LAST (summary) page — everything except the item rows there (header, parties,
+  // table head, totals, notes, signature AND payment/terms) is the "chrome"; this is how many item
+  // rows still fit beside it. Passed to the summary page as `padRows` so its min-row padding never
+  // exceeds what fits: a tall payment/terms block used to push the min-9 padding past the page bottom,
+  // which overflowed and made flexbox squeeze the fixed header (its image height "shrank"). Capped at
+  // 9 so normal invoices keep the native min-9 look.
+  const [summaryRows, setSummaryRows] = useState(9);
   // Measured footer height — the per-page content area is (SHEET_H − footerH) so the trailing
   // summary can anchor (mt-auto) to just above the footer instead of floating under the table.
   const [footerH, setFooterH] = useState(110);
@@ -299,6 +306,8 @@ export function A4PagedFrame({
 
       const pg = paginate(totalItems, nNo, nWith);
       setPages(pg);
+      // Cap the summary page's min-row padding at what actually fits (≤ nWith), never above the native 9.
+      setSummaryRows(Math.min(9, nWith));
 
       // Fit ONE whole page to the pane (width OR height, whichever is tighter) at max zoom —
       // single- and multi-page alike, so a multi-page invoice opens on its full first page and the
@@ -433,7 +442,7 @@ export function A4PagedFrame({
                     <div style={{ position: "absolute", top: 0, left: 0, width: SHEET_W, height: SHEET_H - footerH - FOOTER_BOTTOM_MARGIN, display: "flex", flexDirection: "column" }}>
                       {/* Every page uses the native min-9 table (Math.max(9, items)): a page with ≥9
                           items shows exactly that many (no blanks); a page with fewer pads up to 9. */}
-                      <InvoiceDocument data={pageData} qrDataUrl={qrDataUrl} hideFooter hideSummary={!pg.summary} hideStamp hideSignature labels={labels} dir={dir} />
+                      <InvoiceDocument data={pageData} qrDataUrl={qrDataUrl} hideFooter hideSummary={!pg.summary} hideStamp hideSignature padRows={pg.summary ? summaryRows : undefined} labels={labels} dir={dir} />
                     </div>
                     {/* Footer band pinned FOOTER_BOTTOM_MARGIN above the sheet's bottom edge (equal to
                         its 32px side inset). No pageLabel here — it sits in the margin below. */}
