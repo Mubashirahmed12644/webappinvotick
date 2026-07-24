@@ -67,6 +67,9 @@ export function SummaryLeftFitted({ data, labels }: { data: InvoiceRenderData; l
           flexDirection: "column",
           justifyContent: "flex-start",
           gap: "calc(14px * var(--fit))",
+          // Breathing room so the "Payment Instructions" heading doesn't sit flush against the table
+          // above it. Scales with --fit so the fit math stays exact (padding + content = totals height).
+          paddingTop: "calc(12px * var(--fit))",
         } as CSSProperties}
       >
         {showPayment && (
