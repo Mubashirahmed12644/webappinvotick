@@ -4,6 +4,7 @@ import { formatMoney, formatDate, hexToRgba, contrastText } from "@/lib/format";
 import { imageProxyUrl } from "@/lib/image";
 import { BRAND_LOGO } from "@/lib/givens";
 import { LABELS, type InvoiceLabels } from "@/lib/invoice-labels";
+import { SummaryLeftFitted } from "./SummaryLeftFitted";
 
 // Faithful invoice document — mirrors the mobile app's rendered PDF:
 // full-bleed header image + logo + title, decorative themed background,
@@ -177,21 +178,9 @@ export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hide
             mt-auto → on long text it overflowed → header image height "shrank"). */}
         {((t.total) || (t.payment && data.paymentInstructions) || (t.terms && data.terms)) && !hideSummary && (
           <div className="-mt-px flex items-start justify-between gap-6" data-block>
-            {/* LEFT — Payment Instructions + Terms & Conditions, half width (native widthRatio 0.5). */}
-            <div className="w-1/2 space-y-3 pt-3">
-              {t.payment && data.paymentInstructions && (
-                <div>
-                  <p className="font-extrabold text-[#1c1b1f]" style={{ fontSize: 16 }}>{labels.paymentInstructions}</p>
-                  <p className="mt-1 whitespace-pre-line break-words" style={{ fontSize: 14, lineHeight: 1.4 }}>{data.paymentInstructions}</p>
-                </div>
-              )}
-              {t.terms && data.terms && (
-                <div>
-                  <p className="font-extrabold text-[#1c1b1f]" style={{ fontSize: 16 }}>{labels.terms}</p>
-                  <p className="mt-1 whitespace-pre-line break-words" style={{ fontSize: 14, lineHeight: 1.4 }}>{data.terms}</p>
-                </div>
-              )}
-            </div>
+            {/* LEFT — Payment Instructions + Terms, bound to the totals box's height and auto-fitted so
+                long text never grows the summary onto an extra page (see SummaryLeftFitted). */}
+            <SummaryLeftFitted data={data} labels={labels} />
             {/* RIGHT — totals box. Border = theme primary (FULL), like native. `data-totals` lets
                 A4PagedFrame align the payment stamp's top edge to this box's top line. */}
             {t.total ? (
