@@ -32,6 +32,14 @@ const FIT_FACTOR = 1.0;
 // point is that the gap looks the same on all four sides, and a scaled unit would make the top and
 // bottom differ from the left and right the moment the scale isn't 1.
 const PAGE_MARGIN = 10;
+// Width of the scroll bar, which `scrollbar-gutter: stable both-edges` reserves on BOTH sides —
+// outside clientWidth, so it lands on top of PAGE_MARGIN and only on the left and right. The top and
+// bottom have to add it back by hand or the sides end up twice the gap of the top (48px vs 24px on a
+// Pixel, which is exactly what it looked like). Keep in step with the ::-webkit-scrollbar rule below.
+const SCROLLBAR_W = 8;
+// What the gap actually comes out as, vertically. Horizontally the same total is PAGE_MARGIN plus the
+// reserved gutter; the app's preview sheet uses this number too, so the two must not drift.
+const PAGE_INSET_Y = PAGE_MARGIN + SCROLLBAR_W;
 // Blank margin below the promotional footer. Equal to the footer's side inset (the footer wrapper's
 // paddingLeft/Right = 32) so the footer sits with the same gap on the left, right and bottom.
 const FOOTER_BOTTOM_MARGIN = 32;
@@ -209,7 +217,6 @@ export function A4PagedFrame({
   onSignatureMove,
   onStampRemove,
   onSignatureRemove,
-  onPagesChange,
   onAtTopChange,
   labels,
   dir,
@@ -225,9 +232,6 @@ export function A4PagedFrame({
   // Report that the user removed an overlay so the app can drop it from the invoice.
   onStampRemove?: () => void;
   onSignatureRemove?: () => void;
-  // How many A4 pages this invoice came out to, once pagination has settled. The app sizes its
-  // preview sheet from this: a one-page invoice shouldn't leave a screenful of empty grey below it.
-  onPagesChange?: (pages: number) => void;
   // Whether the page stack is scrolled to the very top. The app's bottom sheet uses this to decide
   // who owns a downward drag: the invoice scrolls until it can't, then the sheet takes over. The
   // host has to be told because the scrolling happens on a div inside the WebView, so the native
@@ -324,11 +328,12 @@ export function A4PagedFrame({
       // Fit ONE whole page to the pane (width OR height, whichever is tighter) at max zoom —
       // single- and multi-page alike, so a multi-page invoice opens on its full first page and the
       // rest are reached by scrolling down. Accounts for the top/bottom stack padding.
-      // Fit inside the margin on every side, so the page is inset by the same number of screen
-      // pixels left, right, top and bottom rather than only top and bottom.
+      // Fit inside the margin on every side. cw already excludes the reserved scrollbar gutters, so
+      // horizontally we only subtract PAGE_MARGIN; vertically we subtract the gutter as well, which
+      // is what makes the visible gap the same on all four sides.
       const s = Math.min(
         (cw - PAGE_MARGIN * 2) / SHEET_W,
-        (ch - PAGE_MARGIN * 2) / SHEET_H,
+        (ch - PAGE_INSET_Y * 2) / SHEET_H,
       ) * FIT_FACTOR;
       if (s > 0 && isFinite(s)) setScale(s);
     };
@@ -369,10 +374,6 @@ export function A4PagedFrame({
 
   // Tell the host how many pages this turned into. Fires after pagination settles rather than on
   // every measure pass, so the app resizes once instead of flickering as rows are counted.
-  useEffect(() => {
-    onPagesChange?.(pages.length);
-  }, [pages.length, onPagesChange]);
-
   // Tell the host whether we're at the top, and only when the answer changes. A single-page invoice
   // never scrolls, so it reports true once and the sheet is draggable from anywhere on it — which is
   // what you want when there's nothing to scroll.
@@ -408,11 +409,15 @@ export function A4PagedFrame({
 
   return (
     <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%" }}>
-    <div ref={containerRef} className="a4-frame" onScroll={!zoomable ? handleScroll : undefined} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", overflow: zoomable ? "hidden" : "auto", background: "#e9e9ec", touchAction: zoomable ? "none" : undefined }}>
+    <div ref={containerRef} className="a4-frame" onScroll={!zoomable ? handleScroll : undefined} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", overflow: zoomable ? "hidden" : "auto", background: "#e9e9ec", touchAction: zoomable ? "none" : undefined, scrollbarGutter: "stable both-edges" }}>
       {/* Each A4 sheet prints as one physical A4 page (single OR multi-invoice); the screen-only
           scaling/scrolling is reset for print. */}
       <style>{`
-        /* Visible side scroll bar for the multi-page stack (WebView hides the overlay one). */
+        /* Visible side scroll bar for the multi-page stack (WebView hides the overlay one).
+           scrollbar-gutter: stable both-edges on the frame reserves the same strip on BOTH sides,
+           so the page keeps an equal gap left and right. Without it the bar ate into the right
+           margin only, and a multi-page invoice sat visibly off-centre (27px left, 48px right)
+           while a single-page one — which has no bar — looked fine. */
         .a4-frame::-webkit-scrollbar { width: 8px; }
         .a4-frame::-webkit-scrollbar-track { background: transparent; }
         .a4-frame::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.28); border-radius: 4px; }
@@ -451,7 +456,7 @@ export function A4PagedFrame({
               flexDirection: "column",
               alignItems: "center",
               gap: 22 * s,
-              padding: `${PAGE_MARGIN}px`,
+              padding: `${PAGE_INSET_Y}px ${PAGE_MARGIN}px`,
               visibility: scale ? "visible" : "hidden",
             }}
           >

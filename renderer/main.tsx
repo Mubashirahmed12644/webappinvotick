@@ -126,13 +126,6 @@ function render(data: InvoiceRenderData | null) {
           w.AndroidStamp?.onAtTop?.(atTop);
           w.__onAtTop?.(atTop);
         }}
-        onPagesChange={(pages) => {
-          // The app sizes its preview sheet from this. Without it the sheet is a fixed share of the
-          // screen, so a one-page invoice sat above a screenful of empty grey.
-          const w = window as unknown as { AndroidStamp?: { onPages?: (n: number) => void }; __onPages?: (n: number) => void };
-          w.AndroidStamp?.onPages?.(pages);
-          w.__onPages?.(pages);
-        }}
       />
     </div>,
   );
