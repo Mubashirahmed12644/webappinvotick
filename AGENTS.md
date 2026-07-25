@@ -126,6 +126,11 @@ Two that bite most often:
 
 ### Backend — `invotick-apis` (Kotlin 1.9.25 / Spring Boot 3.5.5 / Java 21 / MySQL 8)
 - ⚠️ Package is `dev.backend.infotick` — **"infotick", not "invotick"**. Don't "fix" it.
+- ⚠️ **Builds only on JDK 21.** The Mac's default `java` is 26, and Gradle fails with a bare
+  `What went wrong: 26.0.1`. Use the JDK bundled with Android Studio:
+  `JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" ./gradlew …`
+- `./gradlew test`: two tests (`SpringContextBootTest`, `MigrationsApplyToLiveSchemaTest`) need a
+  reachable MySQL and fail with `ConnectException` locally. 266 of 268 passing is the clean baseline.
 - Port **8085**. Flyway migrations `V{YYYYMMDD}_{NN}__{desc}.sql`, `ddl-auto=validate`.
 - Conventions: UUID string PKs, soft delete (`is_deleted` + `deleted_at`), audit columns, UTC
   everywhere via `InstantAttributeConverter`.
