@@ -2,6 +2,14 @@
 /* Scan the shared invoice component so Tailwind v4 emits the utility classes it uses. */
 @source "../src/components/invoice";
 
+/* Match the Android WebView's own background (#F7F7F7) on html/body/#root so there is NO white flash
+   between page-load and the invoice being injected — the pre-render state is a seamless grey instead
+   of a white "No invoice data" flicker. */
+html, body, #root { margin: 0; background: #f7f7f7; }
+
+/* Spinner on the white A4 skeleton page shown before the invoice is injected (see SkeletonPage). */
+@keyframes aospin { to { transform: rotate(360deg); } }
+
 /* The exact Nunito TTFs the native KMP render uses — inlined into the bundle (Vite) so the
    offline HTML text matches the native invoice pixel-for-pixel. */
 @font-face {
