@@ -118,6 +118,21 @@ function render(data: InvoiceRenderData | null) {
           w.AndroidStamp?.onSignatureRemoved?.();
           w.__onSignatureRemoved?.();
         }}
+        onAtTopChange={(atTop) => {
+          // Lets the host decide who owns a downward drag: the invoice scrolls until it can't, then
+          // the sheet takes over. Native can't work this out itself — the scrolling happens on a div
+          // in here, not on the WebView.
+          const w = window as unknown as { AndroidStamp?: { onAtTop?: (v: boolean) => void }; __onAtTop?: (v: boolean) => void };
+          w.AndroidStamp?.onAtTop?.(atTop);
+          w.__onAtTop?.(atTop);
+        }}
+        onPagesChange={(pages) => {
+          // The app sizes its preview sheet from this. Without it the sheet is a fixed share of the
+          // screen, so a one-page invoice sat above a screenful of empty grey.
+          const w = window as unknown as { AndroidStamp?: { onPages?: (n: number) => void }; __onPages?: (n: number) => void };
+          w.AndroidStamp?.onPages?.(pages);
+          w.__onPages?.(pages);
+        }}
       />
     </div>,
   );
