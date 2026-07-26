@@ -39,6 +39,35 @@ currently serve badly.
 | 3 | List/detail two-pane for the few screens that earn it | Invoices, clients, products |
 | 4 | RTL | Its own release |
 
+## Found while testing: the app switches the user's font setting off
+
+`core/ui/theme/FixedFontScale.kt`, applied at the root in `Theme.kt`:
+
+```kotlin
+/** This ensures that all text in the app ignores the user's font size settings */
+CompositionLocalProvider(LocalDensity provides Density(base.density, fontScale = 1f))
+```
+
+Setting the device to 150% font and relaunching changes nothing on screen — which is how this came
+to light. `Typography.kt` goes further, with `dpToSp(dp) = dp`, so the 442 `sp` sizes are `dp` values
+wearing an `sp` label.
+
+Someone who enlarges their system font has told us they cannot read small text. The app hears that
+and declines. There is no crash, no report, and nothing in any dashboard; they simply stop using it.
+
+This changes what phase 2 is. It is not "fix 529 fixed heights so text stops clipping" — text cannot
+clip today because it cannot grow. It is **remove the clamp and fix the 529 heights, together**,
+because removing the clamp alone would break every one of those containers at once. That ordering is
+not optional, and the size of it is a decision for the product owner rather than a cleanup:
+
+- Ship both together, staged. The honest fix.
+- Ship the clamp removal capped (say 1.3×) first, then widen. Smaller blast radius, still a lie to
+  the user who chose 2×.
+- Leave it. Defensible only if we say out loud that the app is closed to those users.
+
+**Not changed here** — deliberately. It was found by testing, not asked for, and it is far too large
+to decide unsupervised.
+
 ## Why accessibility is not a separate phase first
 
 The largest accessibility defect is 529 fixed-height containers holding text sized in `sp`: at 150–200%
