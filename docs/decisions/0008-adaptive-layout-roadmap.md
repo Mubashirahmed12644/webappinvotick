@@ -65,6 +65,31 @@ decorative icons) and the thin `semantics` usage — is small and unrelated, and
   - **A separate accessibility phase first** — see above; it would do the same work twice.
   - **Fixing screens one by one.** With 64 screens it does not finish. The shell and the containers
     are what change, and the screens follow.
+  - **Computing the window size ourselves.** Phase 0 was first written against `LocalWindowInfo`,
+    on the reasoning that no dependency was needed yet. That was wrong once "every form factor" was
+    the goal: a width check cannot know there is a **hinge** through the middle of the screen, and
+    tabletop posture isn't a width problem at all — the answer there is to use the bottom half and
+    leave the top alone. `currentWindowAdaptiveInfo()` reports both. Rewritten before any screen
+    depended on it.
+
+## What Material 3 gives us, per phase
+
+The plan leans on M3's canonical layouts rather than inventing arrangements:
+
+| Phase | Screens | M3 |
+|---|---|---|
+| 1 | Navigation shell | `NavigationSuiteScaffold` — bottom bar / rail / drawer by size |
+| 2 | Dashboard, Reports | **Feed** — responsive grid |
+| 3 | Invoices, Clients, Products | **List-detail** — `ListDetailPaneScaffold` |
+| 3 | Create Invoice + live preview | **Supporting pane** — `SupportingPaneScaffold` |
+
+The supporting-pane one is worth calling out as a product change, not a layout fix: on a phone the
+invoice preview is a bottom sheet, and on a tablet the same thing becomes a pane beside the form that
+updates as you type. The renderer is already HTML that fits whatever box it is given, so this costs
+close to nothing to build.
+
+Our own `WindowWidthClass` / `WindowHeightClass` enums wrap the library's answer on purpose: 64
+screens will branch on them, and the library's size-class API has already changed shape once.
 
 ## Consequences
 
