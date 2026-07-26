@@ -129,8 +129,12 @@ Two that bite most often:
 - ⚠️ **Builds only on JDK 21.** The Mac's default `java` is 26, and Gradle fails with a bare
   `What went wrong: 26.0.1`. Use the JDK bundled with Android Studio:
   `JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" ./gradlew …`
-- `./gradlew test`: two tests (`SpringContextBootTest`, `MigrationsApplyToLiveSchemaTest`) need a
-  reachable MySQL and fail with `ConnectException` locally. 266 of 268 passing is the clean baseline.
+- `./gradlew test`: **268/268 is the clean baseline**, but two of them (`SpringContextBootTest`,
+  `MigrationsApplyToLiveSchemaTest`) need a MySQL on `127.0.0.1:13306`. That's the `invotick-test-mysql`
+  container (db `invotick_test`, root password `test`) — start Docker Desktop and
+  `docker start invotick-test-mysql` first. Without it those two fail with `ConnectException` and you
+  see 266/268; don't mistake that for the baseline, because `SpringContextBootTest` is the pre-push
+  gate that catches a broken Spring bean graph.
 - Port **8085**. Flyway migrations `V{YYYYMMDD}_{NN}__{desc}.sql`, `ddl-auto=validate`.
 - Conventions: UUID string PKs, soft delete (`is_deleted` + `deleted_at`), audit columns, UTC
   everywhere via `InstantAttributeConverter`.
