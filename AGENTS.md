@@ -60,7 +60,18 @@ The authoritative source is **GitLab**, group `invotick`. GitHub copies are clon
 (`Touchpedia/invotickapis`, one "Initial commit"). The real backend is `invotick-apis`.
 
 Rules:
-- Backend serves 4000 users → **branch + Merge Request, never push to `main` directly**.
+- **One person builds all of this.** Do not propose review workflows, approvals or Merge Requests as
+  if they were established practice — `stage` has zero merge commits in its entire history, and work
+  has always gone to it directly. An earlier version of this file asserted a "branch + Merge Request"
+  rule that had never been used here; it was invented while writing the file, then quoted back as the
+  user's own. Suggest process by all means, but as a proposal, and say it is new.
+- **The pipeline is the safety net, not a reviewer.** `.gitlab-ci.yml` runs `test → docker → deploy`
+  on the `stage` branch, with a real MySQL service, and deploy only runs if the tests pass. So the
+  way to have CI verify a backend change is to merge it to `stage` — a failure blocks the deploy
+  rather than reaching the VPS. Vercel does the equivalent for the web repos with per-branch preview
+  deployments.
+- ⚠️ CI's `test` job is `only: - stage`, so **nothing on a feature branch has been tested by CI** —
+  only locally, if at all. Do not describe a feature branch as "green" on CI's authority.
 - Flyway migrations have **no rollback**. Ship SQL and code separately (see `memory/deploy-safety-schema-changes.md`).
 - If a repo is not checked out locally, say so instead of guessing at its code.
 
