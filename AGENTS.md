@@ -102,6 +102,24 @@ Full plan: `memory/html-render-migration.md`, `memory/presentation-json-architec
    Presentation (colors, toggles, stamp/signature offsets, template) = one JSON per invoice, with
    asset **refs**, never base64.
 
+## 4a. Layout rules — read before writing any screen
+
+`invoice-kmp-app/docs/LAYOUT_RULES.md` holds the adaptive/accessibility rules, each with the bug that
+produced it. The ones that bite hardest:
+
+- **No fixed heights on anything holding text** — `heightIn(min =)`, never `height()`. A 32dp chip
+  slices its own label at a large font.
+- **Never assume two things fit side by side** — use `AdaptiveFieldPair`. This failed in six places
+  and always silently: `Bank Transfe`, `2026-07-2`, `Percenta`, with no ellipsis to admit it.
+- **Money and identifiers shrink, never truncate.** `HE260…` is not an invoice number; a total split
+  across two lines reads as a total that might be wrong.
+- **`autoSize` does nothing without a width constraint** — in a `Row` a `Text` gets unbounded width,
+  so it never shrinks and is simply clipped. Needs `weight(1f, fill = false)`.
+- **Ask the window (`LocalWindowSize`), never the device.** No `isTablet`.
+- **Fix every copy** — the filter chip lived in six files; two were fixed and it looked done.
+- **`rememberSaveable` for anything the user opened** — `remember` dies on rotate/fold/resize.
+- **Verify on a device at `font_scale 1.5`.** One screen looking right proves one screen.
+
 ## 4b. Engineering rules that already exist — read them, don't re-derive
 
 `invoice-kmp-app/PROJECT_RULES.md` and `invotick-apis/PROJECT_RULES.md` hold the full change-risk
