@@ -75,7 +75,11 @@ starts going wrong.** That is the whole finding. Ten dashboards is the same as n
 
 ## The part still weak
 
-`TlsCertificateCheck` holds a hand-kept domain list (`HEALTH_TLS_DOMAINS`, currently 9). That is the
-same failure mode one level down — a domain nobody adds is a domain nobody watches. It shipped with 5
-and the missing ones included `api.jariya.net`, which expires 6 August and whose renewal is already
-failing. Worth reconciling against nginx `sites-enabled`, and worth replacing with discovery.
+`TlsCertificateCheck` holds a hand-kept domain list (`HEALTH_TLS_DOMAINS`, 8 Invotick hostnames).
+That is the same failure mode one level down — a domain nobody adds is a domain nobody watches. It
+shipped with 5. Worth reconciling against nginx `sites-enabled`, and worth replacing with discovery.
+
+**Scope is Invotick's domains only.** The VPS hosts other tenants, and `api.jariya.net` is on it,
+expiring 6 August with a renewal already failing — the most urgent certificate the check could see,
+and still removed. A board that reports what its reader will not act on teaches that reader to skip a
+red card, and this page has one job: to mean that *we* have a problem.
