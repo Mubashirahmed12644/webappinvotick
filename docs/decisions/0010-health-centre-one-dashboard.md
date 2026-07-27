@@ -84,7 +84,12 @@ starts going wrong.** That is the whole finding. Ten dashboards is the same as n
 That is the same failure mode one level down — a domain nobody adds is a domain nobody watches. It
 shipped with 5. Worth reconciling against nginx `sites-enabled`, and worth replacing with discovery.
 
-**Scope is Invotick's domains only.** The VPS hosts other tenants, and `api.jariya.net` is on it,
-expiring 6 August with a renewal already failing — the most urgent certificate the check could see,
-and still removed. A board that reports what its reader will not act on teaches that reader to skip a
-red card, and this page has one job: to mean that *we* have a problem.
+**Scope, and a correction.** `api.jariya.net` was removed from the TLS check on the reasoning that
+the VPS hosts other tenants and this was one of theirs. **That was wrong — Jariya is ours too**, and
+the user said so. The removal was right for the wrong reason, and the reason is what the next person
+would have reused.
+
+The principle survives: a card's red must mean one thing, so a board mixing two products teaches its
+reader to interpret rather than act. The correct shape is therefore **a card per product**, not a
+domain dropped. `JariyaTlsCheck` is a separate `@Component` watching Jariya's three hostnames until
+Jariya has its own health surface — deliberately one file, so moving it out is deleting it.
