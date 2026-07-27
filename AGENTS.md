@@ -190,7 +190,10 @@ Two that bite most often:
   `userBasedScreenFlow`, `users`, `users-map`, `health`, `contact-data`,
   `utm`, `ip-stats`, `api-access`, `testing-devices`, `inventory-items`, `invoice-preview`.
 - **Health Centre (`/health`)** is the dashboard for everything that fails silently. **A new check is
-  a `@Component` implementing `HealthCheck` — never a new page.** `sync-health`, `billing-health` and
+  a `@Component` implementing `HealthCheck` — never a new page.** This is a **standing instruction
+  from the user**, not a preference: anything health- or monitoring-related, from now on, goes into
+  the Health Centre — folded into an existing check, or as a new one. A page with rows is a
+  drill-down behind a card (`detailPath`), never a sidebar entry. `sync-health`, `billing-health` and
   `exchange-rates` still exist, but only as drill-downs behind their cards: each was a nav item of
   its own, each already held the evidence, and neither got opened on the ordinary day when the thing
   it watched started failing. Details + the two design rules: `memory/health-centre.md`.
