@@ -55,9 +55,16 @@ The authoritative source is **GitLab**, group `invotick`. GitHub copies are clon
 | **Mobile app** (Kotlin Multiplatform) | GitLab `invotick/invoice-kmp-app` | `~/Documents/invoice-kmp-app` | Play Store |
 | **Backend** (Spring Boot) + admin API | GitLab `invotick/invotick-apis` | `~/Documents/invotick-apis` (default branch `stage`) | Docker → Hostinger VPS `:8085` |
 | **Admin panel** (Next.js) | GitHub `Mubashirahmed12644/invotick-admin-panel` | `~/Documents/invotick-admin-panel` | Vercel → `admin.invotick.com` |
+| **Exchange rates** (Spring/Kotlin) | GitLab `invotick/exchange-rate-service` | `~/Documents/invotick-exchange` | Docker on the same VPS |
 
 ⚠️ **Decoy — do not touch:** `~/Documents/invotickapis` is a stale GitHub clone
 (`Touchpedia/invotickapis`, one "Initial commit"). The real backend is `invotick-apis`.
+
+⚠️ The exchange-rate service lived only on a departed developer's personal GitHub until 2026-07-27,
+and its rates had been 16 days stale because hourly fetching needs 744 requests/month against a
+300-request quota. Its `/healthcheck` had been reporting `"All API keys exhausted"` to nobody the
+whole time. Before trusting any converted figure, check `updated_at` — see
+`memory/exchange-rate-service.md`.
 
 Rules:
 - **One person builds all of this.** Do not propose review workflows, approvals or Merge Requests as
