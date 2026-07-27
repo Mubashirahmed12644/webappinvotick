@@ -57,7 +57,12 @@ starts going wrong.** That is the whole finding. Ten dashboards is the same as n
    enabled" (loses a customer, and they will not write in — they will leave); "enabled without
    payment" only warns (costs money, nobody is upset). Sync ranks by *devices*, not occurrences —
    one defect on forty devices is an outage, forty occurrences on one device is a retry loop.
-4. **Interval matches how fast the truth can change.** A certificate moves every ninety days; a quota
+4. **Threshold at the point evidence appears, not the point it hurts.** The TLS check warned at 14
+   days because that felt like enough notice. Wrong question: renewal fires at 30 days remaining, so
+   a certificate below 25 is already proof the automation did not fire — five weeks before anyone is
+   hurt. `stage` and `grafana` were sitting at 20 days, nine days past their window, and 14 would
+   have stayed green about them until 3 August.
+5. **Interval matches how fast the truth can change.** A certificate moves every ninety days; a quota
    moves hourly. Checking faster than that only adds load and noise.
 
 ## Rejected
