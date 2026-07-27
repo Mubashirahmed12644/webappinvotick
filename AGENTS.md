@@ -204,6 +204,11 @@ Two that bite most often:
   its own, each already held the evidence, and neither got opened on the ordinary day when the thing
   it watched started failing. Details + the two design rules: `memory/health-centre.md`.
 - One API client: `lib/api.ts`; browser calls go through the same-origin `/backend` rewrite.
+- ⚠️ **Auth is opt-in, not default.** `AuthorizationInterceptor` returns `true` when a handler has no
+  `@RequireRole` — no annotation means *any authenticated caller*, guests included. A new admin or
+  webpanel controller is open until you annotate it. `/v2/admin/**` was additionally listed in
+  `security.public-paths` and answered with no token at all until 2026-07-28. Details + what is still
+  open before payment-gateway work: `memory/admin-panel-security-audit.md`.
 - Read-mostly by rule; never recompute money client-side — show what the backend computed.
 
 ## 5b. The analytics pipeline (this is how G1 gets measured)
