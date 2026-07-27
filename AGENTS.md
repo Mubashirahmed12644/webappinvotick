@@ -38,6 +38,12 @@ A trust bug outranks a feature.
 **Priority when two paths look equal:** G1 > G3 > G2. Never trade G3 away for G1 or G2 — a growth
 trick that dents trust is a net loss.
 
+**Monetisation is a requirement, not a variable.** Never propose removing, delaying or disabling an
+ad, ad gate or paywall to improve a funnel. Measure every one of them exhaustively — revenue, fill
+rate and impressions **alongside** wait, drop-off and abandonment — and present the trade as a
+question for the user, never as a finding. A funnel instrumented only for what ads cost will always
+convict them. See `memory/monetisation-measure-never-assume.md`.
+
 Which existing track serves which goal:
 - G1 → onboarding/funnel leaks (business form, splash login-wall), edit-invoice autosave, anything
   that reduces friction between "opened app" and "my own first invoice".
