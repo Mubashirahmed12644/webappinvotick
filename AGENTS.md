@@ -187,8 +187,13 @@ Two that bite most often:
 
 ### Admin panel — `invotick-admin-panel` (Next.js 16, all pages `"use client"`)
 - Pages: `funnel-analysis`, `live-events`, `live-event-config`, `screen-flow`,
-  `userBasedScreenFlow`, `users`, `users-map`, `sync-health`, `billing-health`, `contact-data`,
+  `userBasedScreenFlow`, `users`, `users-map`, `health`, `contact-data`,
   `utm`, `ip-stats`, `api-access`, `testing-devices`, `inventory-items`, `invoice-preview`.
+- **Health Centre (`/health`)** is the dashboard for everything that fails silently. **A new check is
+  a `@Component` implementing `HealthCheck` — never a new page.** `sync-health`, `billing-health` and
+  `exchange-rates` still exist, but only as drill-downs behind their cards: each was a nav item of
+  its own, each already held the evidence, and neither got opened on the ordinary day when the thing
+  it watched started failing. Details + the two design rules: `memory/health-centre.md`.
 - One API client: `lib/api.ts`; browser calls go through the same-origin `/backend` rewrite.
 - Read-mostly by rule; never recompute money client-side — show what the backend computed.
 
