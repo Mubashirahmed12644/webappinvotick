@@ -30,3 +30,4 @@ Numbering: next free number, zero-padded to 4.
 | [0007](0007-first-run-currency-ladder.md) | First currency: IP → device region → unambiguous language → USD | decided |
 | [0008](0008-adaptive-layout-roadmap.md) | Adaptive layout in 5 phases, applied directly; RTL ships separately | decided |
 | [0009](0009-currency-backfill-measured.md) | 2,717 of 5,004 invoices still carry the wrong currency — the backfill's WHERE clause could not see them | measured |
+| [0010](0010-health-centre-one-dashboard.md) | Everything that fails silently gets a check in one place; a new check is a `@Component`, never a new page | accepted |
