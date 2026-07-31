@@ -1,7 +1,8 @@
 # 0011 — A discard dialog belongs to documents, not to small forms
 
 **Date:** 2026-07-28
-**Status:** Accepted, not yet built
+**Status:** Steps 1–3 built and verified on device for the business, client and item sheets
+(2026-07-31). Merchant sheet and step 4 outstanding.
 **Affects:** business, client, item, merchant sheets · invoice + estimate screens · `feature/*`
 
 ## What is there today
