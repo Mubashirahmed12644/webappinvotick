@@ -106,6 +106,14 @@ function DraggableOverlay({
         if (selected) {
           e.stopPropagation();
           try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); } catch { /* no active pointer */ }
+        // Tell the Android host the overlay owns this gesture now.
+        //
+        // Its touch listener otherwise reads a downward drag on a page with nothing left to scroll
+        // as "the user wants the sheet", hands the gesture away, and the stamp stops after a few
+        // pixels. Dragging upward was unaffected, which is what made this look like slowness rather
+        // than a stolen gesture. Harmless in a browser, where the interface does not exist.
+        try { (window as unknown as { AndroidStamp?: { setDragging?: (v: boolean) => void } })
+          .AndroidStamp?.setDragging?.(true); } catch { /* not hosted by the app */ }
         }
       }}
       onPointerMove={(e) => {
@@ -139,6 +147,8 @@ function DraggableOverlay({
         if (!d) return;
         // Hand the final position to React and drop the transform, or the element would sit at its
         // new left/top *plus* the drag delta — the move applied twice.
+        try { (window as unknown as { AndroidStamp?: { setDragging?: (v: boolean) => void } })
+          .AndroidStamp?.setDragging?.(false); } catch { /* not hosted by the app */ }
         if (el) el.style.transform = "";
         if (selected && d.moved) onCommit(d.cx, d.cy);
         else if (!d.moved && !selected) onSelect(); // first tap selects
