@@ -311,20 +311,6 @@ export function A4PagedFrame({
   dir?: "ltr" | "rtl";
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const pull = useRef<{ y: number; fromTop: boolean } | null>(null);
-
-  const hostPull = (dy: number) => {
-    try {
-      (window as unknown as { AndroidStamp?: { onPullDownAtTop?: (d: number) => void } })
-        .AndroidStamp?.onPullDownAtTop?.(dy);
-    } catch { /* not hosted by the app */ }
-  };
-  const hostPullEnd = () => {
-    try {
-      (window as unknown as { AndroidStamp?: { onPullEnd?: () => void } })
-        .AndroidStamp?.onPullEnd?.();
-    } catch { /* not hosted by the app */ }
-  };
   const withTotalsRef = useRef<HTMLDivElement>(null);
   const noTotalsRef = useRef<HTMLDivElement>(null);
   const footerMeasureRef = useRef<HTMLDivElement>(null);
@@ -492,48 +478,7 @@ export function A4PagedFrame({
 
   return (
     <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%" }}>
-    <div
-      ref={containerRef}
-      className="a4-frame"
-      onScroll={!zoomable ? handleScroll : undefined}
-      // Pull past the top → the host moves the sheet instead of the browser bouncing.
-      //
-      // The overscroll itself is the signal, and it is the only honest one available: the browser
-      // has already worked out that nothing is left to scroll, under whatever zoom is in effect.
-      // Everything tried before this guessed at that — a downward finger, a scrollTop read from
-      // here — and guessed wrong the moment the page was zoomed, because zoom happens on a scale
-      // this element never sees.
-      //
-      // Reported as a distance rather than a flag so the host can move the sheet with the finger,
-      // and only from the top edge: pulling up, or anywhere mid-scroll, is the page's own.
-      onTouchStart={(e) => {
-        const el = containerRef.current;
-        pull.current = el && e.touches.length === 1
-          ? { y: e.touches[0].clientY, fromTop: el.scrollTop <= 0 }
-          : null;
-      }}
-      onTouchMove={(e) => {
-        const p = pull.current;
-        if (!p || e.touches.length !== 1) { pull.current = null; return; }
-        const el = containerRef.current;
-        // Re-checked live: a scroll that reaches the top mid-gesture is still the page's, not a pull.
-        if (!el || el.scrollTop > 0 || !p.fromTop) return;
-        const dy = e.touches[0].clientY - p.y;
-        if (dy > 0) hostPull(dy);
-      }}
-      onTouchEnd={() => { pull.current = null; hostPullEnd(); }}
-      onTouchCancel={() => { pull.current = null; hostPullEnd(); }}
-      style={{
-        position: "absolute", top: 0, left: 0, width: "100%", height: "100%",
-        overflow: zoomable ? "hidden" : "auto",
-        background: "#e9e9ec",
-        touchAction: zoomable ? "none" : undefined,
-        scrollbarGutter: "stable both-edges",
-        // No rubber-band: the sheet moving IS the feedback now, and two elastic responses to one
-        // gesture read as the app fighting itself.
-        overscrollBehaviorY: "contain",
-      }}
-    >
+    <div ref={containerRef} className="a4-frame" onScroll={!zoomable ? handleScroll : undefined} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", overflow: zoomable ? "hidden" : "auto", background: "#e9e9ec", touchAction: zoomable ? "none" : undefined, scrollbarGutter: "stable both-edges" }}>
       {/* Each A4 sheet prints as one physical A4 page (single OR multi-invoice); the screen-only
           scaling/scrolling is reset for print. */}
       <style>{`
