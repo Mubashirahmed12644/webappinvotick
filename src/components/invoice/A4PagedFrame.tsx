@@ -176,11 +176,16 @@ function DraggableOverlay({
         const el = elRef.current;
         drag.current = null;
         try { (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId); } catch { /* not captured */ }
+        // Told FIRST, before any early return.
+        //
+        // This used to sit below `if (!d) return`, so a gesture that ended without a live drag — a
+        // pinch that aborted it, most commonly — never reported the end. The host went on believing
+        // an overlay drag was in progress for the rest of the session and kept deciding every touch
+        // as if it were one.
+        tellHost(false);
         if (!d) return;
-        // Hand the final position to React and drop the transform, or the element would sit at its
-        // new left/top *plus* the drag delta — the move applied twice.
-        try { (window as unknown as { AndroidStamp?: { setDragging?: (v: boolean) => void } })
-          .AndroidStamp?.setDragging?.(false); } catch { /* not hosted by the app */ }
+        // Drop the transform before React re-renders at the new position, or the element would sit
+        // at its new left/top *plus* the drag delta — the move applied twice.
         if (el) el.style.transform = "";
         if (selected && d.moved) onCommit(d.cx, d.cy);
         else if (!d.moved && !selected) onSelect(); // first tap selects
