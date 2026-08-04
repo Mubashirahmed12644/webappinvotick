@@ -116,13 +116,30 @@ function DraggableOverlay({
         d.cx = Math.min(0.96, Math.max(0, d.fx + (e.clientX - d.sx) / scale / sheetW));
         d.cy = Math.min(0.96, Math.max(0, d.fy + (e.clientY - d.sy) / scale / sheetH));
         const el = elRef.current;
-        if (el) { el.style.left = `${d.cx * sheetW}px`; el.style.top = `${d.cy * sheetH}px`; }
+        // translate3d, not left/top.
+        //
+        // Changing left or top asks the browser to lay the document out again on every pointer move,
+        // and this document is an A4 page carrying base64 images — logo, header, background. That is
+        // why the stamp crawled here while the same gesture was fine on a light page: the cost was
+        // never the gesture, it was re-laying-out everything behind it sixty times a second.
+        //
+        // A transform is composited on the GPU and skips layout and paint entirely. The element's
+        // own left/top stay where they were, so the offset below is a delta from that origin, and
+        // it is cleared on commit once React re-renders at the new position.
+        if (el) {
+          el.style.transform =
+            `translate3d(${(d.cx - frac.x) * sheetW}px, ${(d.cy - frac.y) * sheetH}px, 0)`;
+        }
       }}
       onPointerUp={(e) => {
         const d = drag.current;
+        const el = elRef.current;
         drag.current = null;
         try { (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId); } catch { /* not captured */ }
         if (!d) return;
+        // Hand the final position to React and drop the transform, or the element would sit at its
+        // new left/top *plus* the drag delta — the move applied twice.
+        if (el) el.style.transform = "";
         if (selected && d.moved) onCommit(d.cx, d.cy);
         else if (!d.moved && !selected) onSelect(); // first tap selects
       }}
