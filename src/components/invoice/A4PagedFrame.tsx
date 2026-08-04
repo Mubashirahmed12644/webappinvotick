@@ -95,11 +95,36 @@ function DraggableOverlay({
 }) {
   const elRef = useRef<HTMLDivElement>(null);
   const drag = useRef<{ sx: number; sy: number; fx: number; fy: number; cx: number; cy: number; moved: boolean } | null>(null);
+  // Pointers currently down on this overlay. A second one means the user is pinching, and a pinch is
+  // always a zoom — never a move — however this overlay was grabbed first.
+  const pointers = useRef(new Set<number>());
+
+  const tellHost = (v: boolean) => {
+    try {
+      (window as unknown as { AndroidStamp?: { setDragging?: (b: boolean) => void } })
+        .AndroidStamp?.setDragging?.(v);
+    } catch { /* not hosted by the app */ }
+  };
+
+  /** Abandon an in-progress drag and put the overlay back where it started. */
+  const abortDrag = () => {
+    drag.current = null;
+    const el = elRef.current;
+    if (el) el.style.transform = "";
+    tellHost(false);
+  };
 
   return (
     <div
       ref={elRef}
       onPointerDown={(e) => {
+        pointers.current.add(e.pointerId);
+        // Second finger down: this is a pinch. Give the page back its gesture and leave the overlay
+        // where it was — zooming with a stamp selected must not drag the stamp along with it.
+        if (pointers.current.size > 1) {
+          abortDrag();
+          return;
+        }
         drag.current = { sx: e.clientX, sy: e.clientY, fx: frac.x, fy: frac.y, cx: frac.x, cy: frac.y, moved: false };
         // Only a SELECTED overlay grabs the pointer to drag; unselected we leave the event alone so
         // the host (WebView pinch, or react-zoom-pan-pinch) still gets both fingers for a pinch.
@@ -119,6 +144,8 @@ function DraggableOverlay({
       onPointerMove={(e) => {
         const d = drag.current;
         if (!d) return;
+        // A pinch can begin after the drag has: bail the moment it does.
+        if (pointers.current.size > 1) { abortDrag(); return; }
         if (Math.hypot(e.clientX - d.sx, e.clientY - d.sy) > 6) d.moved = true;
         if (!selected || !scale) return;
         d.cx = Math.min(0.96, Math.max(0, d.fx + (e.clientX - d.sx) / scale / sheetW));
@@ -139,7 +166,12 @@ function DraggableOverlay({
             `translate3d(${(d.cx - frac.x) * sheetW}px, ${(d.cy - frac.y) * sheetH}px, 0)`;
         }
       }}
+      onPointerCancel={(e) => {
+        pointers.current.delete(e.pointerId);
+        abortDrag();
+      }}
       onPointerUp={(e) => {
+        pointers.current.delete(e.pointerId);
         const d = drag.current;
         const el = elRef.current;
         drag.current = null;
@@ -161,8 +193,13 @@ function DraggableOverlay({
         height: size,
         zIndex: 20,
         cursor: selected ? "grab" : "pointer",
-        // Selected → we own the gesture (drag). Unselected → let the host zoom/pan.
-        touchAction: selected ? "none" : "auto",
+        // Selected → we own a ONE-finger drag; two fingers still belong to the host.
+        //
+        // This was "none" while selected, which told the browser to send us everything — including a
+        // pinch. Zooming became impossible anywhere the stamp happened to be, and a stamp sits in
+        // the middle of the page. pinch-zoom hands multi-touch back while keeping the single-finger
+        // drag ours, and the handlers abort the drag the moment a second finger lands.
+        touchAction: selected ? "pinch-zoom" : "auto",
         // Light dashed selection container (mirrors native drawSelectionUI).
         border: selected ? "1.5px dashed rgba(37,99,235,0.85)" : undefined,
         background: selected ? "rgba(37,99,235,0.10)" : undefined,
