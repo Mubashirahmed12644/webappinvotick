@@ -311,6 +311,37 @@ export function A4PagedFrame({
   dir?: "ltr" | "rtl";
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Report a pull past the top, so a host that has a sheet below can close it.
+  //
+  // Passive, and that is the whole design. A passive listener cannot preventDefault, so it cannot
+  // touch the scroll — which matters because two earlier attempts here broke panning outright: a
+  // React onTouchMove (non-passive), and an overscroll-behavior rule that blocked the very scroll
+  // chaining a zoomed page needs. Both were measured breaking it; this one was measured not to.
+  //
+  // Only from the top, and only single-finger: a pinch is a zoom, and a scroll that happens to
+  // reach the top mid-way is still the page's own.
+  useLayoutEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    let startY = 0;
+    const down = (e: TouchEvent) => { startY = e.touches[0]?.clientY ?? 0; };
+    const move = (e: TouchEvent) => {
+      if (e.touches.length !== 1 || el.scrollTop > 0) return;
+      const dy = (e.touches[0]?.clientY ?? 0) - startY;
+      if (dy <= 0) return;
+      try {
+        (window as unknown as { AndroidStamp?: { onPullDownAtTop?: (d: number) => void } })
+          .AndroidStamp?.onPullDownAtTop?.(dy);
+      } catch { /* not hosted by the app */ }
+    };
+    el.addEventListener("touchstart", down, { passive: true });
+    el.addEventListener("touchmove", move, { passive: true });
+    return () => {
+      el.removeEventListener("touchstart", down);
+      el.removeEventListener("touchmove", move);
+    };
+  }, []);
   const withTotalsRef = useRef<HTMLDivElement>(null);
   const noTotalsRef = useRef<HTMLDivElement>(null);
   const footerMeasureRef = useRef<HTMLDivElement>(null);
