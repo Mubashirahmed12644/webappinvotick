@@ -335,11 +335,27 @@ export function A4PagedFrame({
           .AndroidStamp?.onPullDownAtTop?.(dy);
       } catch { /* not hosted by the app */ }
     };
+    // The release, which is where the host actually decides. Without it the host is told how far
+    // the finger has travelled and never told it stopped — so the pull is measured and then nothing
+    // happens, which reads exactly like the gesture not working at all.
+    //
+    // touchcancel as well as touchend: the system can take the gesture away (a call arriving, a
+    // back swipe), and a host left waiting for an end that never comes stays half-pulled.
+    const up = () => {
+      try {
+        (window as unknown as { AndroidStamp?: { onPullEnd?: () => void } })
+          .AndroidStamp?.onPullEnd?.();
+      } catch { /* not hosted by the app */ }
+    };
     el.addEventListener("touchstart", down, { passive: true });
     el.addEventListener("touchmove", move, { passive: true });
+    el.addEventListener("touchend", up, { passive: true });
+    el.addEventListener("touchcancel", up, { passive: true });
     return () => {
       el.removeEventListener("touchstart", down);
       el.removeEventListener("touchmove", move);
+      el.removeEventListener("touchend", up);
+      el.removeEventListener("touchcancel", up);
     };
   }, []);
   const withTotalsRef = useRef<HTMLDivElement>(null);
