@@ -392,6 +392,15 @@ export interface RenderItem {
 
 export interface InvoiceRenderData {
   id: string;
+  /**
+   * Which kind of document this is. Absent means "INVOICE", which is what every snapshot captured
+   * before estimates reached the HTML renderer says — and shared snapshots are frozen, so the
+   * default is load-bearing rather than tidiness.
+   *
+   * An estimate is the same document with a different vocabulary and no money received: the labels
+   * come from ESTIMATE_LABELS and the AMOUNT PAID / BALANCE DUE rows are dropped.
+   */
+  documentType?: "INVOICE" | "ESTIMATE";
   invoiceNumber: string;
   invoiceDate: string;
   dueDate?: string | null;

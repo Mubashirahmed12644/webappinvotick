@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import { InvoiceDocument, InvoiceFooter } from "./InvoiceDocument";
-import type { InvoiceLabels } from "@/lib/invoice-labels";
+import { labelsFor, type InvoiceLabels } from "@/lib/invoice-labels";
 import { imageProxyUrl } from "@/lib/image";
 import type { InvoiceRenderData } from "@/lib/data";
 
@@ -375,7 +375,15 @@ export function A4PagedFrame({
   const signatureUrl = imageProxyUrl(data.signatureImage);
   // The auto PAID / PARTIALLY-PAID stamp — a SEPARATE overlay pinned to the totals box, shown
   // alongside (not instead of) the company stamp.
-  const paymentStampUrl = imageProxyUrl(data.paymentStampImage);
+  //
+  // Never on an estimate: a PAID stamp across a price that is still being quoted is the kind of
+  // thing a client screenshots. The app should not be sending one, and this is the last line of
+  // defence if it ever does.
+  const paymentStampUrl = data.documentType === "ESTIMATE" ? null : imageProxyUrl(data.paymentStampImage);
+
+  // The footer is the one place the caller's `labels` were not reaching: it carries its own default,
+  // so an estimate whose caller passed nothing printed "Invoice generated using Invotick" under it.
+  const docLabels = labels ?? labelsFor(data.documentType);
   // Overlay sizes (px) from the saved fractions; payment stamp keeps its own slightly larger size.
   const stampSizePx = (data.stampSize ?? 0.189) * SHEET_W;
   const sigSizePx = (data.signatureSize ?? 0.189) * SHEET_W;
@@ -544,7 +552,7 @@ export function A4PagedFrame({
       <div ref={footerMeasureRef} className="a4-measure" style={{ position: "absolute", left: -99999, top: 0, width: SHEET_W, visibility: "hidden", pointerEvents: "none" }} aria-hidden>
         {/* Band only — the "Page X of Y" line lives inside FOOTER_BOTTOM_MARGIN, so it must NOT add
             to the measured footer height (else multi-page invoices reserve extra space for it). */}
-        <InvoiceFooter qrDataUrl={qrDataUrl} labels={labels} />
+        <InvoiceFooter qrDataUrl={qrDataUrl} labels={docLabels} />
       </div>
 
       {(() => {
@@ -593,7 +601,7 @@ export function A4PagedFrame({
                     {/* Footer band pinned FOOTER_BOTTOM_MARGIN above the sheet's bottom edge (equal to
                         its 32px side inset). No pageLabel here — it sits in the margin below. */}
                     <div style={{ position: "absolute", left: 0, right: 0, bottom: FOOTER_BOTTOM_MARGIN, background: "#fff", paddingLeft: 32, paddingRight: 32 }}>
-                      <InvoiceFooter qrDataUrl={qrDataUrl} labels={labels} />
+                      <InvoiceFooter qrDataUrl={qrDataUrl} labels={docLabels} />
                     </div>
                     {/* "Page X of Y" printed INSIDE the bottom margin (centred in the FOOTER_BOTTOM_MARGIN
                         gap between the band and the sheet edge) — so multi-page invoices reserve no

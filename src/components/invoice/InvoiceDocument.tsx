@@ -3,7 +3,7 @@ import type { InvoiceRenderData } from "@/lib/data";
 import { formatMoney, formatDate, hexToRgba, contrastText } from "@/lib/format";
 import { imageProxyUrl } from "@/lib/image";
 import { BRAND_LOGO } from "@/lib/givens";
-import { LABELS, type InvoiceLabels } from "@/lib/invoice-labels";
+import { LABELS, labelsFor, type InvoiceLabels } from "@/lib/invoice-labels";
 import { SummaryLeftFitted } from "./SummaryLeftFitted";
 
 // Faithful invoice document — mirrors the mobile app's rendered PDF:
@@ -13,7 +13,11 @@ import { SummaryLeftFitted } from "./SummaryLeftFitted";
 //
 // `labels` (default English) + `dir` let the shared invoice render in the receiver's language: the
 // structural labels are translated by the caller, and `dir="rtl"` mirrors the layout for Arabic/Farsi.
-export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hideStamp, hideSignature, padRows, labels = LABELS, dir = "ltr" }: { data: InvoiceRenderData; qrDataUrl?: string | null; hideFooter?: boolean; hideSummary?: boolean; hideStamp?: boolean; hideSignature?: boolean; padRows?: number; labels?: InvoiceLabels; dir?: "ltr" | "rtl" }) {
+export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hideStamp, hideSignature, padRows, labels: labelsProp, dir = "ltr" }: { data: InvoiceRenderData; qrDataUrl?: string | null; hideFooter?: boolean; hideSummary?: boolean; hideStamp?: boolean; hideSignature?: boolean; padRows?: number; labels?: InvoiceLabels; dir?: "ltr" | "rtl" }) {
+  // The document's own vocabulary, unless the caller passed a translated set — the shared-link view
+  // does, having already run the labels through the receiver's language.
+  const isEstimate = data.documentType === "ESTIMATE";
+  const labels = labelsProp ?? labelsFor(data.documentType);
   const color = data.color || "#0D4DC0";
   const onColor = contrastText(color);
   const cur = data.currency;
@@ -189,21 +193,29 @@ export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hide
                 <TotalRow label={labels.discount} value={formatMoney(data.discountAmount, cur)} tint={hexToRgba(color, 0.05)} />
                 <TotalRow label={labels.tax} value={formatMoney(data.taxAmount, cur)} tint={hexToRgba(color, 0.05)} />
                 <TotalRow label={labels.shipping} value={formatMoney(data.shippingCost, cur)} tint={hexToRgba(color, 0.05)} />
-                {/* TOTAL — light tint + accent text (lowest rung). */}
-                <div className="flex items-center justify-between px-3 py-2 text-[15px] font-extrabold" style={{ backgroundColor: hexToRgba(color, 0.16), color }}>
+                {/* TOTAL — light tint + accent text, the lowest of three rungs on an invoice. On an
+                    estimate it is the only figure that matters and the last row in the box, so it
+                    takes the hero treatment BALANCE DUE would have had. */}
+                <div className="flex items-center justify-between px-3 py-2 text-[15px] font-extrabold" style={isEstimate ? { backgroundColor: color, color: onColor } : { backgroundColor: hexToRgba(color, 0.16), color }}>
                   <span>{labels.total}</span>
                   <span>{formatMoney(data.total, cur)}</span>
                 </div>
-                {/* AMOUNT PAID — medium tint + dark text (middle rung). Always shown (0 when nothing paid). */}
-                <div className="flex items-center justify-between px-3 py-2 text-[15px] font-extrabold" style={{ backgroundColor: hexToRgba(color, 0.34), color: "#1c1b1f" }}>
-                  <span>{labels.amountPaid}</span>
-                  <span>{formatMoney(data.amountPaid ?? 0, cur)}</span>
-                </div>
-                {/* BALANCE DUE = dark hero (full primary + onColor); always last so nothing dangles below. */}
-                <div className="flex items-center justify-between px-3 py-2 text-[15px] font-extrabold" style={{ backgroundColor: color, color: onColor }}>
-                  <span>{labels.balanceDue}</span>
-                  <span>{formatMoney(data.balanceDue ?? data.total, cur)}</span>
-                </div>
+                {/* AMOUNT PAID / BALANCE DUE — an invoice's two lower rungs, and nonsense on an
+                    estimate: nothing has been paid against a price that is still being quoted, and
+                    a "BALANCE DUE" on a quotation reads as a bill the client never agreed to. On an
+                    estimate TOTAL is the last row, so it takes the dark hero treatment instead. */}
+                {!isEstimate && (
+                  <>
+                    <div className="flex items-center justify-between px-3 py-2 text-[15px] font-extrabold" style={{ backgroundColor: hexToRgba(color, 0.34), color: "#1c1b1f" }}>
+                      <span>{labels.amountPaid}</span>
+                      <span>{formatMoney(data.amountPaid ?? 0, cur)}</span>
+                    </div>
+                    <div className="flex items-center justify-between px-3 py-2 text-[15px] font-extrabold" style={{ backgroundColor: color, color: onColor }}>
+                      <span>{labels.balanceDue}</span>
+                      <span>{formatMoney(data.balanceDue ?? data.total, cur)}</span>
+                    </div>
+                  </>
+                )}
               </div>
             ) : null}
           </div>
