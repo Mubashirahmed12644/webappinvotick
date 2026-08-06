@@ -56,6 +56,23 @@ and must be changed together:
 - `src/lib/og-card.tsx` — the line now reading "View this invoice" / "View this estimate"
 - `src/app/i/[token]/page.tsx` — the `description` in `generateMetadata`
 
-And the wording will differ by platform, which the OG card cannot know — the card is rendered once
-and cached per token, long before anyone opens it. So the card should promise only what is true
-everywhere.
+## What the OG card should say
+
+The card promises the OUTCOME, not the mechanism: "download the PDF", on every platform.
+
+That is true everywhere. The receiver does get a PDF — on iOS and desktop in one click, on Android
+after installing. The path differs; the result does not, and a card that says "download the PDF" is
+not lying to an Android user, it is just not listing the steps.
+
+The card must NOT say "install the app to get the PDF", even though that is what Android will ask
+for. Two reasons:
+
+1. **It front-loads the cost before any value is shown.** The card is read before the link is
+   opened. Someone who sees an install demand at that point has not yet seen the document, so the
+   ask has nothing behind it — and many will simply not open it. The install belongs after the
+   document is on screen, when the receiver has something they want to keep.
+2. **The card cannot know the platform anyway.** It is rendered once and cached per token, long
+   before anyone opens it, so any platform-specific wording would be wrong for someone.
+
+An earlier draft of this decision said the card should "promise only what is true everywhere" and
+treated that as a limitation. It is not one: downloading the PDF *is* true everywhere.
