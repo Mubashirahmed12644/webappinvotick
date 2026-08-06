@@ -105,7 +105,10 @@ export async function renderOgCard(token: string): Promise<ImageResponse> {
         </div>
 
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#ffffff", color: "#1355D8", borderRadius: 24, padding: "24px 24px 24px 40px", fontSize: 42, fontWeight: 800 }}>
-          <div style={{ display: "flex" }}>View &amp; download the invoice (PDF)</div>
+          {/* Says what the page does. It read "View &amp; download the invoice (PDF)" — and there is
+              no PDF download on that page, for an invoice or an estimate. The card promised a
+              thing the link cannot do, which is a poor first impression to hand a client. */}
+          <div style={{ display: "flex" }}>{isEstimate ? "View this estimate" : "View this invoice"}</div>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 62, height: 62, borderRadius: 999, background: "#1355D8", color: "#ffffff", fontSize: 40 }}>→</div>
         </div>
       </div>

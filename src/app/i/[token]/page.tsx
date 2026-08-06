@@ -52,9 +52,11 @@ export async function generateMetadata({
   const title = [number ? `${kind} ${number}` : kind, who ? `from ${who}` : null]
     .filter(Boolean)
     .join(" ");
+  // No PDF claim: this page has no download. It offers the document and, for the receiver, a
+  // decision — which is the more useful thing to say anyway.
   const description = isEstimate
-    ? "View this estimate and download it as a PDF. Made with Invotick."
-    : "View this invoice and download it as a PDF. Made with Invotick.";
+    ? "View this estimate and approve it. Made with Invotick."
+    : "View this invoice. Made with Invotick.";
   // OG image = the blob-backed route, versioned by content so an edited invoice (new total, more
   // items) gets a fresh card instead of the first render forever. `v` changes whenever the invoice
   // changes → new blob key + a new image URL crawlers re-fetch.
@@ -81,9 +83,12 @@ export default async function SharedInvoicePage({
   if (!shared) {
     return (
       <main className="mx-auto flex min-h-[70vh] max-w-md flex-col items-center justify-center px-6 text-center">
-        <h1 className="text-2xl font-semibold text-neutral-900">Invoice not available</h1>
+        {/* Neutral wording on purpose: the share could not be loaded, so which kind of document it
+            held is exactly what we do not know here. Guessing "invoice" is wrong half as often as
+            it is right, and it is the last thing this person reads. */}
+        <h1 className="text-2xl font-semibold text-neutral-900">This link is no longer available</h1>
         <p className="mt-3 text-neutral-600">
-          This invoice link is no longer available — it may have been revoked or expired.
+          It may have been revoked, replaced by a newer version, or expired.
         </p>
         <Link
           href="/"
@@ -97,6 +102,9 @@ export default async function SharedInvoicePage({
 
   const installUrl = installUrlForToken(token);
   const businessName = shared.businessName?.trim() || "a business";
+  // Derived again here: generateMetadata runs in its own scope, and the two must not drift — the
+  // card and the page a receiver opens from it should not call the document different things.
+  const kind = shared.documentType === "ESTIMATE" ? "Estimate" : "Invoice";
   const status = shared.approvalStatus ?? "PENDING";
   const decided = status === "APPROVED" || status === "REJECTED";
   const platform = await detectPlatform();
@@ -110,7 +118,7 @@ export default async function SharedInvoicePage({
     <main className="mx-auto flex h-[100dvh] w-full max-w-2xl flex-col bg-neutral-50">
       <header className="shrink-0 px-4 pt-3 pb-2 text-center">
         <h1 className="truncate text-base font-semibold text-neutral-900 sm:text-lg">
-          {shared.invoiceNumber ? `Invoice ${shared.invoiceNumber}` : "Invoice"} ·{" "}
+          {shared.invoiceNumber ? `${kind} ${shared.invoiceNumber}` : kind} ·{" "}
           <span className="text-neutral-500">{businessName}</span>
         </h1>
       </header>
