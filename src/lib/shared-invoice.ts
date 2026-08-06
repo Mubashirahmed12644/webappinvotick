@@ -23,12 +23,10 @@ export interface PublicSharedInvoice {
   totalAmount: number | null;
   status: string;
   createdAt: string;
-  // Approval loop. `imageUrl` is the app-rendered pixel-perfect invoice (ephemeral —
-  // may be null once auto-deleted, then the page falls back to the snapshot render).
+  // Approval loop.
   approvalStatus?: "PENDING" | "APPROVED" | "REJECTED";
   approvedAt?: string | null;
   decisionNote?: string | null;
-  imageUrl?: string | null;
 }
 
 /**
@@ -48,22 +46,20 @@ export const getSharedInvoice = cache(
         `${config.backendUrl}/v2/shared-invoice/${encodeURIComponent(token)}`,
         {
           headers: { "Content-Type": "application/json" },
-          // Short revalidate: the app uploads the pixel-perfect image a few seconds AFTER the
-          // share is minted, so a longer cache would keep serving the image-less (HTML-fallback)
-          // version. 15s keeps the page fresh so the real image appears on first open. The OG
-          // crawler image is separately Blob-cached, so this doesn't slow social previews.
-          next: { revalidate: 15, tags: [`shared-invoice:${token}`] },
+          // The snapshot is frozen at share time (it never changes for a given token), and the one
+          // mutable field — approvalStatus — is pushed rather than polled: the decision route calls
+          // revalidateTag on this exact tag. So there is nothing a short window can catch.
+          //
+          // It used to be 15s, for a reason that no longer exists: the app uploaded a rendered
+          // image a few seconds after the share was minted, and a long cache would have kept
+          // serving the page from before it landed. That upload is gone — the page renders the
+          // snapshot as HTML and always did.
+          next: { revalidate: 300, tags: [`shared-invoice:${token}`] },
         },
       );
       if (!res.ok) return null;
       const json = (await res.json()) as { success?: boolean; data?: PublicSharedInvoice } | null;
-      const data = json?.success && json.data ? json.data : null;
-      if (data?.imageUrl && data.imageUrl.startsWith("/")) {
-        // Resolve a relative "/uploads/..." path against the backend host (older shares
-        // stored a relative path; the browser would otherwise resolve it against this site).
-        data.imageUrl = `${config.backendUrl.replace(/\/$/, "")}${data.imageUrl}`;
-      }
-      return data;
+      return json?.success && json.data ? json.data : null;
     } catch {
       return null;
     }
