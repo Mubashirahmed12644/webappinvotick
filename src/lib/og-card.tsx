@@ -38,6 +38,11 @@ export async function renderOgCard(token: string): Promise<ImageResponse> {
 
   const business = shared?.businessName?.trim() || "A business";
   const number = shared?.invoiceNumber?.trim();
+  // The card is often all the receiver reads before deciding to open the link. Calling an estimate
+  // an "Invoice" here tells a client they have been billed for something they were only quoted —
+  // and unlike the page, this image is what gets forwarded on.
+  const isEstimate = shared?.documentType === "ESTIMATE";
+  const kind = isEstimate ? "Estimate" : "Invoice";
   const cur = ogCurrency(shared?.currency);
   const amount =
     shared?.totalAmount != null
@@ -84,12 +89,12 @@ export async function renderOgCard(token: string): Promise<ImageResponse> {
             <div style={{ display: "flex", fontSize: 40, fontWeight: 800 }}>Invotick</div>
           </div>
           <div style={{ display: "flex", fontSize: 32, fontWeight: 700, background: "rgba(255,255,255,0.16)", padding: "10px 24px", borderRadius: 999 }}>
-            {number ? `Invoice #${number}` : "Invoice"}
+            {number ? `${kind} #${number}` : kind}
           </div>
         </div>
 
         <div style={{ display: "flex", flexDirection: "column" }}>
-          <div style={{ display: "flex", fontSize: 32, fontWeight: 700, letterSpacing: 3, opacity: 0.78 }}>INVOICE FROM</div>
+          <div style={{ display: "flex", fontSize: 32, fontWeight: 700, letterSpacing: 3, opacity: 0.78 }}>{isEstimate ? "ESTIMATE FROM" : "INVOICE FROM"}</div>
           <div style={{ display: "flex", fontSize: businessSize, fontWeight: 800, lineHeight: 1.04, marginTop: 12 }}>{business}</div>
           {amount && (
             <div style={{ display: "flex", alignItems: "center", alignSelf: "flex-start", background: "rgba(255,255,255,0.14)", borderRadius: 20, padding: "18px 32px", marginTop: 32 }}>

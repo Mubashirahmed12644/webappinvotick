@@ -8,6 +8,14 @@ import type { InvoiceRenderData } from "./data";
 // the web page renders it with the same <InvoiceDocument> the free tool uses.
 export interface PublicSharedInvoice {
   token: string;
+  /**
+   * "INVOICE" or "ESTIMATE". Absent on links created before estimates could be shared, which is why
+   * it is optional and why the reader defaults to invoice.
+   *
+   * The RENDER does not use this — `snapshot.documentType` carries it and <InvoiceDocument> reads it
+   * there. This is for the page's own words: the title, the description, and the OG card.
+   */
+  documentType?: "INVOICE" | "ESTIMATE";
   snapshot: InvoiceRenderData;
   invoiceNumber: string | null;
   businessName: string | null;

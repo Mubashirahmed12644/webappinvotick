@@ -38,14 +38,23 @@ export async function generateMetadata({
   const { token } = await params;
   const shared = await getSharedInvoice(token);
   if (!shared) {
-    return { title: "Invoice not available | Invotick", robots: { index: false, follow: false } };
+    return { title: "Document not available | Invotick", robots: { index: false, follow: false } };
   }
+  // A share link now carries either kind of document, and the card is often the only thing the
+  // receiver reads before deciding whether to open it. Calling an estimate an "Invoice" in a
+  // WhatsApp preview tells the client they have been billed for something they were only quoted.
+  //
+  // Read AFTER the null guard, not before it.
+  const isEstimate = shared.documentType === "ESTIMATE";
+  const kind = isEstimate ? "Estimate" : "Invoice";
   const who = shared.businessName?.trim();
   const number = shared.invoiceNumber?.trim();
-  const title = [number ? `Invoice ${number}` : "Invoice", who ? `from ${who}` : null]
+  const title = [number ? `${kind} ${number}` : kind, who ? `from ${who}` : null]
     .filter(Boolean)
     .join(" ");
-  const description = "View this invoice and download it as a PDF. Made with Invotick.";
+  const description = isEstimate
+    ? "View this estimate and download it as a PDF. Made with Invotick."
+    : "View this invoice and download it as a PDF. Made with Invotick.";
   // OG image = the blob-backed route, versioned by content so an edited invoice (new total, more
   // items) gets a fresh card instead of the first render forever. `v` changes whenever the invoice
   // changes → new blob key + a new image URL crawlers re-fetch.
