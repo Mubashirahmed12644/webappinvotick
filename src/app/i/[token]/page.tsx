@@ -5,6 +5,7 @@ import QRCode from "qrcode";
 import { getSharedInvoice, installUrlForToken } from "@/lib/shared-invoice";
 import { ApprovalActions } from "@/components/shared-invoice/ApprovalActions";
 import { SharedInvoiceViewer } from "@/components/shared-invoice/SharedInvoiceViewer";
+import { ViewBeacon } from "@/components/shared-invoice/ViewBeacon";
 
 const SITE = "https://www.invotick.com";
 
@@ -116,6 +117,10 @@ export default async function SharedInvoicePage({
 
   return (
     <main className="mx-auto flex h-[100dvh] w-full max-w-2xl flex-col bg-neutral-50">
+      {/* Records that a person — not a link unfurler — has the document on screen. Renders nothing;
+          it has to be a client component so crawlers, which never run JS, are excluded by design. */}
+      <ViewBeacon token={token} />
+
       <header className="shrink-0 px-4 pt-3 pb-2 text-center">
         <h1 className="truncate text-base font-semibold text-neutral-900 sm:text-lg">
           {shared.invoiceNumber ? `${kind} ${shared.invoiceNumber}` : kind} ·{" "}
