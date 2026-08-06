@@ -9,19 +9,51 @@
 
 Every invoice card shows **two** tags, not one:
 
-| | Left tag — the document | Right tag — delivery |
+Both live at the card's top right, stacked — **delivery on top, money underneath.**
+
+| | Top tag — delivery | Below it — money |
 |---|---|---|
-| **Answers** | where is my money | what has the client done |
-| **Values** | Draft · Issued · Partial · Paid · Overdue | Sent → Received → Approved / Rejected |
-| **Source** | `InvoiceStatus` (local, computed) | the share record (backend) |
+| **Answers** | what has my client done | where is my money |
+| **Values** | Sent → Viewed → Approved / Rejected | Unpaid · Partially paid · Paid · Overdue |
+| **Shown when** | only if the document was shared | always |
+| **Source** | the share record (backend) | computed locally from payments + due date |
 
 They are independent. An invoice can be **Partial and Approved** at the same time, or **Paid and never
 opened**. Neither fact makes the other untrue.
 
+### The money tag has exactly four values
+
+**Unpaid · Partially paid · Paid · Overdue.** Nothing paid within the due date; something paid; all
+of it paid; and past the date with a balance outstanding. Between them they cover every case —
+amount (none/some/all) × time (inside/outside) — so a fifth is not missing, it does not exist.
+
+**"Unpaid" for the not-yet-due case, and this needed arguing.** The formally correct accounts-
+receivable term is **Current**, which is what every aging report calls it. It was rejected for the
+same reason "Post" and "Outstanding" were: it is a bookkeeper's word, and a small business that has
+never read an aging report learns nothing from it.
+
+"Unpaid" is not a compromise on accuracy either. Internationally, *unpaid* describes the **amount** —
+it is silent about timing, and an invoice inside its due date is genuinely unpaid. The specific terms
+for lateness are *overdue*, *past due*, *in arrears*. What made this worth checking is that in
+everyday speech people say "unpaid invoices" and mean the ones they are chasing, which drifts toward
+"late" — but that is colloquial drift, not the term's meaning. Beside "Overdue", the pair reads
+itself: both unpaid, one of them late.
+
+**Overdue outranks Partially paid** when both apply. Lateness is the fact the user has to act on, and
+the part-payment is not lost from the card — the Paid/Unpaid amount chips below still show it.
+
+**Overdue begins the day AFTER the due date**, compared as calendar days in the user's own timezone.
+This was a real defect: `dueDate` is an `Instant` carrying the time of day the invoice was created
+(it is set as `now + 7 days`), and the old `dueDate < now` therefore flipped an invoice to Overdue
+partway through its own due date — at whatever o'clock it happened to be made. The client still had
+the rest of the day and the app had already called them late. Two copies of this existed, in
+`InvoiceListViewModel` and `SaveInvoiceViewModel`; both are fixed.
+
 ### The delivery tag is a progression, and "Pending" is not part of it
 
-Sent → Received → Approved/Rejected. Each step is a fact about something the client did (or, for
-Sent, something we did to reach them), and each replaces the one before it.
+Sent → Viewed → Approved/Rejected. Each step is a fact about something the client did (or, for
+Sent, something we did to reach them), and each replaces the one before it. A decision outranks a
+view, because you cannot approve what you did not open.
 
 **"Pending" is deliberately not shown**, even though the backend's `approvalStatus` is literally
 `PENDING` until a decision arrives. It is the current badge's default and it has to go: every shared
@@ -38,6 +70,13 @@ set.
 
 The codebase already contains the failed attempt, and it is worth naming because it will otherwise be
 re-proposed: **`InvoiceStatus.VIEWED`.**
+
+(Three more values sit beside it — `CANCELLED`, `UNCOLLECTIBLE`, `REFUNDED` — and were verified on
+2026-08-07 to be **never assigned anywhere either**, in the app or the backend. There is no way to
+cancel or void an invoice in this product. They are leftovers in an enum written on 2026-06-08,
+before the product had this shape; they are not features waiting to be finished, and this is a simple
+invoice maker where advancement has to arrive as simplicity. The `when` branches map them to "Unpaid"
+purely because Kotlin demands exhaustiveness.)
 
 It sits in the enum between `SENT` and `PARTIAL`. The list item has a label for it, the dashboard
 counts it as outstanding, and the payment screens filter on it. And **nothing has ever assigned it** —
