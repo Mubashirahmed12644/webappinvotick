@@ -57,11 +57,14 @@ export async function POST(request: Request) {
     const res = await fetch(`${origin}/api/translate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ q: [...labelValues, ...dataStrings], target }),
+      body: JSON.stringify({ texts: [...labelValues, ...dataStrings], target }),
       cache: "no-store",
     });
-    const json = (await res.json()) as { translations?: string[] };
-    const out = json?.translations;
+    // `texts` in AND `texts` out — /api/translate's actual contract. This read `translations`,
+    // which is always undefined, so every call fell through the length check below and returned the
+    // original document. Silently, by design, which is why it looked like nothing happened.
+    const json = (await res.json()) as { texts?: string[] };
+    const out = json?.texts;
     if (!out || out.length !== labelValues.length + dataStrings.length) {
       // Length mismatch means the positional mapping below would put the wrong words in the wrong
       // fields — a client's name landing in the notes. Original text is the safe answer.
