@@ -75,9 +75,24 @@ import qrCode from "./qr_code.jpg";
 declare global {
   interface Window {
     __setInvoice?: (json: string) => void;
+    /**
+     * Show the document in another language: `{ data, labels, dir }` as JSON.
+     *
+     * The bundle does NOT translate. It cannot — translation is a network service and this file is
+     * deliberately self-contained. The app fetches the translated document from the web (one
+     * endpoint, the same one behind the public share page) and hands the result in here, so the
+     * offline renderer stays the renderer everywhere and only the translation crosses the network.
+     *
+     * Passing dir="rtl" mirrors the page, which is why the whole payload arrives together rather
+     * than labels alone: text, direction and data have to change in the same frame.
+     */
+    __setTranslatedInvoice?: (json: string) => void;
     __INVOICE__?: InvoiceRenderData;
   }
 }
+
+type Translation = { labels?: typeof LABELS; dir?: "ltr" | "rtl" };
+let currentTranslation: Translation = {};
 
 const root = createRoot(document.getElementById("root")!);
 
@@ -95,6 +110,8 @@ function render(data: InvoiceRenderData | null) {
     <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0 }}>
       <A4PagedFrame
         data={data}
+        labels={currentTranslation.labels}
+        dir={currentTranslation.dir ?? "ltr"}
         qrDataUrl={qrCode}
         draggableStamp
         onStampMove={(x, y) => {
@@ -133,9 +150,23 @@ function render(data: InvoiceRenderData | null) {
 
 window.__setInvoice = (json: string) => {
   try {
+    // A fresh document arrives untranslated — the app re-asks for a translation if it wants one.
+    // Keeping a stale translation here would leave the previous language's labels on a new invoice.
+    currentTranslation = {};
     render(JSON.parse(json) as InvoiceRenderData);
   } catch {
     render(null);
+  }
+};
+
+window.__setTranslatedInvoice = (json: string) => {
+  try {
+    const payload = JSON.parse(json) as { data: InvoiceRenderData; labels?: typeof LABELS; dir?: "ltr" | "rtl" };
+    currentTranslation = { labels: payload.labels, dir: payload.dir };
+    render(payload.data);
+  } catch {
+    // Leave whatever is on screen. A document that fails to translate should stay readable in its
+    // original language, not disappear.
   }
 };
 
