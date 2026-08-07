@@ -1,7 +1,7 @@
 # 0017 — On the shared link, Android installs the app for a PDF; everyone else downloads in the browser
 
 **Date:** 2026-08-07
-**Status:** accepted, not yet built
+**Status:** accepted, BUILT 2026-08-07
 **Touches:** `Webinvotick` — `src/app/i/[token]/page.tsx`, `src/lib/og-card.tsx`
 
 ## The decision
@@ -47,14 +47,30 @@ device.
 - **A "maybe later" download link under the install prompt on Android.** Every receiver takes it, so
   it is browser-download-everywhere with extra steps.
 
-## Still open
+## Built
 
-The claim has to come back when the feature does. It was removed in `a7f35a3` because the OG card
-promised "View & download the invoice (PDF)" and no download existed. Both places carry the promise
-and must be changed together:
+Both places got the promise back together, as this document required:
 
-- `src/lib/og-card.tsx` — the line now reading "View this invoice" / "View this estimate"
+- `src/lib/og-card.tsx` — "View & download the invoice / estimate (PDF)"
 - `src/app/i/[token]/page.tsx` — the `description` in `generateMetadata`
+
+**How the browser makes the PDF: the print dialog.** Every browser offers "Save as PDF" there, so
+the file is produced on the receiver's own machine from the page already in front of them. The
+alternative — rendering PDFs server-side — would mean a headless browser per request and a file to
+store or stream, for something the client can already make from the same HTML, plus one more thing
+that can be stale or empty.
+
+Almost no new code was needed to print: `A4PagedFrame` already carried a full `@media print` block
+with A4 pagination, and `globals.css` already defined `.no-print` and `.print-area`. The page header
+and footer are marked as chrome; the document container is marked as the thing to print.
+
+**The Android side is now worth arriving at.** `PdfViewerActivity` was a viewer with a close button:
+someone who installed the app to read an invoice could look at it and press Back, and `finish()` put
+them on their launcher. It has Share and Print (Print is also Android's Save-as-PDF), a single line
+offering to create their own, and Back that lands inside the app.
+
+**Not exercised end to end.** That needs a live share token, which needs the app and a signed-in
+user. Typecheck passes and the dead-link path renders.
 
 ## What the OG card should say
 
