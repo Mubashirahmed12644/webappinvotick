@@ -87,7 +87,7 @@ export const LABEL_TRANSLATIONS: Record<string, Partial<InvoiceLabels>> = {
     "poNo": "ص.ب #",
     "phone": "الهاتف",
     "email": "البريد الإلكتروني",
-    "colSn": "س#",
+    "colSn": "س #",
     "colDescription": "الوصف",
     "colQty": "الكمية",
     "colPrice": "السعر",
