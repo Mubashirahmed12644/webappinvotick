@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { A4PagedFrame } from "@/components/invoice/A4PagedFrame";
+import { translateInvoice, type TranslatedInvoice } from "@/lib/translate-invoice";
 import type { InvoiceRenderData } from "@/lib/data";
 
 /**
@@ -26,6 +27,29 @@ export default function EmbedRenderPage() {
   // server round-trip renders identically to the offline bundle. No token → local hash/postMessage
   // data with draggable overlays (the editing harness).
   const [serverMode, setServerMode] = useState(false);
+  // Translated view of [data], or null when the document is shown in its original language.
+  //
+  // The app's preview asks for this with ?lang=xx, so an invoice can be read in the receiver's
+  // language from inside the app using the SAME translation the public share page runs — one
+  // implementation, one set of labels, one right-to-left decision. A second translator would drift
+  // from this one and the sender would be shown something the receiver never sees.
+  const [translated, setTranslated] = useState<TranslatedInvoice | null>(null);
+
+  useEffect(() => {
+    if (!data) return;
+    const lang = new URLSearchParams(window.location.search).get("lang");
+    if (!lang || lang === "en") {
+      setTranslated(null);
+      return;
+    }
+    let cancelled = false;
+    void translateInvoice(data, lang)
+      .then((t) => { if (!cancelled) setTranslated(t); })
+      // Silent on failure, showing the original. A half-translated invoice, or an error where a
+      // document should be, is worse than one in the language it was written in.
+      .catch(() => { if (!cancelled) setTranslated(null); });
+    return () => { cancelled = true; };
+  }, [data]);
 
   useEffect(() => {
     const token = new URLSearchParams(window.location.search).get("token");
@@ -112,7 +136,9 @@ export default function EmbedRenderPage() {
   return (
     <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0 }}>
       <A4PagedFrame
-        data={data}
+        data={translated?.data ?? data}
+        labels={translated?.labels}
+        dir={translated?.dir ?? "ltr"}
         qrDataUrl="/qr_code.jpg"
         // Server (token) mode renders read-only — exactly like the receiver's OG-link. Local (hash)
         // mode keeps the draggable editing overlays.
