@@ -6,6 +6,7 @@ import { getSharedInvoice, installUrlForToken } from "@/lib/shared-invoice";
 import { ApprovalActions } from "@/components/shared-invoice/ApprovalActions";
 import { SharedInvoiceViewer } from "@/components/shared-invoice/SharedInvoiceViewer";
 import { ViewBeacon } from "@/components/shared-invoice/ViewBeacon";
+import { PdfButton } from "@/components/shared-invoice/PdfButton";
 
 const SITE = "https://www.invotick.com";
 
@@ -53,11 +54,13 @@ export async function generateMetadata({
   const title = [number ? `${kind} ${number}` : kind, who ? `from ${who}` : null]
     .filter(Boolean)
     .join(" ");
-  // No PDF claim: this page has no download. It offers the document and, for the receiver, a
-  // decision — which is the more useful thing to say anyway.
+  // The PDF claim is back, because the download exists again (decision 0017). It promises the
+  // OUTCOME, not the mechanism: every receiver does get a PDF — in one click on iOS and desktop,
+  // after installing on Android. Saying "install the app" here would front-load the cost before the
+  // document has even been seen, and this text is read before the link is opened.
   const description = isEstimate
-    ? "View this estimate and approve it. Made with Invotick."
-    : "View this invoice. Made with Invotick.";
+    ? "View this estimate, download the PDF, and approve it. Made with Invotick."
+    : "View this invoice and download the PDF. Made with Invotick.";
   // OG image = the blob-backed route, versioned by content so an edited invoice (new total, more
   // items) gets a fresh card instead of the first render forever. `v` changes whenever the invoice
   // changes → new blob key + a new image URL crawlers re-fetch.
@@ -121,7 +124,7 @@ export default async function SharedInvoicePage({
           it has to be a client component so crawlers, which never run JS, are excluded by design. */}
       <ViewBeacon token={token} />
 
-      <header className="shrink-0 px-4 pt-3 pb-2 text-center">
+      <header className="no-print shrink-0 px-4 pt-3 pb-2 text-center">
         <h1 className="truncate text-base font-semibold text-neutral-900 sm:text-lg">
           {shared.invoiceNumber ? `${kind} ${shared.invoiceNumber}` : kind} ·{" "}
           <span className="text-neutral-500">{businessName}</span>
@@ -131,13 +134,13 @@ export default async function SharedInvoicePage({
       {/* Invoice rendered as HTML from the snapshot — the same <InvoiceDocument> / A4 paging the app
           and free tool use (multi-page, fits width, scrolls). No image upload/wait. */}
       <div className="min-h-0 flex-1 px-3">
-        <div className="relative mx-auto h-full overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
+        <div className="print-area relative mx-auto h-full overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
           <SharedInvoiceViewer data={shared.snapshot} qrDataUrl="/qr_code.jpg" />
         </div>
       </div>
 
       {/* Fixed footer — always visible without scrolling: decision + create CTA. */}
-      <footer className="shrink-0 space-y-2 px-4 pt-2 pb-4">
+      <footer className="no-print shrink-0 space-y-2 px-4 pt-2 pb-4">
         {decided ? (
           <div
             className={`rounded-2xl border p-3 text-center ${
@@ -159,29 +162,27 @@ export default async function SharedInvoicePage({
           <ApprovalActions token={token} compact />
         )}
 
-        {platform === "android" ? (
-          <div className="flex gap-2">
+        {/* Decision 0017: everyone is offered the PDF. Android reaches it through the app, which
+            is where the growth loop lives; iOS and desktop get it from the browser, because there is
+            no iOS app to install and a desktop has nowhere to be sent. */}
+        <div className="flex gap-2">
+          <PdfButton platform={platform} installUrl={installUrl} kind={kind} />
+          {platform === "android" ? (
             <a
               href={installUrl}
               className="flex-1 rounded-full bg-[#0D4DC0] px-4 py-2.5 text-center text-sm font-medium text-white"
             >
               Install Invotick — free
             </a>
+          ) : (
             <Link
               href="/"
-              className="flex-1 rounded-full border border-neutral-300 px-4 py-2.5 text-center text-sm font-medium text-neutral-800"
+              className="flex-1 rounded-full bg-[#0D4DC0] px-4 py-2.5 text-center text-sm font-medium text-white"
             >
-              Create an invoice online
+              Create yours — free
             </Link>
-          </div>
-        ) : (
-          <Link
-            href="/"
-            className="block w-full rounded-full bg-[#0D4DC0] px-4 py-2.5 text-center text-sm font-medium text-white"
-          >
-            Create an invoice online — free
-          </Link>
-        )}
+          )}
+        </div>
       </footer>
     </main>
   );
