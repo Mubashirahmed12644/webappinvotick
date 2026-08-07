@@ -101,4 +101,30 @@ export function labelsFor(documentType?: string | null): InvoiceLabels {
 }
 
 // Stable key order for batching label translations.
+/**
+ * What to hand a TRANSLATOR for labels whose English is an abbreviation or otherwise ambiguous.
+ *
+ * The rendered label stays short — a table column has no room for "Purchase order number" — but the
+ * string we ask a machine to translate has to be the thing we actually mean. Sending the abbreviation
+ * produced real, shipped nonsense:
+ *
+ *   "Disc"  → 光盘 / القرص / Scheibe / ディスク   ("optical disc", over the DISCOUNT column)
+ *   "P.O #" → 邮政信箱号                          ("PO Box number", not purchase order)
+ *   "S#"    → nothing meaningful in any language
+ *
+ * A translator cannot know "Disc" is short for "Discount"; a reader of the finished invoice cannot
+ * know either. Anything added to LABELS whose English is clipped, initialised, or a word with a
+ * commoner other meaning belongs in here.
+ */
+export const LABEL_TRANSLATION_SOURCE: Partial<Record<keyof InvoiceLabels, string>> = {
+  colDisc: "Discount",
+  poNo: "Purchase order number",
+  colSn: "Line number",
+  colQty: "Quantity",
+  invoiceNo: "Invoice number",
+  // "From" alone reads as the preposition and comes back as one. On an invoice it names the party.
+  from: "Sender",
+  billTo: "Bill to customer",
+};
+
 export const LABEL_KEYS = Object.keys(LABELS) as (keyof InvoiceLabels)[];

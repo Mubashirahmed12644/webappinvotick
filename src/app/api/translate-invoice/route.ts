@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { LABELS } from "@/lib/invoice-labels";
-import { LABEL_TRANSLATIONS } from "@/lib/invoice-labels-i18n";
+import { LABELS, labelsFor } from "@/lib/invoice-labels";
+import { LABEL_TRANSLATIONS, ESTIMATE_LABEL_TRANSLATIONS } from "@/lib/invoice-labels-i18n";
 import { isRtl } from "@/lib/translate";
 import type { InvoiceRenderData } from "@/lib/data";
 
@@ -32,8 +32,13 @@ export async function POST(request: Request) {
   if (!data) {
     return NextResponse.json({ error: "snapshot is required" }, { status: 400 });
   }
+  // An estimate says five things differently, starting with its own name. Getting this wrong tells a
+  // client they have been BILLED for something they were only quoted.
+  const isEstimate = (data as { documentType?: string }).documentType === "ESTIMATE";
+  const base = labelsFor(isEstimate ? "ESTIMATE" : "INVOICE");
+
   if (!target || target === "en") {
-    return NextResponse.json({ data, labels: LABELS, dir: "ltr" });
+    return NextResponse.json({ data, labels: base, dir: "ltr" });
   }
 
   const dir: "ltr" | "rtl" = isRtl(target) ? "rtl" : "ltr";
@@ -45,7 +50,11 @@ export async function POST(request: Request) {
   //
   // A language with no entry falls back to English labels and still translates the seller's text:
   // half a document in the reader's language beats none of it.
-  const labels = { ...LABELS, ...(LABEL_TRANSLATIONS[target] ?? {}) };
+  const labels = {
+    ...base,
+    ...(LABEL_TRANSLATIONS[target] ?? {}),
+    ...(isEstimate ? ESTIMATE_LABEL_TRANSLATIONS[target] ?? {} : {}),
+  };
   const c = data.client;
   // Same FIXED order as translateInvoice, because the translations come back positionally.
   const dataStrings: string[] = [
