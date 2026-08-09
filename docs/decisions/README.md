@@ -32,3 +32,13 @@ Numbering: next free number, zero-padded to 4.
 | [0009](0009-currency-backfill-measured.md) | 2,717 of 5,004 invoices still carry the wrong currency — the backfill's WHERE clause could not see them | measured |
 | [0010](0010-health-centre-one-dashboard.md) | Everything that fails silently gets a check in one place; a new check is a `@Component`, never a new page | accepted |
 | [0011](0011-discard-dialog-only-for-documents.md) | Small entity forms lose the discard dialog and keep a draft; invoice/estimate keep it — the six copies are two different interactions | accepted |
+| [0012](0012-no-continue-editing-dialog-on-entry.md) | A draft is resumed, not negotiated — no "continue editing?" dialog on entry | accepted |
+| [0013](0013-logout-clears-session-and-purges-when-settled.md) | Logout clears the session; the account's data is deleted only once it is settled | accepted |
+| [0014](0014-discard-dialog-needs-document-content.md) | A business and a client are not work worth a dialog | accepted |
+| [0015](0015-estimate-draft-rules-copied-only-where-safe.md) | Estimate draft rules follow the invoice's — but only four of five | accepted |
+| [0016](0016-one-bottom-sheet-standard.md) | One bottom sheet, and it answers when you pull it | accepted, shipped |
+| [0017](0017-shared-pdf-android-installs-others-download.md) | On the shared link, Android installs the app for a PDF; everyone else downloads | accepted, built |
+| [0018](0018-the-shared-image-is-gone-html-is-the-only-render.md) | The shared invoice image is gone; HTML is the only render | accepted, built |
+| [0019](0019-two-tags-money-and-delivery-are-not-one-axis.md) | An invoice card carries two tags — money and delivery are not one axis | superseded by 0020 |
+| [0020](0020-the-payment-tag-goes-the-card-says-it-in-words.md) | The payment tag goes; the card says it in words | accepted, built |
+| [0021](0021-dynamic-colour-is-offered-never-assumed.md) | Dynamic colour is offered, never assumed; it stops at the document | accepted, built |
