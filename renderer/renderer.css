@@ -43,19 +43,40 @@ html, body, #root { margin: 0; background: #f7f7f7; }
   src: url("./fonts/nunito_black.ttf") format("truetype");
 }
 
-/* Theme vars InvoiceDocument reads. */
+/* Theme vars InvoiceDocument reads. Mirrors src/app/globals.css — hard invariant 1. */
 :root {
+  /*
+    Mirrored from globals.css, and it has to be here too.
+
+    This bundle is a self-contained HTML file loaded in the app's WebView, so it never sees the
+    site's stylesheet. Without this line the offline render is exactly the page a browser feels
+    entitled to darken — and on the WebView side the same applies once the app's window theme
+    becomes DayNight. The sheet is paper in both places or it is paper in neither.
+  */
+  color-scheme: only light;
+
   --font-nunito: "Nunito", ui-sans-serif, system-ui, sans-serif;
   --color-primary: #0d4dc0;
-  --color-primary-container: #d6e2ff;
-  --color-outline-variant: #cac4d0;
+  --color-primary-container: #e1e0ff;
+  --color-outline-variant: #c6c5d4;
   --radius-md: 12px;
+
+  /* Paper. Fixed in every theme, on both sides of the render. */
+  --color-paper: #ffffff;
+  --color-on-paper: #1c1b1f;
+  --color-paper-line: #e0e0e0;
 }
 
 html,
 body {
   margin: 0;
-  /* Same light grey the native canvas uses behind the invoice (Color 0xFFF7F7F7). */
-  background: #f7f7f7;
+  /*
+    The mat the sheet sits on. Light by default — that is what the public share page and any
+    other viewer should see, because there the page IS the document.
+
+    The Android app overrides `--invotick-mat` on page finish so the desk matches the app around
+    it. The PAPER never changes: that is the white A4 inside, and it is white in every theme.
+  */
+  background: var(--invotick-mat, #f7f7f7);
   font-family: var(--font-nunito);
 }

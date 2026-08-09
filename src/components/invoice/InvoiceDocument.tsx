@@ -1,6 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
 import type { InvoiceRenderData } from "@/lib/data";
-import { formatMoney, formatDate, hexToRgba, contrastText } from "@/lib/format";
+import { formatMoney, formatDate, hexToRgba, contrastText, onTint, blendOnWhite } from "@/lib/format";
 import { imageProxyUrl } from "@/lib/image";
 import { BRAND_LOGO } from "@/lib/givens";
 import { LABELS, labelsFor, type InvoiceLabels } from "@/lib/invoice-labels";
@@ -195,8 +195,16 @@ export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hide
                 <TotalRow label={labels.shipping} value={formatMoney(data.shippingCost, cur)} tint={hexToRgba(color, 0.05)} />
                 {/* TOTAL — light tint + accent text, the lowest of three rungs on an invoice. On an
                     estimate it is the only figure that matters and the last row in the box, so it
-                    takes the hero treatment BALANCE DUE would have had. */}
-                <div className="flex items-center justify-between px-3 py-2 text-[15px] font-extrabold" style={isEstimate ? { backgroundColor: color, color: onColor } : { backgroundColor: hexToRgba(color, 0.16), color }}>
+                    takes the hero treatment BALANCE DUE would have had.
+
+                    The text is `onTint`, not the raw accent. Written literally this row was the
+                    accent on a 16% wash of itself: 5.7:1 for the default blue, but 1.99:1 if a
+                    seller picks cyan and 1.18:1 for yellow. `onTint` keeps the hue and walks the
+                    lightness down until the pair clears AA, so the row still reads as accent-on-
+                    accent for every colour rather than only for the one that was tested. The
+                    estimate branch already did the right thing with `onColor`; this is the invoice
+                    branch catching up. */}
+                <div className="flex items-center justify-between px-3 py-2 text-[15px] font-extrabold" style={isEstimate ? { backgroundColor: color, color: onColor } : { backgroundColor: hexToRgba(color, 0.16), color: onTint(color, 0.16) }}>
                   <span>{labels.total}</span>
                   <span>{formatMoney(data.total, cur)}</span>
                 </div>
@@ -206,7 +214,7 @@ export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hide
                     estimate TOTAL is the last row, so it takes the dark hero treatment instead. */}
                 {!isEstimate && (
                   <>
-                    <div className="flex items-center justify-between px-3 py-2 text-[15px] font-extrabold" style={{ backgroundColor: hexToRgba(color, 0.34), color: "#1c1b1f" }}>
+                    <div className="flex items-center justify-between px-3 py-2 text-[15px] font-extrabold" style={{ backgroundColor: hexToRgba(color, 0.34), color: contrastText(blendOnWhite(color, 0.34)) }}>
                       <span>{labels.amountPaid}</span>
                       <span>{formatMoney(data.amountPaid ?? 0, cur)}</span>
                     </div>

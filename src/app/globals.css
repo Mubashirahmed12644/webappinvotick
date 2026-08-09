@@ -3,38 +3,79 @@
 /*
   Invotick brand theme — mirrored 1:1 from the Android/KMP app
   (core/ui/theme/Theme.kt, Shapes.kt, Typography.kt).
-  Primary blue #0D4DC0, secondary green #1B7E34, Nunito font.
+
+  The values below are the app's LightColorScheme, regenerated 2026-08-08 when the app grew a real
+  Material 3 scheme. They are derived from tonal palettes rather than chosen, so do not hand-edit
+  one: change Theme.kt, then mirror. Primary stays the brand blue #0D4DC0 — pinned in both repos.
+
+  Secondary and tertiary changed with that regeneration: they used to be a green and a dark red,
+  which put the theme's "secondary" and the app's "paid" both on green with no relation between
+  them. They are now derived from the seed, so an accent can no longer be mistaken for a meaning.
 */
 :root {
+  /*
+    The single most load-bearing line in this file.
+
+    Nothing here declared a colour-scheme, which tells Chrome on Android and Samsung Internet that
+    the page has no opinion — and both ship a user-facing "darken websites" toggle that then
+    algorithmically inverts it. On a shared invoice that is not a cosmetic problem: the header photo,
+    the seller's logo, the stamp and the signature are classified as images and left bright, while
+    the QR code — two-tone, high-contrast, exactly what the inverter targets — flips and stops
+    scanning. `only light` is the documented opt-out.
+
+    It is `only light` rather than `light` deliberately: `light` still permits the browser to darken;
+    `only` refuses. This page renders a paper document, and paper has one colour.
+
+    Mirrored in renderer/renderer.css. Both must say it, or the offline bundle and the deployed page
+    disagree about what a shared invoice looks like — hard invariant 1.
+  */
+  color-scheme: only light;
+
   --color-primary: #0d4dc0;
   --color-on-primary: #ffffff;
-  --color-primary-container: #d6e2ff;
-  --color-on-primary-container: #001a48;
+  --color-primary-container: #e1e0ff;
+  --color-on-primary-container: #001849;
 
-  --color-secondary: #1b7e34;
+  --color-secondary: #5c5c76;
   --color-on-secondary: #ffffff;
-  --color-secondary-container: #b8f1c5;
-  --color-on-secondary-container: #00210b;
+  --color-secondary-container: #e1e0fe;
+  --color-on-secondary-container: #181a2f;
 
-  --color-tertiary: #8b2c2c;
+  --color-tertiary: #b5106b;
   --color-on-tertiary: #ffffff;
-  --color-tertiary-container: #ffdad6;
-  --color-on-tertiary-container: #370909;
+  --color-tertiary-container: #ffd9e6;
+  --color-on-tertiary-container: #3e0021;
 
-  --color-error: #b3261e;
+  --color-error: #c00017;
   --color-on-error: #ffffff;
-  --color-error-container: #f9dedc;
-  --color-on-error-container: #410e0b;
+  --color-error-container: #ffdad3;
+  --color-on-error-container: #3a0b00;
 
-  --color-background: #fafafa;
-  --color-on-background: #1c1b1f;
-  --color-surface: #ffffff;
-  --color-on-surface: #1c1b1f;
+  --color-background: #f9f9ff;
+  --color-on-background: #1b1b20;
+  --color-surface: #f9f9ff;
+  --color-on-surface: #1b1b20;
 
-  --color-surface-variant: #e7e0ec;
-  --color-on-surface-variant: #49454f;
-  --color-outline: #79747e;
-  --color-outline-variant: #cac4d0;
+  --color-surface-variant: #e2e1f0;
+  --color-on-surface-variant: #464652;
+  --color-outline: #767683;
+  --color-outline-variant: #c6c5d4;
+
+  /* The meanings Material 3 has no role for. Mirrors InvotickExtendedColors in the app. */
+  --color-success: #036c4b;
+  --color-success-container: #83f8c5;
+  --color-on-success-container: #002114;
+  --color-warning: #855301;
+  --color-warning-container: #ffddb9;
+  --color-on-warning-container: #281900;
+  --color-info: #015cbc;
+  --color-info-container: #dce1ff;
+  --color-on-info-container: #001b3f;
+
+  /* Paper. Fixed — an invoice sheet does not follow anyone's theme. */
+  --color-paper: #ffffff;
+  --color-on-paper: #1c1b1f;
+  --color-paper-line: #e0e0e0;
 }
 
 @theme inline {

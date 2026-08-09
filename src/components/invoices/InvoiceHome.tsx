@@ -5,19 +5,27 @@ import Link from "next/link";
 import { formatMoney, formatDate } from "@/lib/format";
 import type { InvoiceSummary } from "@/lib/types";
 
+// The same tokens globals.css defines, read through CSS variables rather than re-typed as hexes.
+//
+// This was a private copy, and it had already drifted: `success` here was #10B981 while the app's
+// was #059669 and StatusBadge's was a third value — three greens for one word, "Paid". Pointing at
+// the variables means the drift cannot start again, and it is what makes this component follow the
+// theme instead of a snapshot of it.
 const C = {
-  primary: "#0D4DC0",
-  primaryVariant: "#0A3D9A",
-  success: "#10B981",
-  warning: "#F59E0B",
-  warningLight: "#FEF3C7",
-  error: "#EF4444",
-  info: "#3B82F6",
-  infoLight: "#DCEEFB",
-  grey: "#6B7280",
-  greyLight: "#F3F4F6",
-  ink: "#0F172A",
-  bg: "#F6F7FB",
+  primary: "var(--color-primary)",
+  primaryVariant: "var(--color-primary)",
+  success: "var(--color-success)",
+  successLight: "var(--color-success-container)",
+  warning: "var(--color-warning)",
+  warningLight: "var(--color-warning-container)",
+  error: "var(--color-error)",
+  errorLight: "var(--color-error-container)",
+  info: "var(--color-info)",
+  infoLight: "var(--color-info-container)",
+  grey: "var(--color-on-surface-variant)",
+  greyLight: "var(--color-surface-variant)",
+  ink: "var(--color-on-surface)",
+  bg: "var(--color-background)",
 } as const;
 
 const n = (v: string | number | null | undefined) => {
@@ -38,9 +46,9 @@ function symbolOf(currency: string): string {
 function statusStyle(status: string): { label: string; color: string; light: string } {
   switch (status.toUpperCase()) {
     case "PAID":
-      return { label: "Paid", color: C.success, light: "#D1FAE5" };
+      return { label: "Paid", color: C.success, light: C.successLight };
     case "OVERDUE":
-      return { label: "Overdue", color: C.error, light: "#FEE2E2" };
+      return { label: "Overdue", color: C.error, light: C.errorLight };
     case "PARTIAL":
       return { label: "Partial", color: C.warning, light: C.warningLight };
     case "DRAFT":
