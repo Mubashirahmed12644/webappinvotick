@@ -42,3 +42,4 @@ Numbering: next free number, zero-padded to 4.
 | [0019](0019-two-tags-money-and-delivery-are-not-one-axis.md) | An invoice card carries two tags — money and delivery are not one axis | superseded by 0020 |
 | [0020](0020-the-payment-tag-goes-the-card-says-it-in-words.md) | The payment tag goes; the card says it in words | accepted, built |
 | [0021](0021-dynamic-colour-is-offered-never-assumed.md) | Dynamic colour is offered, never assumed; it stops at the document | accepted, built |
+| [0022](0022-edge-to-edge-verified-for-targetsdk-36.md) | Edge-to-edge verified for targetSdk 36 — 17 surfaces measured, no code needed |
