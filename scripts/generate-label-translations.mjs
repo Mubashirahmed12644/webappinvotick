@@ -42,6 +42,19 @@ const estEntries = [...(estBlock?.[1] ?? "").matchAll(/^\s*(\w+)\s*:\s*"((?:[^"\
   .map((m) => [m[1], m[2]]);
 console.log(`${estEntries.length} estimate overrides:`, estEntries.map(([k]) => k).join(", "));
 
+// Human-verified corrections. Merged OVER the machine output, and the reason they live in their own
+// file is that THIS script overwrites its output whole — a correction made in the generated file
+// survives exactly until the next run. 271 of them came out of a per-language review; losing those
+// to a regeneration would be losing the only part of this table anybody actually checked.
+const overridesSrc = readFileSync("src/lib/invoice-labels-overrides.ts", "utf8");
+const OVERRIDES = {};
+for (const m of overridesSrc.matchAll(/"([\w-]+)":\s*\{([\s\S]*?)\n  \}/g)) {
+  OVERRIDES[m[1]] = Object.fromEntries(
+    [...m[2].matchAll(/^\s*(\w+):\s*"((?:[^"\\]|\\.)*)"/gm)].map((e) => [e[1], e[2]]),
+  );
+}
+console.log(`${Object.keys(OVERRIDES).length} languages carry human corrections`);
+
 const langBlock = readFileSync("src/lib/translate.ts", "utf8").match(/export const LANGUAGES[^[]*\[([\s\S]*?)\n\];/);
 const codes = [...langBlock[1].matchAll(/code:\s*"([^"]+)"/g)].map((m) => m[1]).filter((c) => c !== "en");
 
@@ -64,6 +77,20 @@ for (const code of codes) {
   // A language is only written if EVERY label came back. A partial set would leave some labels in
   // English and some translated on the same document, which reads as a rendering bug.
   out[code] = Object.fromEntries(entries.map(([k], i) => [k, texts[i] || entries[i][1]]));
+
+  // The brand name is a proper noun and must survive verbatim. Translation mangled it in nine
+  // languages — "Invotic" with the k eaten in zh-CN, th, nl and ne, "Invotik" in ms, and
+  // transliterated into local script in hi, bn, gu and am. A company's name is not a word to
+  // translate; it is how people find the app in a store.
+  for (const k of Object.keys(out[code])) {
+    // Any Latin-script near-miss becomes the real thing. The transliterations into Devanagari,
+    // Bengali, Gujarati and Ethiopic are not reachable by a Latin pattern and are corrected by hand
+    // in the overrides file instead.
+    out[code][k] = out[code][k].replace(/\bInvot[a-zA-Z]{0,4}\b/g, "Invotick");
+  }
+
+  // Human corrections win over everything above.
+  Object.assign(out[code], OVERRIDES[code] ?? {});
 
   // Second, much smaller batch for the estimate's own wording.
   const estRes = await fetch(`${ORIGIN}/api/translate`, {
