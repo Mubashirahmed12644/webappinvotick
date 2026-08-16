@@ -238,6 +238,13 @@ a single-line grep silently misses events — always grep with trailing context.
 - **Form-typing proxies:** `business_form_text_add`, `client_form_text_add`, `item_form_text_add` —
   fired **once per form**, on the first non-blank keystroke in the *name* field. They prove the user
   started typing, **not** that the data was real. Plus `*_form_dismissed`, `Business/Client/Item_added`.
+- **Abandonment:** `sheet_dismissed` — **one** event for every bottom sheet, with `sheet`
+  (`invoice_client_form`, `invoice_item_form`, …), `method`
+  (`close_button` | `swipe` | `scrim_or_back`) and `had_input`. Do not add a second dismissal event
+  or a per-sheet name; see decision [0023](docs/decisions/0023-one-dismissal-event-the-method-is-a-parameter.md).
+  It is emitted from the single `InvotickSheet` implementation through `LocalCodedEventLogger` — a
+  second, **non-allowlisted** channel, because auto-captured taps do not reach production while
+  `AnalyticsAllowlist.DEFAULT` is empty, and a swipe has no clickable for auto-capture to see.
 - **Auth:** `login_success`, `register_success`, `guest_login_success`, `otp_verify_success`
 - **Growth (G2), receiver side:** `shared_invoice_opened`, `shared_invoice_opened_by_owner`,
   `shared_invoice_create_own_click`, `shared_invoice_approved`, `shared_invoice_rejected`,
