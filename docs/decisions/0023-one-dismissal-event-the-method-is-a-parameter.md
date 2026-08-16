@@ -97,5 +97,14 @@ The three-event behaviour was found by the owner in the admin panel's Live Event
 device run that preceded it — that run only checked that `method` was reported correctly, and never
 counted how many events one dismissal produced. **Count first, then read the values.**
 
-Static state after the fix: two emitters across all four routes, mutually exclusive. The device
-count is still owed — adb lost the phone after the build.
+Measured on device (`tools/maestro/sheet_dismiss_methods.yaml` and `sheet_dismiss_swipe.yaml`), one
+event per dismissal, same name, parameters apart:
+
+```
+✕      invoice_create_client_screen_close | method=close_button, had_input=false
+swipe  invoice_create_client_screen_close | method=swipe,        had_input=true
+```
+
+`sheet_dismissed`, `client_form_dismissed`, `business_form_dismissed` and `item_form_dismissed`
+appear zero times across both runs. The events also carry `allowlisted=false`, which is the
+allowlist doing its job rather than a bypass doing it for them.
