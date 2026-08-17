@@ -216,6 +216,11 @@ Two that bite most often:
 Flow: app records → local queue (`core/analytics`, its own Room DB) → flush → backend
 `/v2/analytics/track` → admin panel reads it back.
 
+> ⚠️ **Before touching ANY event, read [`AGENTS-EVENTS.md`](AGENTS-EVENTS.md).** It is the
+> constitution for this system — one action one event, one screen one event, no shared ids, which
+> channel is allowlist-governed, the backend query traps, and how to verify. Every rule in it was
+> paid for by a defect that looked like data rather than a bug. Add to it whenever a rule is decided.
+
 Two classes of event:
 1. **Explicitly coded** events — `gateway.trackClick("name", params)`. These **always send**.
 2. **Auto-captured taps** — a codemod stamped a stable `analyticsId` (`<FileSlug>.<label>_N`) on
@@ -290,6 +295,8 @@ arrive with `sessionId=null`, undercounting admin reports.
 
 ## 8. Where the rest of the knowledge lives
 
+- `AGENTS-EVENTS.md` — **event management constitution**: the rules, the incidents behind them, the
+  verification standard, and the open suggestions. Read before adding, renaming or removing an event.
 - `docs/decisions/` — decision log (what was decided, why, what was rejected). **Read the index before planning.**
 - `~/.claude/projects/-Users-ahmedmubashir-Documents-Webinvotick/memory/` — per-topic memory files, indexed by `MEMORY.md`.
 - `docs/MOBILE-APP-REQUIREMENTS.md`, `docs/SERVER-SIDE-CHANGES.md` — cross-repo contracts (this repo).
