@@ -51,6 +51,21 @@ carries for its dismissal.
 > (`create_invoice_screen` and `Create_invoice_Scr`), and the screen-flow report — which reads
 > `screen_view` — could see only those eight of twenty-odd screens.
 
+**The same rule applies to the screen an event is *stamped with*, not just to the screen event.**
+There are two readers of "where am I": auto-captured taps read `LocalScreenId`, coded events read the
+gateway's own current screen. They must resolve to the same string, and only `InvotickSheet` and the
+nav shell may set it.
+
+> **Incident.** They disagreed on every single tap, 2ms apart:
+> `create_CreateClientScreen.tap_4 screen=create` next to
+> `contacts_permission_requested screen=invoice_client_form`. Two causes. `LocalScreenId` pre-stripped
+> the route to its leaf before calling `meaningfulScreenName`, and that function resolves a name from
+> the **owner** (`InvoiceRoutes.Create` → `create_invoice_screen`); given a bare `Create` it matched
+> nothing and returned the leaf. And a sheet is not a nav destination, so the id did not move when one
+> opened — taps inside the client form were filed under the screen behind it. Nothing was missing and
+> nothing was misordered; the run simply read as though the user kept leaving screens they never left.
+> Fixed in `a3ed3571`: the whole route, and the sheet provides its own name to its subtree.
+
 ### 1.3 Make the automatic thing meaningful. Do not write a manual twin to get a good name.
 
 The owner's rule, in their words: *"tm automatic waly ko meaningful banao gy, na ky meaningful ky
