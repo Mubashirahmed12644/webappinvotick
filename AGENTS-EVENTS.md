@@ -174,9 +174,21 @@ Full detail in `memory/mysql-binary-uuid-and-test-clock.md`. In native queries:
    `install_referrer`, `app_cold_start` and the splash belong to nobody by that column. Scope by
    **session as well**, the way `LiveEventsController` does — and by session, not device, because one
    device can hold several guests.
-4. **No prose inside a native query string.** An apostrophe or a `?` in a `--` comment breaks every
+4. **A JSON column projects as `String`, not `Map`.** `analytics_event_config.baseline_json` is read
+   by the entity through `@JdbcTypeCode(SqlTypes.JSON)`, but an interface projection over a *native*
+   query never goes through the entity — it casts the JDBC value to whatever the interface declares,
+   and the driver hands JSON over as text. Declaring `Map<String, Any?>` made every load of the
+   Discovery page answer 500 with `String cannot be cast to Map`, from the moment the first event
+   was marked Tested and the column stopped being null. Same shape as trap 1: **a native query
+   returns columns, not fields.** Parse it above the repository.
+
+   > Note what hid it: 268 tests passed. Every one of them left `analytics_event_config` empty, so
+   > the LEFT JOIN returned NULL and nothing was ever converted. A nullable column is only tested by
+   > a test that fills it.
+
+5. **No prose inside a native query string.** An apostrophe or a `?` in a `--` comment breaks every
    repository in the context. See `memory/no-prose-inside-native-queries.md`.
-5. **Run `./gradlew test` before every backend push.** `SpringContextBootTest` is the gate and needs
+6. **Run `./gradlew test` before every backend push.** `SpringContextBootTest` is the gate and needs
    the `invotick-test-mysql` container. That container's clock reports a UTC five hours ahead of the
    one it accepts, so never assert a narrow time window against it.
 
