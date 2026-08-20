@@ -201,9 +201,29 @@ Full detail in `memory/mysql-binary-uuid-and-test-clock.md`. In native queries:
    > the LEFT JOIN returned NULL and nothing was ever converted. A nullable column is only tested by
    > a test that fills it.
 
-5. **No prose inside a native query string.** An apostrophe or a `?` in a `--` comment breaks every
+5. **A page that polls is a hot path. Do not hang cold data on it.**
+
+   The Discovery query polls every four seconds. Config columns were selected alongside the event
+   aggregates, which forced `ONLY_FULL_GROUP_BY` to demand all of them in the `GROUP BY` —
+   `baseline_json` included. Grouping by JSON makes MySQL sort on a blob: no index applies, and the
+   cost scales with rows scanned. Measured on 200k rows, 1152ms against 412ms for the same query
+   without it.
+
+   The rule is not "keep JSON out of GROUP BY". It is that **events and config change at completely
+   different speeds** — events every second, config when a person types — and joining them in SQL
+   means paying for the second at the rate of the first. Aggregate events; fetch the config table
+   whole (a few hundred rows); join above the database. Then a column added to config later cannot
+   reach the hot query at all.
+
+   > **What this cost.** One pool of 10 connections serves the entire app — sync push and pull, auth,
+   > invoices, billing, analytics ingest, the panel. A slow query plus a poll with no in-flight guard
+   > filled it: 10 active, 0 idle, 48 queued, MySQL itself idle. Auth could not get a connection
+   > either, so the panel signed itself out, and **devices could not sync**. An admin page made the
+   > product fail for real users.
+
+6. **No prose inside a native query string.** An apostrophe or a `?` in a `--` comment breaks every
    repository in the context. See `memory/no-prose-inside-native-queries.md`.
-6. **Run `./gradlew test` before every backend push.** `SpringContextBootTest` is the gate and needs
+7. **Run `./gradlew test` before every backend push.** `SpringContextBootTest` is the gate and needs
    the `invotick-test-mysql` container. That container's clock reports a UTC five hours ahead of the
    one it accepts, so never assert a narrow time window against it.
 
