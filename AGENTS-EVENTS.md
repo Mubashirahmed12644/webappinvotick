@@ -82,8 +82,28 @@ under one name and neither can be told from the other.
 > cards. `CreateProductScreen.tap_2` covered Discount, Tax and Net Price. All three looked fine in
 > the file they were written in.
 
-Still outstanding, and worth knowing before adding more: `InvotickClickableTextField` (11 screens),
-`InvotickSearchTextField` (12), `DrawerItem` (24), `TextFiedl.voice_input_4` (every mic in the app).
+**Resolved structurally on 2026-08-23, not case by case.** The cause was not carelessness at 550
+call sites: a codemod stamped `analyticsId = "<File>.<label>_N"` on every clickable, and every
+emitter preferred that id over the screen-derived fallback — so the stamp *removed* the screen from
+the name. `tap:invoice_client_form:Save` and `tap:invoice_business_form:Save` are two names for the
+same component because no id was stamped there; `Topbar.close_4` was one name for 60 screens because
+one was.
+
+The damage was in naming. `analytics_event_config` is keyed by event name, so a shared id can only
+ever be given one display name — true on one screen, a lie on the other 59 — and switching it off to
+quieten one screen silences all of them. "Which screen do people close and leave from" was
+unanswerable for exactly the controls the question is about.
+
+`guardedTrackedClick` now qualifies the identity with the screen, idempotently (anything already
+starting with `tap:` is left alone). One gate, 550 ids, no call site edited — and that is the point:
+44 agents working file by file had left 57% of them behind, because a fix spread across call sites
+reaches the ones somebody remembered. `InvotickButton` was the proof it keeps happening: it held a
+fourth copy of the emit, so it bypassed both the screen and the double-tap guard.
+
+Unique is now structural; **meaningful is not**. 182 of the 550 labels say nothing (`tap_2`, `btn_3`,
+`ib_1`), and 141 of those have nothing in the surrounding code to name them from. They are listed in
+`invoice-kmp-app/docs/AUTO-EVENT-NAMES-REVIEW.md`, each to be named or deleted — some are not
+actions at all (`SpotlightShadow.tap_1` is a scrim).
 
 ### 1.5 Auto-captured and coded are different channels. Know which one you are in.
 
@@ -254,9 +274,21 @@ Full detail in `memory/mysql-binary-uuid-and-test-clock.md`. In native queries:
    > either, so the panel signed itself out, and **devices could not sync**. An admin page made the
    > product fail for real users.
 
-6. **No prose inside a native query string.** An apostrophe or a `?` in a `--` comment breaks every
+6. **A column is a claim about a parameter key. Verify the app sends that key.**
+
+   `analytics_events.screen_name` carries two indexes and was filled from `params["screen_name"]`.
+   Only `trackScreenView` sends that key; every auto-captured tap sends `params["screen"]`. So the
+   column was never filled for a single tap, and every screen-filtered query answered as though taps
+   happened nowhere — not an error, a confident empty answer. Ingestion now reads either.
+
+   Note how long it survived: the column exists, the indexes exist, the code reads it, and the data
+   looked plausible because `screen_view` events did fill it. Whenever ingestion extracts a field out
+   of `params`, the key is a contract with the app — grep the app for it, do not read it from the
+   backend alone.
+
+7. **No prose inside a native query string.** An apostrophe or a `?` in a `--` comment breaks every
    repository in the context. See `memory/no-prose-inside-native-queries.md`.
-7. **Run `./gradlew test` before every backend push.** `SpringContextBootTest` is the gate and needs
+8. **Run `./gradlew test` before every backend push.** `SpringContextBootTest` is the gate and needs
    the `invotick-test-mysql` container. That container's clock reports a UTC five hours ahead of the
    one it accepts, so never assert a narrow time window against it.
 
