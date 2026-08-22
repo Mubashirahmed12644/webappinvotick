@@ -110,6 +110,15 @@ a pause ends, carrying `break_ms`.
 > direction: hiding the noise hid the meaning, showing the meaning showed the noise. Removing the
 > ping instead took the live indicator out with it — the app stopped showing as live at all.
 
+> **Incident, 2026-08-22.** The panel's `PRESENCE_ONLY` also listed `nav_screen_view`, and had done
+> since before the two screen events were unified. The app stopped sending that name; the entry
+> matched nothing from then on and nothing said so — measured at the time as **3,334 screen firings
+> across 37 identities, every one arriving as `screen_view` and none as `nav_screen_view`**. The
+> app's own comment on that unification had already named the trap: a check *"keeps working right up
+> until the event it names stops being sent"*. It was fixed in the app and the stale copy survived in
+> the panel. **A filter keyed by an event name is a claim about what the app sends. Re-check it when
+> a name changes — including in the places that did not change.**
+
 ### 1.7 An absent parameter means unknown. Never encode unknown as a value.
 
 `had_input` is omitted when nothing in scope can see the form's state. `false` would be a claim that
@@ -265,6 +274,19 @@ Full detail in `memory/mysql-binary-uuid-and-test-clock.md`. In native queries:
    the pre-search list while the table rendered the filtered one.
 4. **Live Events has a row per firing; Discovery has a row per identity.** They reconcile through the
    × column. This confuses everyone at first and is not a bug.
+5. **A count must say what window it covers.** Discovery counts a week of history and prints when the
+   list was cleared; Live Events counted only what arrived while the page was open and printed
+   nothing. Read side by side that was 112 against 72, which looks exactly like events going missing
+   — the 40 between them had fired before anyone opened the page. Fixed 2026-08-22 by printing
+   `since <time>` beside the stream count. **Two numbers on two pages will be compared whether or not
+   they were meant to be; each one has to carry its own scope.**
+6. **Track is decided in Event Discovery and shown everywhere.** Live Events displays each row's
+   Track status and filters nothing on it. A "tracked only" filter was built on 2026-08-22 and
+   removed the same day: hiding un-tracked rows made the two pages disagree on counts, and this
+   stream is the one place an event nobody has catalogued yet can be seen at all — filtering by a
+   decision that has not been made about it is how it stays invisible. See decision
+   [0024](docs/decisions/0024-a-double-tap-is-stopped-at-the-button-not-counted-later.md) for the
+   same principle applied to duplicate taps: stop the cause, do not filter the symptom.
 5. Both pages have **Copy** and **Download**; the copy carries full params, which no screenshot can.
 
 ---
