@@ -280,13 +280,25 @@ Full detail in `memory/mysql-binary-uuid-and-test-clock.md`. In native queries:
    — the 40 between them had fired before anyone opened the page. Fixed 2026-08-22 by printing
    `since <time>` beside the stream count. **Two numbers on two pages will be compared whether or not
    they were meant to be; each one has to carry its own scope.**
-6. **Track is decided in Event Discovery and shown everywhere.** Live Events displays each row's
-   Track status and filters nothing on it. A "tracked only" filter was built on 2026-08-22 and
-   removed the same day: hiding un-tracked rows made the two pages disagree on counts, and this
-   stream is the one place an event nobody has catalogued yet can be seen at all — filtering by a
-   decision that has not been made about it is how it stays invisible. See decision
-   [0024](docs/decisions/0024-a-double-tap-is-stopped-at-the-button-not-counted-later.md) for the
-   same principle applied to duplicate taps: stop the cause, do not filter the symptom.
+6. **Track is decided in Event Discovery and shown everywhere.** Every Live Events row states its own
+   Track status, and there is a "Tracked only" view filter that is **off by default**, so nothing is
+   withheld until it is asked for.
+
+   That filter was built on 2026-08-22, removed the same day, and put back later the same day — and
+   the difference is worth keeping, because it is not about the filter. On the first attempt it hid
+   rows with nothing to say it was doing so, the row numbers were computed after filtering so the
+   survivors were renumbered into a contiguous block, and the header still claimed the full count.
+   The result read as events going missing, twice, and cost an afternoon of looking for a fault that
+   was not there. **A filter is safe to offer once the page can say what it is holding back and the
+   numbering survives it.** Three things had to exist first: the Track column, a row number taken
+   before the filter, and a hidden count in the header.
+
+7. **The same event must start at the same place on both pages.** Both Live Events and Event
+   Discovery put the identity first and everything about it — screen, time, kind, channel — on a
+   second, quieter line under it. Discovery used to lead with the `screen`/`action` and `auto`/`coded`
+   badges, so the name began at a different x depending on what kind of event it was, and the two
+   lists could not be run down side by side. Two lists of the same events that cannot be compared by
+   eye are two lists nobody reconciles.
 5. Both pages have **Copy** and **Download**; the copy carries full params, which no screenshot can.
 
 ---
