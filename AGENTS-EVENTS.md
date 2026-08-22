@@ -131,6 +131,30 @@ is genuinely earlier.
 > the reader happens to do. A comment claimed the correct behaviour and had never been checked
 > against the line above it.
 
+### 1.9a A bounced finger is not a second event. It is stopped at the button.
+
+Two taps closer together than `DOUBLE_TAP_GUARD_MS` (400ms) never reach the feed, because the second
+one never runs at all. Every clickable in the app passes through `guardedTrackedClick`, which owns
+the whole click rather than emitting beside it.
+
+Do not answer this in the analytics layer. Counting around a duplicate leaves the duplicate *action*
+in place, and two businesses from one finger is a data problem where two rows are only a counting
+one. See decision [0024](docs/decisions/0024-a-double-tap-is-stopped-at-the-button-not-counted-later.md).
+
+A suppressed tap is deliberately **silent** — emitting it would put back the row this removes. To
+find buttons that feel slow, measure response time; do not count taps we threw away.
+
+`repeatable = true` opts a control out, for steppers and add-row buttons where every tap is its own
+action. Keep that list short: a wrong `true` restores the bug, a wrong `false` eats an action
+somebody meant.
+
+> **Incident.** Two fast taps on "add business" put two rows in the live feed. The guard existed
+> nowhere, and three helpers were each doing emit-then-call, so a guard added to any one of them
+> would have covered part of the app and looked finished — the same shape as the filter chip that
+> lived in six files in `LAYOUT_RULES.md`. `trackedOnClick` also opened with
+> `LocalUiActionLogger.current ?: return onClick`, which hands back the caller's own lambda in
+> release builds: a guard behind that line protects debug devices and nobody else.
+
 ### 1.10 Layers
 
 `intent.screen` · `intent.action` · `response.outcome` · `response.gate` · `response.interruption` ·
