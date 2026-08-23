@@ -146,10 +146,16 @@ produced it. The ones that bite hardest:
 
 ## 4b. Engineering rules that already exist — read them, don't re-derive
 
-`invoice-kmp-app/PROJECT_RULES.md` and `invotick-apis/PROJECT_RULES.md` hold the full change-risk
-system: **Tier 1** (data/schema migration, financial logic, auth/identity — zero tolerance),
-**Tier 2** (sync engine, API contract), **Tier 3** (monetisation, analytics, admin panel), plus
-per-repo pre-push checklists. Universal rules: additive-only, idempotent, local-first, backward
+`invoice-kmp-app/PROJECT_RULES.md` holds the full change-risk system: **Tier 1** (data/schema
+migration, financial logic, auth/identity — zero tolerance), **Tier 2** (sync engine, API contract),
+**Tier 3** (monetisation, analytics, admin panel), plus a pre-push checklist.
+
+⚠️ **`invotick-apis/PROJECT_RULES.md` does not exist** — this file claimed it did until 2026-08-23.
+The backend's own rules live in `invotick-apis/CLAUDE.md`, which now also carries the deploy rules:
+`stage` **is** production, and **never retry an old pipeline once a newer commit has deployed** —
+a retry re-runs against the commit it was created for, so it ships the older image over the newer
+one while every pipeline in the list stays green. That happened on 2026-08-23 and silently removed
+three things from production. Universal rules: additive-only, idempotent, local-first, backward
 compatible, behind a remote kill-switch, staged rollout ready.
 
 Two that bite most often:
@@ -311,7 +317,8 @@ arrive with `sessionId=null`, undercounting admin reports.
 - `docs/decisions/` — decision log (what was decided, why, what was rejected). **Read the index before planning.**
 - `~/.claude/projects/-Users-ahmedmubashir-Documents-Webinvotick/memory/` — per-topic memory files, indexed by `MEMORY.md`.
 - `docs/MOBILE-APP-REQUIREMENTS.md`, `docs/SERVER-SIDE-CHANGES.md` — cross-repo contracts (this repo).
-- `invoice-kmp-app/PROJECT_RULES.md`, `invotick-apis/PROJECT_RULES.md` — change rules + pre-push gates.
+- `invoice-kmp-app/PROJECT_RULES.md` — change rules + pre-push gates. The backend equivalent is
+  `invotick-apis/CLAUDE.md` (there is no `invotick-apis/PROJECT_RULES.md`); it also holds the deploy rules.
 - Backend docs: `invotick-apis/` holds `SYNC_V2_MOBILE_PROTOCOL.md`, `AUTH_API.md`, `WEBPANEL_API.md`,
   `analytics.md`, `AppFlow.md`, `HANDOVER.md`.
 - Each repo has its own `CLAUDE.md` with build commands and local conventions — read the one for the
