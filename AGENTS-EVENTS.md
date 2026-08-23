@@ -109,16 +109,51 @@ actions at all (`SpotlightShadow.tap_1` is a scrim).
 
 | | Auto-captured (`trackedOnClick`, `Tracked*`) | Coded (`analytics.trackClick`) |
 |---|---|---|
-| Release build sends it | **only if allowlisted** | always |
-| How to stop it | remove from the allowlist | delete the call from source |
+| Release build sends it | **unless it was switched off** | always |
+| How to stop it | Sending toggle in Discovery — no release | delete the call from source |
 | Marked in the panel | `params.auto = true` | absence of that flag |
 
-`AnalyticsAllowlist.DEFAULT` is **empty** today, so auto-captured taps reach production only via the
-backend override. That is deliberate.
+**Never build a channel that bypasses the send policy.** A `LocalCodedEventLogger` was added for
+exactly that and removed the same day: the policy is the agreed control, and a second path that
+ignores it makes the control a half-truth.
 
-**Never build a channel that bypasses the allowlist.** A `LocalCodedEventLogger` was added for
-exactly that and removed the same day: the allowlist is the agreed control, and a second path that
-ignores it makes the control a half-truth. If an event should ship, say so in the allowlist.
+### 1.5a Send everything except what somebody switched off. Not the reverse. *(decided 2026-08-23)*
+
+`AnalyticsSendPolicy.shouldSend(key) = key !in denied`. Empty means send everything.
+
+This was an allowlist and had to be inverted, for a reason worth keeping: **an allowlist cannot
+discover anything.** A key can only be listed once it is already known, and a key only becomes known
+by arriving. So a button added in a later release is absent from the list, silent in release, and
+stays undiscoverable for ever. "Turn everything on so the important events get found" is not
+expressible as an allowlist.
+
+It also had the emergency lever backwards. The old shape was `DEFAULT || override`, which could only
+ever ADD — a key baked into a release could not be switched off without shipping another one. What
+an emergency needs is *make it stop*, and that is what a denylist is: one toggle, no release.
+
+> **The incident.** `AnalyticsAllowlist` documented a backend override applied through
+> `setOverride`. **`setOverride` had no caller, and nothing ever fetched `/v2/analytics/allowlist`.**
+> With a bundled default of `emptySet()` the gate was a constant `false`: release builds had never
+> sent a single auto-captured tap, and the panel's Track toggle had never once affected a release
+> build. The list was not empty by accident — it was not connected. Filling it would have changed
+> nothing. Note what hid it: a documented mechanism, a working-looking UI, and a plausible reason for
+> the silence ("the list is deliberately empty"). **A control nobody has watched take effect is a
+> control you have not got.**
+
+Empty meaning "send everything" is also the right failure mode: a device that cannot reach the
+network is noisy rather than silent, and noise can be discarded while a gap cannot be told apart
+from a user who did nothing.
+
+### 1.5b `denied` is not `NOT tracked`. *(decided 2026-08-23)*
+
+A config row is created the first time anyone touches an event — **renaming it is enough** — and
+`tracked` is false on a fresh row. Building the denylist from `NOT tracked` would therefore mean
+that **giving an event a meaningful name silently switches it off**, which is the opposite of why
+anyone names one.
+
+They are different facts: `tracked` is "was opted in", `denied` is "was opted out", and most events
+are neither. The upsert field is nullable for the same reason — absent means unchanged, so editing a
+name cannot toggle sending as a side effect.
 
 ### 1.6 Presence is not the event feed.
 
@@ -149,6 +184,27 @@ the form was empty. Same for a planned event's `firings = 0` and `lastSeen = nul
 R8 renames classes in release, so `this::class.simpleName` produces `a`, `b`, `c` **in exactly the
 builds being measured** — and it looks like data the whole time. Sheet names are spelled out in a
 `when`. Renaming a class must not rename an event a dashboard is counting.
+
+**Stable also means: do not rename them.** *(2026-08-23)* `rename-applied` moves the config row to
+the new name and deletes the old one. It **never touches `analytics_events`**. So a rename costs two
+things, permanently:
+
+1. **The event's history splits in two.** Old rows keep whatever name was sent at the time, so one
+   button becomes two events for ever, and any funnel spanning the rename sees a cliff.
+2. **The old rows lose their name too**, because the config row that held it was deleted.
+
+Meaning belongs in the **Meaningful event name** (`displayName`) instead: instant, no release,
+nothing split, and old rows stay labelled.
+
+When an identity genuinely must change, it is a **bulk migration, never a per-row field**. Discovery
+used to offer "Replace name" — you typed the new identity and then had to remember to press a second
+button once the release shipped it. That is 550 chances to forget, each one silently stranding a
+row's name, layer and tested mark. It was removed; `applyEventRename` stays, to be called by a script
+that rewrites the ids in code and carries every key over **in the same run**, passing `to`
+explicitly.
+
+> The 182 ids renamed on 2026-08-23 were free of cost 1 — release builds had never sent an
+> auto-captured tap (see 1.5a), so there was no history to split. **That will not be true again.**
 
 ### 1.9 An event that explains another must be stamped before it.
 
@@ -226,6 +282,28 @@ the proof. Stashing both proves nothing; that was done once and looked like a pa
 
 md5 the APK before trusting a device run. A Maestro `tapOn` that finds nothing only **warns**.
 
+### 2.6 A grep that searched the wrong scope reports zero and calls it an answer. *(2026-08-23)*
+
+Counting the codemod's stamped ids across `composeApp` and `core/ui` gave **77**, and a check for
+shared components gave "0 callers" for a text field used everywhere. Both were wrong by the same
+cause: this app has **dozens of `feature/*` modules**, and neither search looked at them. The real
+numbers were **550 ids** and 48 callers.
+
+Nothing errored. A zero from a search is only as true as its scope, so state the scope out loud and
+test it against something you already know the answer to. `find . -name "*.kt" -not -path "*/build/*"`
+is the honest root here — anything narrower has to justify itself.
+
+### 2.7 Proximity in a file is not containment. *(2026-08-23)*
+
+A rename pass searched **backwards** for a label, because `Text(text = "Privacy Policy", modifier =
+Modifier.trackedClickable(...))` puts the label above the id. It looked right and it renamed **106
+controls to their previous sibling's text**: `AllocationDialog.confirm_3` became `cancel_3`, and two
+dialogs' close buttons took the dialog title.
+
+It was reverted whole rather than patched, and the three sites it was written for were done by hand.
+When a heuristic walks outside the node it is describing, it will read a neighbour eventually — and
+the output is plausible, which is what makes it dangerous.
+
 ---
 
 ## 3. Backend traps (`analytics_events`)
@@ -288,13 +366,74 @@ Full detail in `memory/mysql-binary-uuid-and-test-clock.md`. In native queries:
 
 7. **No prose inside a native query string.** An apostrophe or a `?` in a `--` comment breaks every
    repository in the context. See `memory/no-prose-inside-native-queries.md`.
-8. **Run `./gradlew test` before every backend push.** `SpringContextBootTest` is the gate and needs
+8. **A dimension you filter on must live ON the event.** *(2026-08-23)* Version and country were
+   resolved once per batch and stored on the session, so "compare this funnel across releases" or
+   "split it by country" meant a join on `session_id` — a column that arrives NULL for every event
+   after the first batch of a session. A joined funnel drops exactly those rows and still returns a
+   confident number. Both are now copied onto `analytics_events` at ingestion
+   (`app_version`, `app_version_code`, `country`), with an index each. Cost matters too: a funnel is
+   several passes over the busiest table in the product, and a join per pass multiplies the
+   bottleneck.
+
+9. **Compare builds with `app_version_code`, never `app_version`.** `"1.4.10"` sorts BELOW `"1.4.9"`
+   as a string, so a release comparison built on the name is correct for nine releases and then
+   silently wrong. The name is for display only. The app sends both (Android `longVersionCode` above
+   API 28, `versionCode` below; iOS `CFBundleVersion`), and sends **null rather than 0** when the
+   package cannot be read — 0 is a real orderable value that would sort below every shipped build
+   and quietly count as the oldest release instead of as unknown.
+
+10. **Build a filter's dropdown from the same table the filter queries.** `/funnel/dimensions` reads
+    `analytics_events`, not `analytics_sessions_v2`, so every value offered is one the query can
+    match. A list built from the other table can offer a release that returns zero rows — and an
+    empty funnel reads as *a step nobody reached*, not as *a filter with nothing behind it*. It is
+    scoped to the selected window for the same reason.
+
+11. **Events below the version floor are refused at ingestion.** *(decided 2026-08-23)* Everything at
+    or below `analytics.min-app-version-code - 1` (currently 91, i.e. 1.4.0 and older) carries the
+    event work that was ruled unacceptable, and mixing it into one table produces a dataset nobody
+    can trust rather than a bigger one. Two decisions inside that are load-bearing:
+
+    - **The session is still recorded.** What was refused is the event work, not the fact that a
+      device exists — and one row per session is what keeps "how much of the install base has
+      updated" answerable. Refuse both and old builds go invisible, and then a funnel on the new
+      build cannot be told apart from a funnel on 10% of users.
+    - **A refused batch answers 200.** The app retries what fails. A 4xx would put every old device
+      into a permanent retry loop against an endpoint that will never accept it — the shape of the
+      sync defect that pushed one record 7,173 times. Refusing is a decision, so it is reported as
+      one: accepted, zero stored.
+
+    `OldBuildTrafficCheck` reports it in the Health Centre, because a deliberate silence looks
+    exactly like an accidental one on a dashboard, and reading a post-release funnel as
+    representative too early is a wrong decision made confidently.
+
+12. **Run `./gradlew test` before every backend push.** `SpringContextBootTest` is the gate and needs
    the `invotick-test-mysql` container. That container's clock reports a UTC five hours ahead of the
    one it accepts, so never assert a narrow time window against it.
 
 ---
 
 ## 4. Admin panel rules
+
+### 4.0 What Discovery shows, and what it stopped showing *(2026-08-23)*
+
+Columns: `#` · `Tested` · **`Sending`** · `Meaningful event name` · `Events from apps` · `Firings` ·
+`Layer` · `Save`.
+
+Three went, and the reasons generalise:
+
+- **Status** labelled every row `in list` or `debug-only` — two answers to one question, *will this
+  ship from release*, which the `Sending` toggle now answers one cell away. Its `task queued` line
+  tracked work to bake a key into `AnalyticsAllowlist.DEFAULT`, **a class that no longer exists**.
+  The three states that were still true — `still firing`, `removing`, `planned` — moved onto the
+  identity cell as badges. *A badge that appears only when it means something beats a column obliged
+  to say something about every row.*
+- **Description** was written and read back on the same page and **nowhere else in the product**. The
+  meaningful name is the one that travels — Live Events reads it. Its column and API field are left
+  in the database: dropping a column is not reversible under Flyway.
+- **Replace name** — see §1.8. Kept once on the belief that 182 renamed ids had config rows waiting
+  to be carried over; **the config table held six rows and none of them were those.** The belief was
+  never checked. *Do not keep a mechanism for a case you have not counted.*
+
 
 1. **What is worth seeing is decided in Event Discovery, not in a source file.** A hard-coded hidden
    set overrode a deliberate choice the owner had made in the UI, and the page ignored them.
@@ -385,7 +524,23 @@ list containing none of the devices being tested on.
    ways to separate them either change real behaviour or guess.
 6. **Volume guard.** `app_heartbeat` was 88 of 95 rows before anyone noticed. A weekly "top events by
    volume" glance in the Health Centre would surface the next one early.
-7. **Per-field mic ids** (`TextFiedl.voice_input_4`) and the other shared ids in §1.4.
+7. ~~**Per-field mic ids** (`TextFiedl.voice_input_4`) and the other shared ids in §1.4.~~ **Done
+   2026-08-23** — solved in the gate rather than per id; see §1.4.
+8. **"One press, two events" detector.** Measured on 2026-08-23 and **not built**. On one device's
+   stream, 11 pairs landed within 50ms on the same screen with one auto and one coded event. Six were
+   `session_break` (§1.9, by design) and two were tap-then-permission-prompt (two real facts). **Three
+   were genuine duplicates**, all the same shape — an auto tap on a Save button plus a coded event for
+   the same save: `tap:invoice_business_form:Save` + `business_form_saved`,
+   `tap:invoice_client_form:Save` + `client_form_saved`, `item_form_add_clicked` + `item_form_saved`.
+   Policy is that the **coded** one goes, after review. Finding them by hand does not scale — this
+   belongs as a badge on the Discovery row and a count in the Health Centre.
+9. **The 30 runtime-label sites.** `DrawerTiles.tap_1..4` are not four buttons; they are one
+   `DrawerItem` handed a different `label` each time. §1.1 says one event with the label as a
+   parameter. **Do not do this by script:** the same shape includes `CustomerLedgerTopBar` whose
+   label is a **client's name**, and `ProfileHeaderComponents` whose label is the **Invotick ID**.
+   Sending those as parameters would put customer data into analytics. The pattern already solved
+   correctly in this codebase is `DocumentActionBar`, where the **call site** supplies the id
+   (`analyticsPrefix = "invoice_action_bar"`), and that is the shape to copy.
 
 ---
 

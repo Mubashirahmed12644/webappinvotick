@@ -223,14 +223,25 @@ Flow: app records → local queue (`core/analytics`, its own Room DB) → flush 
 
 Two classes of event:
 1. **Explicitly coded** events — `gateway.trackClick("name", params)`. These **always send**.
-2. **Auto-captured taps** — a codemod stamped a stable `analyticsId` (`<FileSlug>.<label>_N`) on
-   every button/clickable. These are firehose-scale, so release builds send one **only if it is
-   allowlisted**; debug builds send everything.
+2. **Auto-captured taps** — a codemod stamped a stable `analyticsId` on every button/clickable, and
+   `guardedTrackedClick` prefixes the screen, so the identity is `tap:<screen>:<File>.<label>_N`.
+   Release builds send one **unless somebody switched it off**; debug builds send everything.
 
-⚠️ **`AnalyticsAllowlist.DEFAULT` is currently EMPTY** — deliberately cleared on 2026-07-14
-(commit `92a3bb96`) to rebuild the list via Live Event Discovery, after a 41-key seed on 07-13.
-So in release builds **auto-captured taps send nothing** unless the backend override
-(`GET /v2/analytics/allowlist`) supplies keys. Check this before trusting any tap-based number.
+**Send policy — inverted on 2026-08-23.** `AnalyticsSendPolicy.shouldSend(key) = key !in denied`,
+where `denied` comes from `GET /v2/analytics/denylist` at app start. It was an allowlist, and an
+allowlist can only list keys that have already been seen — so a control added in a later release was
+silent in release and undiscoverable for ever. Switching one off now takes effect from the panel with
+no release. Full reasoning: `AGENTS-EVENTS.md` §1.5a.
+
+⚠️ **The old allowlist was never wired at all.** `setOverride` had no caller and nothing ever fetched
+`/v2/analytics/allowlist`, so with an empty bundled default the gate was a constant `false`: **no
+release build has ever sent an auto-captured tap**, and the panel's Track toggle never affected one.
+Every tap-based number from before 1.4.1 is debug-only for that reason.
+
+⚠️ **Events from builds ≤ versionCode 90 are refused at ingestion** (`analytics.min-app-version-code`).
+Their sessions are still stored, so "how much of the install base has updated" stays answerable. Until
+1.4.1 rolls out, **production stores no new events** — this is intended, not a fault. See
+`AGENTS-EVENTS.md` §3.11 and the Health Centre's *Old-build analytics traffic*.
 
 Explicitly coded event vocabulary today. **Grep note:** `trackClick(` is often a multi-line call, so
 a single-line grep silently misses events — always grep with trailing context.
@@ -249,7 +260,7 @@ a single-line grep silently misses events — always grep with trailing context.
   `sheet_dismissed` beside the close id and put three events on one dismissal — see decision
   [0023](docs/decisions/0023-one-dismissal-event-the-method-is-a-parameter.md), which also records
   why `client/business/item_form_dismissed` were removed. These are auto-captured, so the
-  **allowlist** decides whether they ship; do not add a channel that bypasses it.
+  **send policy** decides whether they ship; do not add a channel that bypasses it.
 - **Auth:** `login_success`, `register_success`, `guest_login_success`, `otp_verify_success`
 - **Growth (G2), receiver side:** `shared_invoice_opened`, `shared_invoice_opened_by_owner`,
   `shared_invoice_create_own_click`, `shared_invoice_approved`, `shared_invoice_rejected`,
