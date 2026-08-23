@@ -526,7 +526,12 @@ list containing none of the devices being tested on.
    volume" glance in the Health Centre would surface the next one early.
 7. ~~**Per-field mic ids** (`TextFiedl.voice_input_4`) and the other shared ids in §1.4.~~ **Done
    2026-08-23** — solved in the gate rather than per id; see §1.4.
-8. **"One press, two events" detector.** Measured on 2026-08-23 and **not built**. On one device's
+8. ~~**"One press, two events" detector.**~~ **Built 2026-08-23** — `DuplicatePressCheck` in the
+   Health Centre, verified against live data on its first run (it found
+   `tap:invoice_business_form:Save + business_form_saved`, one of the three found by hand).
+   `session_break` and `*_permission_requested` are excluded as two-facts-by-design. Deliberately no
+   SQL self-join: one indexed range scan over six hours, paired in Kotlin, because joining this
+   table to itself sits behind the pool that also serves sync and auth. Originally measured as: On one device's
    stream, 11 pairs landed within 50ms on the same screen with one auto and one coded event. Six were
    `session_break` (§1.9, by design) and two were tap-then-permission-prompt (two real facts). **Three
    were genuine duplicates**, all the same shape — an auto tap on a Save button plus a coded event for
@@ -534,7 +539,12 @@ list containing none of the devices being tested on.
    `tap:invoice_client_form:Save` + `client_form_saved`, `item_form_add_clicked` + `item_form_saved`.
    Policy is that the **coded** one goes, after review. Finding them by hand does not scale — this
    belongs as a badge on the Discovery row and a count in the Health Centre.
-9. **The 30 runtime-label sites.** `DrawerTiles.tap_1..4` are not four buttons; they are one
+9. ~~**The 30 runtime-label sites.**~~ **Done 2026-08-23** — the call site supplies the id, as
+   `DocumentActionBar` already did. Ids were derived from what the call site states *in source* (the
+   `NavigateTo("settings")` route, or the `stringResource` key), never from the runtime label. 588
+   ids now, none meaningless and none duplicated. Note what made it necessary even after the screen
+   prefix: `DrawerItem`'s 25 call sites are the same drawer on the **same screen**, so the screen
+   could not separate them. Original note: `DrawerTiles.tap_1..4` are not four buttons; they are one
    `DrawerItem` handed a different `label` each time. §1.1 says one event with the label as a
    parameter. **Do not do this by script:** the same shape includes `CustomerLedgerTopBar` whose
    label is a **client's name**, and `ProfileHeaderComponents` whose label is the **Invotick ID**.
