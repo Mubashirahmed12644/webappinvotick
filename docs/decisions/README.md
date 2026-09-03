@@ -46,3 +46,7 @@ Numbering: next free number, zero-padded to 4.
 | [0024](0024-a-double-tap-is-stopped-at-the-button-not-counted-later.md) | A double tap is stopped at the button, not counted around later | decided |
 | [0025](0025-voice-input-is-offered-only-where-the-device-can-do-it.md) | Voice input is offered only where the device can do it | decided |
 | [0026](0026-a-session-is-renewed-before-it-dies-never-revived-after.md) | A session is renewed before it dies, never revived after | decided, implemented |
+| [0027](0027-a-first-time-user-is-a-device.md) | A first-time user is a device, and the journey is counted per device | decided, implemented |
+| [0028](0028-the-invotick-id-is-part-of-the-account.md) | The Invotick ID is minted with the account, not on demand (reverses 2026-07-09 lazy) | decided, implemented |
+| [0029](0029-a-sync-failure-is-an-attempt-the-server-refused.md) | A reported sync failure is an attempt the server refused | decided, in app branch |
+| [0030](0030-every-device-that-stopped-has-a-reason.md) | Every device that stopped on the journey has exactly one reason | decided, implemented |
