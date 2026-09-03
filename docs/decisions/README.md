@@ -50,3 +50,5 @@ Numbering: next free number, zero-padded to 4.
 | [0028](0028-the-invotick-id-is-part-of-the-account.md) | The Invotick ID is minted with the account, not on demand (reverses 2026-07-09 lazy) | decided, implemented |
 | [0029](0029-a-sync-failure-is-an-attempt-the-server-refused.md) | A reported sync failure is an attempt the server refused | decided, in app branch |
 | [0030](0030-every-device-that-stopped-has-a-reason.md) | Every device that stopped on the journey has exactly one reason | decided, implemented |
+| [0031](0031-the-splash-shows-the-app-while-the-gate-holds.md) | The splash shows the app taking shape while the ad gate holds; gate timing untouched | decided, in app branch |
+| [0032](0032-dismissing-the-save-gate-keeps-the-invoice-as-a-draft.md) | Dismissing the Save gate keeps the invoice as a draft | decided, in app branch |
