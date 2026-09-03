@@ -279,6 +279,12 @@ the list is wrong, not the app.**
 - **Money/ads:** `premium_click`, `watch_ad_click`, `ad_request`, `ad_loaded`, `ad_shown`,
   `ad_dismissed`, `ad_load_failed`, `ad_show_failed`, `ad_dialog_dismissed`, `app_open_ad_loaded`
 - **Notifications:** `notification_permission_shown` / `_allowed` / `_denied`
+- **Parameters added 2026-09-04 (release after 1.4.2, branch `VC_93_VN_142`):** `app_cold_start.prev_exit`
+  (`crash|anr|crash_native|user_request|low_memory|…|unknown`, API ≥ 30 only) + `prev_exit_ms_ago`;
+  `splash_ready.reason|wait_ms|guest_login_ms|rc_ms|session_ms`; `guest_login_failed.reason` is now a
+  **code** (`save_timeout|auth_error|offline|exception_<Class>`), never a message; `invoice_screen_close.method|had_input`
+  (decision 0023 on the invoice screen); `ad_dialog_dismissed.outcome` (`draft_saved|draft_failed`, decision 0032).
+  Absent parameter = unknown (§1.7); none of these is a new event.
 - **Lifecycle:** `app_cold_start`, `app_foreground`, `app_resumed`, `app_paused`, `app_background`,
   `app_heartbeat`, `session_break`, `screen_view`, `network_changed`, `app_exit_dialog_shown`
 
