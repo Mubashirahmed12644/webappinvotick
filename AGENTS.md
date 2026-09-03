@@ -249,44 +249,53 @@ Their sessions are still stored, so "how much of the install base has updated" s
 1.4.1 rolls out, **production stores no new events** — this is intended, not a fault. See
 `AGENTS-EVENTS.md` §3.11 and the Health Centre's *Old-build analytics traffic*.
 
-Explicitly coded event vocabulary today. **Grep note:** `trackClick(` is often a multi-line call, so
-a single-line grep silently misses events — always grep with trailing context.
+Explicitly coded event vocabulary today — **as the shipped build sends it** (`origin/VC_93_VN_142`,
+live as 1.4.2 / versionCode 94; re-verified against `analytics_events` on 2026-09-04). **Grep note:**
+`trackClick(` is often a multi-line call, so a single-line grep silently misses events — always grep
+with trailing context. **A name in this list is a claim about the app; when it stops matching rows,
+the list is wrong, not the app.**
 
-- **Activation:** `invoice_created`, `ci_save_clicked`, `ci_preview_clicked`, `ci_save_validation_failed`,
-  `ci_celebration_shown`, `Invoice_preview_create_click`, `DB_create_Invoice_click`, `Draft_click`,
-  `Discard_click`, `Create_Invoice_Backpress_click`, `estimate_created`, `estimate_converted_to_invoice`
-- **G1 primary — proof an invoice is real:** `invoice_shared` (fires only on a **confirmed** share:
-  the user picks a target app in the OS chooser, tagged `mode` + `target`) and `payment_added`.
-- **Form-typing proxies:** `business_form_text_add`, `client_form_text_add`, `item_form_text_add` —
+- **Activation:** `invoice_created_success`, `ci_save_clicked`, `ci_preview_clicked`,
+  `ci_save_validation_failed`, `ci_celebration_shown`, `Saved_clicked`, `Draft_click`, `Discard_click`,
+  `create_inv_discard_dailog_shown` (sic), `discard_dialog_closed`, `estimated_success` (sic),
+  `estimate_converted_to_invoice`
+- **G1 primary — proof an invoice is real:** **`invoice_shared_success`** (fires only on a **confirmed**
+  share: the user picks a target app in the OS chooser, tagged `mode` + `target`; **live since 1.4.1**)
+  and `payment_added`. `estimate_shared` is the estimate twin.
+- **Form-typing proxies:** `business_form_text_typed`, `client_form_text_add`, `item_form_text_add` —
   fired **once per form**, on the first non-blank keystroke in the *name* field. They prove the user
-  started typing, **not** that the data was real. Plus `*_form_dismissed`, `Business/Client/Item_added`.
+  started typing, **not** that the data was real. Plus `business_add_success`, `client_add_success`,
+  `add_item_success` / `Item_added`.
 - **Abandonment:** a sheet's **own per-sheet close id** (`invoice_create_client_screen_close`, …)
   carries `method` (`close_button` | `swipe` | `scrim_or_back`) and `had_input`. There is **no**
-  separate dismissal event: one action, one event, with parameters. A first attempt added
-  `sheet_dismissed` beside the close id and put three events on one dismissal — see decision
-  [0023](docs/decisions/0023-one-dismissal-event-the-method-is-a-parameter.md), which also records
-  why `client/business/item_form_dismissed` were removed. These are auto-captured, so the
-  **send policy** decides whether they ship; do not add a channel that bypasses it.
-- **Auth:** `login_success`, `register_success`, `guest_login_success`, `otp_verify_success`
+  separate dismissal event: one action, one event, with parameters — decision
+  [0023](docs/decisions/0023-one-dismissal-event-the-method-is-a-parameter.md). These are
+  auto-captured, so the **send policy** decides whether they ship; do not add a channel that bypasses it.
+- **Auth:** `login_success`, `register_success`, `guest_login_success`, **`guest_login_failed`**,
+  `otp_verify_success`, `guest_merge_notice_dismissed`
 - **Growth (G2), receiver side:** `shared_invoice_opened`, `shared_invoice_opened_by_owner`,
   `shared_invoice_create_own_click`, `shared_invoice_approved`, `shared_invoice_rejected`,
   `shared_invoice_open_failed`, `shared_invoice_decision_failed`, `invoice_share_link_fallback`
-- **Money/ads:** `premium_click`, `watch_ad_click`, `ad_shown`, `ad_dismissed`, `ad_load_failed`,
-  `ad_show_failed`, `app_open_ad_loaded`
+- **Money/ads:** `premium_click`, `watch_ad_click`, `ad_request`, `ad_loaded`, `ad_shown`,
+  `ad_dismissed`, `ad_load_failed`, `ad_show_failed`, `ad_dialog_dismissed`, `app_open_ad_loaded`
 - **Notifications:** `notification_permission_shown` / `_allowed` / `_denied`
 - **Lifecycle:** `app_cold_start`, `app_foreground`, `app_resumed`, `app_paused`, `app_background`,
-  `app_heartbeat`, `nav_screen_view`
+  `app_heartbeat`, `session_break`, `screen_view`, `network_changed`, `app_exit_dialog_shown`
+
+⚠️ The names this section carried until 2026-09-04 (`invoice_created`, `Business_added`,
+`business_form_text_add`, `Client_added`) return **zero rows** on the live build; a funnel built on
+them reads as steps nobody reached. Memory: `g1-real-data-metric-gap`.
 
 **G1 measurement (decision [0006](docs/decisions/0006-g1-real-invoice-metric.md)):** a real invoice =
 confirmed share **or** payment recorded; repeat use is the supporting signal. Nothing is prefilled
 anywhere in the app, so the enemy is **throwaway data**, not our template.
 
-⚠️ **`invoice_shared` is not live yet** — present only on `feat/presentation-json-migration` and
-`fix/analytics-reliable-delivery`, absent from `origin/main` and the released `VC_90_VN_140`.
-G1 cannot be measured from production until it ships.
+✅ **`invoice_shared_success` is live** (1.4.1+; 44 firings / 33 sessions in the 7 days to 2026-09-04),
+so G1 **can** be measured from production now. The earlier note that it was not live referred to the
+name `invoice_shared` on pre-release branches.
 
-Known defect: `memory/analytics-session-attribution-bug.md` — events after the first batch can
-arrive with `sessionId=null`, undercounting admin reports.
+~~Known defect: `memory/analytics-session-attribution-bug.md` — `sessionId=null` after the first batch.~~
+**Fixed in 1.4.2** — 0.0 % NULL session ids across 81,834 events on versionCode ≥ 94 (measured 2026-09-04).
 
 ## 6. Glossary (use these words precisely)
 
