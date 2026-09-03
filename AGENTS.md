@@ -318,6 +318,10 @@ name `invoice_shared` on pre-release branches.
 5. **Do not self-verify** with screenshot/device loops unless asked. Finish, report, user checks.
 6. Prefer Maestro flows + logcat/API traces over tapping coordinates and reading screenshots.
 7. Unexplained state changes on the shared test device are usually the user, not a bug — ask first.
+8. **User journey / funnel / event work always loops in the `user-journey` agent**
+   (`.claude/agents/user-journey.md`) — *standing instruction from the user, 2026-09-04*. Diagnosing
+   the journey, reading or adding any analytics event, the send policy, the panel's funnel pages: the
+   agent owns that context. If a session starts on this without it, invoke it first.
 
 ## 8. Where the rest of the knowledge lives
 
