@@ -21,6 +21,17 @@ not it (fast networks bounce more), intent matters but not 3× (organic 6 %, cam
 - `splash_ready` now carries `reason`, `wait_ms`, `guest_login_ms`, `rc_ms`, `session_ms`, so the next
   measurement can say where the seconds went for the 13 who left before ready.
 
+## Addendum 2026-09-04 — the picture is keyed to the destination, not to the open count
+The owner asked whether the skeleton should show only on the first open, or stop once the user has
+reached the create-invoice screen, or once an invoice exists. None of those is the rule. The splash's
+destination is decided by `hasCreatedFirstInvoice` (create-invoice until one exists, then the
+dashboard), and in 30 days 161 of 276 returning opens still landed on create-invoice. So the hold
+shows **the skeleton of wherever the splash is about to go**: create-invoice → the create-invoice
+skeleton (a block-for-block copy of that screen); dashboard → a dashboard skeleton; auth/unknown →
+the logo as before. "Stop after the first invoice" follows by itself, because the destination
+changes. A create-invoice skeleton on a dashboard-bound open would be the mismatch this decision
+exists to remove.
+
 ## Rejected
 - Navigate to content at `splash_ready` and show the ad over it when it loads — keeps impressions but
   changes when the ad interrupts; that is the owner's call, not a default.
