@@ -217,6 +217,25 @@ Two that bite most often:
   open before payment-gateway work: `memory/admin-panel-security-audit.md`.
 - Read-mostly by rule; never recompute money client-side — show what the backend computed.
 
+## 5a. Reading rules — a page costs what it shows *(decision [0034](docs/decisions/0034-a-page-costs-what-it-shows.md))*
+
+The backend died twice on 2026-09-04 because one 20-minute job loaded all 988,339 `analytics_events`
+rows to summarise 12,341 users. It had done that ~72 times a day since April, growing with the table.
+
+- **No unbounded `findAll()`** in a webpanel/admin path. Every list endpoint takes `page`/`size` with
+  a cap; paging happens in the database, never by slicing a full list.
+- **Count and summarise in SQL.** Loading rows to count them moves the table into the heap.
+- **Every analytics query carries a date range**, and that range is indexed.
+- **Pre-compute only what cannot be produced without scanning a large table** (a rollup, read by the
+  page). A pre-computed figure can be stale, so it is a cost — not a default.
+- **Heavy per-user detail lives in that user's drill-down**, never in a list of all users.
+- The test is **cost, not popularity**: the page that killed production had not been opened in weeks.
+- Before writing a new page or job, answer in the commit message: **how many rows does this touch?**
+
+`WebpanelReadsAreBoundedTest` fails the build when this is broken. The JVM exits on OOM and writes a
+heap dump (`-XX:+ExitOnOutOfMemoryError`), and the container has a healthcheck, so a repeat is a
+restart and an alert rather than a silent outage — see `memory/backend-oom-all-users-cache.md`.
+
 ## 5b. The analytics pipeline (this is how G1 gets measured)
 
 Flow: app records → local queue (`core/analytics`, its own Room DB) → flush → backend
