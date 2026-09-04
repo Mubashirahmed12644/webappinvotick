@@ -68,3 +68,25 @@ a broken script produces.
 ## Still open
 
 The memory cap itself, and the larger question of whether CI belongs on the box it deploys to.
+
+## Measured afterwards — and it moved the target
+
+A full pipeline, sampled every five seconds:
+
+| container | peak |
+|---|---|
+| **`docker-0`** (docker:24-dind, buildx) | **3270 MB** |
+| `build` (Gradle + Kotlin, already `--no-daemon`) | 2862 MB |
+| `mysql-0` | 706 MB |
+| **whole pipeline** | **3560 MB** |
+
+The first reading of this was taken while only the test stage had run. It said 2958 MB and pointed at
+Gradle heap limits as the fix. That was wrong: **the heaviest container is the docker build**, and no
+JVM flag touches it. A number quoted before the pipeline finishes is a number about one stage.
+
+Which makes the better answer structural rather than a cap: **`build:docker` has no reason to run on
+this machine.** It builds an image and pushes it to the registry — unlike `test`, which needs the
+local MySQL. Dropping `<<: *on-vps` from that one job takes the largest spike off the production box
+entirely. It spends GitLab SaaS minutes (400/month free, a docker build is roughly 3-5), so it is the
+owner's call, not an engineering detail. `.gitlab-ci.yml` already records the escape hatch:
+*"Remove `tags` to hand everything back to the SaaS runners if this host ever has to come out."*
