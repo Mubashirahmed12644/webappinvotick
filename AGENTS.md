@@ -275,7 +275,7 @@ with trailing context. **A name in this list is a claim about the app; when it s
 the list is wrong, not the app.**
 
 - **Activation:** `invoice_created_success`, `ci_save_clicked`, `ci_preview_clicked`,
-  `ci_save_validation_failed`, `ci_celebration_shown`, `Saved_clicked`, `Draft_click`, `Discard_click`,
+  `ci_save_validation_failed`, `ci_celebration_shown`, `Saved_clicked`, `Draft_click`,
   `create_inv_discard_dailog_shown` (sic), `discard_dialog_closed`, `estimated_success` (sic),
   `estimate_converted_to_invoice`
 - **G1 primary — proof an invoice is real:** **`invoice_shared_success`** (fires only on a **confirmed**
@@ -283,8 +283,33 @@ the list is wrong, not the app.**
   and `payment_added`. `estimate_shared` is the estimate twin.
 - **Form-typing proxies:** `business_form_text_typed`, `client_form_text_add`, `item_form_text_add` —
   fired **once per form**, on the first non-blank keystroke in the *name* field. They prove the user
-  started typing, **not** that the data was real. Plus `business_add_success`, `client_add_success`,
-  `add_item_success` / `Item_added`.
+  started typing, **not** that the data was real. Plus `client_add_success` and `Item_added`.
+
+- ⚠️ **1.4.3 (`VC_95_VN_143`) removes nine coded duplicates — the UI layer now owns the press.**
+  *(owner decision 2026-09-05, from the Health Centre's "One press, two events" check.)* Every one
+  of these was an `analytics.trackClick` firing 0–29ms after the same button's own auto-captured id,
+  so the count for that action was **doubled on 1.4.1 and 1.4.2 alike** — the doubling is as old as
+  the data, not new in 1.4.2. What the app sends from 1.4.3:
+
+  | Was two events | Survives as | Gone from the app |
+  |---|---|---|
+  | `add_item_click` + `add_item_success` | **`add_item_added`** (auto, renamed) | `add_item_success` |
+  | `business_form_saved` + `business_saved_click` + `business_add_success` | `business_form_saved` (auto) | both coded |
+  | `db_create_first_inv_click` + `DB_create_Invoice_click` | `db_create_first_inv_click` (auto) | `DB_create_Invoice_click` |
+  | `create_inv_discard_click` + `discard_confirmed` + `Discard_click` | first two | `Discard_click` |
+  | `saved_inv_signature_click` + `SI_Signature_click` | `saved_inv_signature_click` (auto) | `SI_Signature_click` |
+  | `saved_inv_send_invoice` ×2 · `saved_inv_back_click` ×2 · `create_inv_preview_click` ×2 | the auto emit; **name unchanged** | the coded twin |
+
+  **The old names stay in the backend funnel queries** (`AnalyticsEventRepository` steps 3, 5, 7 and
+  `discarded`) because `analytics_events` keeps whatever was sent at the time — the app stops sending
+  them, the query must keep reading them, and `add_item_added` was added alongside. Three losses that
+  are **not** behaviour changes and must not be read as any: `saved_inv_back_click` no longer covers
+  the **system back gesture** on the saved-invoice screen (the top bar cannot see it);
+  `DB_create_Invoice_click` covered **every** dashboard create press, the survivor only the
+  first-invoice empty state; and the `optional_fields_filled` / `has_logo` / `has_description` /
+  `has_discount` parameters are gone, so **nothing in the app now separates real data from the
+  minimum that clears validation** — the G1 question. Putting those back means **parameters on the
+  surviving event** (`AGENTS-EVENTS.md` §1.1), never a second event.
 - **Abandonment:** a sheet's **own per-sheet close id** (`invoice_create_client_screen_close`, …)
   carries `method` (`close_button` | `swipe` | `scrim_or_back`) and `had_input`. There is **no**
   separate dismissal event: one action, one event, with parameters — decision

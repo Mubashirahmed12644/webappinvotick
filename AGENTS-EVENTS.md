@@ -240,6 +240,38 @@ somebody meant.
 > `LocalUiActionLogger.current ?: return onClick`, which hands back the caller's own lambda in
 > release builds: a guard behind that line protects debug devices and nobody else.
 
+### 1.11 When one press produces two events, the UI layer keeps it. *(decided 2026-09-05)*
+
+An `analyticsId` / `navigationAnalyticsId` on the clickable **and** an `analytics.trackClick` in the
+view model for the same press are one action recorded twice. **The auto one survives; the coded one
+is deleted.** The tap carries the screen, and one denylist toggle stops it from the panel — a coded
+call can only be stopped by shipping a release.
+
+> **The measurement, 2026-09-05.** The Health Centre's `DuplicatePressCheck` returned **16 pairs** in
+> six hours. Nine were this shape and were removed in 1.4.3. The counts were exactly what a duplicate
+> looks like: `discard_confirmed` 44, `Discard_click` 44, `create_inv_discard_click` 44 — one finger,
+> three rows. **This was never new.** Re-running the same pairing over versionCode 92 (1.4.1) found
+> the same pairs, and versionCode 91 already carried 35 `tap:` identities, so every build production
+> has ever stored auto taps for is affected. There is no clean "before" to compare against, because
+> builds ≤ 90 are refused at ingestion (§3.11).
+
+Two things the rule does **not** settle, and both cost something the day it is applied:
+
+1. **The parameters do not move by themselves.** The coded call is usually the one carrying the
+   payload — `optional_fields_filled`, `has_logo`, `has_description`. Deleting it keeps the count and
+   loses the meaning, and for G1 the meaning *is* the metric. Move them onto the surviving event as
+   parameters (§1.1) in the same change, or write down that they are gone.
+2. **The tap may not see every route.** A view-model handler is reached by the system back gesture,
+   by a post-ad callback, by a picker — none of which the button can see. `saved_inv_back_click` lost
+   the back gesture this way, and `DB_create_Invoice_click` covered every dashboard create press
+   while its survivor covers only the first-invoice empty state. Count both sides before deleting;
+   where the tap cannot reach, the fix is `InvoiceScreenClose.kt`'s shape — report the extra route on
+   the **auto** channel under the same name with a `method` parameter.
+
+Deleting a coded call also splits nothing, which is why it is cheap: the name simply stops arriving.
+A **rename** does split (§1.8), and `add_item_click` → `add_item_added` is one — so every funnel step
+that reads it lists the old spellings too.
+
 ### 1.10 Layers
 
 `intent.screen` · `intent.action` · `response.outcome` · `response.gate` · `response.interruption` ·
@@ -526,8 +558,17 @@ list containing none of the devices being tested on.
    volume" glance in the Health Centre would surface the next one early.
 7. ~~**Per-field mic ids** (`TextFiedl.voice_input_4`) and the other shared ids in §1.4.~~ **Done
    2026-08-23** — solved in the gate rather than per id; see §1.4.
-8. ~~**"One press, two events" detector.**~~ **Built 2026-08-23** — `DuplicatePressCheck` in the
-   Health Centre, verified against live data on its first run (it found
+8. ~~**"One press, two events" detector.**~~ **Built 2026-08-23, first full read 2026-09-05** —
+   `DuplicatePressCheck` in the Health Centre. The full read returned **16 pairs, not one problem**:
+   nine were a coded twin of a tap (removed in 1.4.3 — §1.11), four were **not duplicates at all**
+   and the *check* was narrowed instead of the app, and the rest need a person. Two things the check
+   itself got wrong and both are §1.6 in miniature: it excluded `*_permission_requested`, **a name
+   the shipped app has never sent** (it sends `notification_permission_shown`), so the one case the
+   exclusion was written for was reported as a duplicate for the check's whole life; and it printed
+   the **top ten of sixteen** with nothing saying so, which is a header that does not describe its
+   rows (§4.3). It now separates *same identity on both channels* (no judgement needed) from *two
+   names* (read it first), and lists every pair.
+   Original note: verified against live data on its first run (it found
    `tap:invoice_business_form:Save + business_form_saved`, one of the three found by hand).
    `session_break` and `*_permission_requested` are excluded as two-facts-by-design. Deliberately no
    SQL self-join: one indexed range scan over six hours, paired in Kotlin, because joining this
@@ -537,7 +578,9 @@ list containing none of the devices being tested on.
    were genuine duplicates**, all the same shape — an auto tap on a Save button plus a coded event for
    the same save: `tap:invoice_business_form:Save` + `business_form_saved`,
    `tap:invoice_client_form:Save` + `client_form_saved`, `item_form_add_clicked` + `item_form_saved`.
-   Policy is that the **coded** one goes, after review. Finding them by hand does not scale — this
+   Policy is that the **coded** one goes, after review — **confirmed as the rule on 2026-09-05,
+   see §1.11**, with the caveat that the coded call's parameters have to be moved onto the survivor
+   or they are simply lost. Finding them by hand does not scale — this
    belongs as a badge on the Discovery row and a count in the Health Centre.
 9. ~~**The 30 runtime-label sites.**~~ **Done 2026-08-23** — the call site supplies the id, as
    `DocumentActionBar` already did. Ids were derived from what the call site states *in source* (the
