@@ -145,6 +145,26 @@ has never been decided.
 `SyncConflictRecord` holds it; `shouldKeepIncoming` reads it into `incomingVersion` /
 `existingVersion` — **and only logs it.** Every decision above is made on a clock the device owns.
 
+**Being measured now, not changed** (`SyncConflictPolicy.recordShadowVerdict`, live 2026-09-05). Every
+conflict computes both verdicts, acts on the clock exactly as before, and counts what version *would*
+have said:
+
+```
+sum by (outcome) (sync_conflict_shadow_total)
+```
+
+| outcome | meaning |
+|---|---|
+| `version_absent` | one side has no version — an old row, or one of the two entity types with no repository of their own |
+| `version_equal` | version says nothing; the clock decides and always would |
+| `agree_apply` | both apply it |
+| `clock_beat_version` | **the clock refuses what version calls newer** — the wrong-clock devices (S6, S7) |
+| `superseded` | **both refuse, and version explains it**: the incoming copy is an ancestor of the server's. Answered `STALE_CONFLICT` today — "failed" — when the truth is "your newer copy is already here" |
+| `version_older_but_applied` | **the number that decides whether flipping is safe.** The clock applies what version calls older; if this is not rare, a version rule would start refusing writes that land today, and that is somebody's edit disappearing |
+
+Two of those are the size of the prize and one is the size of the risk, and none of them could be
+guessed. Read them before changing the rule, not after.
+
 A version-based rule would answer S6 and S7 outright, and would turn P4 into three answers instead
 of one: *newer* → apply, *equal* → already applied, *older* → **superseded, and therefore done** —
 not "failed". Today the server says a record failed when what actually happened is that a newer
