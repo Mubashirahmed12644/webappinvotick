@@ -284,6 +284,8 @@ the list is wrong, not the app.**
   `splash_ready.reason|wait_ms|guest_login_ms|rc_ms|session_ms`; `guest_login_failed.reason` is now a
   **code** (`save_timeout|auth_error|offline|exception_<Class>`), never a message; `invoice_screen_close.method` (`close_button|back_press|discard_confirmed`) + `had_input`
   (decision 0023 on the invoice screen); `ad_dialog_dismissed.outcome` (`draft_saved|draft_failed|autosave_only|edits_kept`, decision 0032).
+  `ui_mode` (`dark|light` — what the screen was actually in) + `theme_pref` (`system|light|dark`) stamped on
+  **every** event by the gateway, so any funnel can be filtered by mode (`first-invoice-journey?uiMode=`).
   Absent parameter = unknown (§1.7); none of these is a new event.
 - **Lifecycle:** `app_cold_start`, `app_foreground`, `app_resumed`, `app_paused`, `app_background`,
   `app_heartbeat`, `session_break`, `screen_view`, `network_changed`, `app_exit_dialog_shown`
