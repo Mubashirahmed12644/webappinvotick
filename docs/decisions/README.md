@@ -50,8 +50,9 @@ Numbering: next free number, zero-padded to 4.
 | [0028](0028-the-invotick-id-is-part-of-the-account.md) | The Invotick ID is minted with the account, not on demand (reverses 2026-07-09 lazy) | decided, implemented |
 | [0029](0029-a-sync-failure-is-an-attempt-the-server-refused.md) | A reported sync failure is an attempt the server refused | decided, in app branch |
 | [0030](0030-every-device-that-stopped-has-a-reason.md) | Every device that stopped on the journey has exactly one reason | decided, implemented |
-| [0031](0031-the-splash-shows-the-app-while-the-gate-holds.md) | The splash shows the app taking shape while the ad gate holds; gate timing untouched | decided, in app branch |
+| [0031](0031-the-splash-shows-the-app-while-the-gate-holds.md) | The splash shows the app taking shape while the ad gate holds; gate timing untouched | remedy reversed by 0038 (diagnosis stands) |
 | [0032](0032-dismissing-the-save-gate-keeps-the-invoice-as-a-draft.md) | Dismissing the Save gate keeps the invoice as a draft | decided, in app branch |
 | [0033](0033-no-banner-under-the-first-open-onboarding-overlay.md) | No banner under the first-open onboarding overlay (owner's call; measure impressions alongside) | decided, in app branch |
 | [0034](0034-a-page-costs-what-it-shows.md) | A page costs what it shows, not what the database holds | decided, being applied |
 | [0037](0037-the-ui-layer-owns-the-press.md) | The UI layer owns the press; the coded `trackClick` twin goes | decided, in app branch |
+| [0038](0038-the-hold-shows-one-branded-loader-not-a-picture-of-the-screen.md) | The hold shows one branded loader, not a picture of the screen it is heading to (reverses 0031's remedy) | decided, in app branch |

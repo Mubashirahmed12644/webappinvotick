@@ -1,6 +1,15 @@
 # 0031 — The splash shows the app taking shape while the ad gate holds; the gate's timing is untouched
 
-**Date:** 2026-09-04 · **Status:** decided (owner delegated the choice), being implemented on `VC_93_VN_142`
+**Date:** 2026-09-04 · **Status:** the remedy below is **reversed by
+[0038](0038-the-hold-shows-one-branded-loader-not-a-picture-of-the-screen.md)** (2026-09-05); the
+diagnosis stands and the gate is still untouched.
+
+> ⚠️ The skeleton described here shipped and the owner rejected it on a device: a page of grey blobs
+> reads as a screen that failed to load, its highest-contrast element was an empty outlined box, its
+> only words were at the bottom, it offered a dead back arrow, and it carried no brand. The hold now
+> shows one centred branded loader with a turning ring and three lines. **Read 0038 before acting on
+> anything below the Decision heading** — in particular the addendum's destination-keyed picture and
+> the determinate progress bar are both gone.
 
 ## Context
 First open takes ~9 s to the first real screen. `splash_ready` fires at ~2 s; the app-open gate then
