@@ -37,11 +37,12 @@ timestamp to the epoch. `version` travels on every record and **neither side use
 
 | id | situation | answer | why |
 |---|---|---|---|
+| **P0** | a record in the body cannot be turned into its DTO at all | reject **that record**, `MISSING_REQUIRED_FIELD`, and read the rest of the body normally | 21 upsert DTOs carry about sixty non-nullable fields between them. One of them arriving null used to fail the **whole request** at Jackson, before a line of service code ran — one device sent that body 250 times in a week and synced nothing at all in between. `SyncV2BatchDeserializer` reads each element on its own and sets the unreadable ones aside. `MISSING_REQUIRED_FIELD` rather than a new error name because every build in the field already knows that one, and almost every real case is exactly that. |
 | **P1** | incoming strictly newer | apply | ordinary edit |
 | **P2** | timestamps equal | apply | a retry of an operation that was applied is applied again; identical data, so it is idempotent, and refusing it would fail an operation that already succeeded |
 | **P3** | incoming up to 1000 ms older | apply | clocks and round trips differ by less than a second all the time; refusing here would reject ordinary edits |
 | **P4** | incoming more than 1000 ms older | reject `STALE_CONFLICT` | the server holds something newer |
-| **P5** | incoming has no `updatedAt` but has `createdAt` | fall back to `createdAt`, then P1–P4 | a create that never carried an update time is still a real record |
+| **P5** | incoming has no `updatedAt` but has `createdAt` | fall back to `createdAt`, then P1–P4 | a create that never carried an update time is still a real record. **The update path used to throw before ever reaching this rule** — 5 devices and 155 occurrences of `Missing update timestamp` on the live build — so the code disagreed with its own contract in 21 places. It now falls back the same way a create does. |
 | **P6** | incoming has neither | reject | nothing to compare; guessing would overwrite on a coin toss |
 | **P7** | the server row has no `updatedAt` | treat as epoch → incoming wins | anything beats nothing |
 | **P8** | `CREATE` for an id the server already holds | run P1–P4, and on a win continue as an update | the device believed it was new; the server knows better, and the data is still the user's |
