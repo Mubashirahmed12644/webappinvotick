@@ -136,9 +136,38 @@ and `data.serverRecord` — which the server already sends with every `STALE_CON
 `SYNC_V2_MOBILE_PROTOCOL.md` §7 says to apply — is parsed into a `JsonElement` and never used.
 Fixing it means choosing what the user sees: their edit replaced by the server's copy, or a prompt.
 
-**G2 — `DELETE` skips the conflict check entirely.** S9. Either it is deliberate (a delete is an
-instruction, not a value) and belongs in this document as a stated rule, or it is an omission. It
-has never been decided.
+**G2 — `DELETE` skips the conflict check entirely.** S9. **Decided 2026-09-05, not yet built** —
+see decision [0036](decisions/0036-a-delete-must-say-what-it-is-deleting.md).
+
+A delete must say **what** it is deleting: `[{id, version}]` instead of `["id"]`. The server then
+answers in three ways, and none of them asks the user anything:
+
+| the server holds | meaning | outcome |
+|---|---|---|
+| the same version | nothing happened since the user looked at it | **delete it** |
+| a higher version | something happened to this record *after* the user decided to delete it | **refuse**, return the record, the device restores it locally |
+| the delete carries no version (an older build) | nothing to compare | **delete it** — exactly as today |
+
+Version rather than a timestamp for the same reason as everywhere else here: *"I am deleting v7"* is
+a fact about the record, while *"I deleted it at 15:04"* is a fact about a clock the device owns.
+
+**Why refusing is not a surprise.** The obvious objection is that a deleted record reappearing will
+confuse somebody. It will not, and the owner's argument is the one that settles it: **the user's
+most recent deliberate action was not the delete — it was the edit.** Monday's delete was made
+without knowing about Tuesday. Tuesday's edit was made looking straight at the record. If they truly
+wanted it gone they would have deleted it from the later device too, or left it alone. So the record
+coming back *is* their own latest decision, which is why nothing needs to be asked and no dialog is
+needed. Deleting it again costs one tap, and that delete now carries v8 and goes through.
+
+And between the two possible mistakes, only one is recoverable by the person it happens to: a record
+that comes back can be deleted again; work that vanished cannot be brought back by anyone who is not
+reading the database.
+
+**One honest wrinkle.** `version` is not bumped only by direct edits — `updateCurrencyCode` bumps it
+when the user makes an *invoice* for that client, not when they edit the client. So the rule's
+justification is not "you edited it" but the wider and truer **"something happened to this record
+after you decided to delete it"**. A client whose invoice was written yesterday is not one to delete
+on the strength of a decision made the day before that.
 
 **G3 — `version` is carried, stored, and ignored.** The app increments it on every edit in
 `commonMain`, so Android and iOS behave identically; the mapper sends it; the server writes it;
