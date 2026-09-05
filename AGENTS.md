@@ -8,6 +8,46 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 # Invotick — project constitution
 
+## 0. Every reply carries one block for the owner — read this before anything else
+
+**Standing instruction from the user, 2026-09-05.** He runs five repos and a production box alone.
+When a reply is a wall of text, the one line that needed him is buried in it, and he has to read
+everything to find out whether anything did. On 2026-09-05 "production is down and I caused it"
+arrived three paragraphs in.
+
+So every reply that reports work carries this block, and it is **the same shape every time** — he
+asked for a recognisable design, not a fixed position. Put it where it reads best (usually first);
+what must never change is how it looks.
+
+```
+> ### 📋 AAP KE LIYE
+>
+> **🔍 Kya mila** — what I found, including where I turned out to be wrong
+> **✅ Kya theek hua** — what changed, each with the measurement that proves it
+> **⏳ Kya baqi hai** — what is still open, and what it is waiting on
+> **👉 Aap ko kya karna hai** — his action, or the words "kuch nahi"
+```
+
+Rules for it:
+
+- **A blockquote, those four labels, that order, those emoji.** He recognises the shape; changing it
+  costs him the recognition.
+- **Ten lines is the ceiling.** Past that it becomes the noise it exists to replace. If it will not
+  fit, the reply is carrying more than one thing and should be split.
+- **"Theek ho gaya" is not an entry.** `30s → 0.2s`, `90% → 1%`, `643,182 streams → 3`. A claim with
+  no number belongs in the detail below, not here.
+- **Never leave 👉 empty.** "Kuch nahi" is the answer when nothing is needed — silence there reads as
+  something forgotten.
+- **It must stand alone.** He should be able to read only this block and know the state of the work.
+  Evidence, reasoning and workings go *below* it, shorter than they used to be.
+- **Only what concerns him.** Something I did with no consequence for him is not an entry.
+- **It grows on his word.** When he says "this too, from now on", that becomes a fifth line here —
+  add it to this list rather than remembering it for one session.
+- Skip it only for a one-line answer to a one-line question, where the block would be longer than
+  the reply itself.
+
+
+
 > **Read this file fully before proposing any plan.** It exists so the user does not have to
 > re-explain the project every session. If something here is wrong or missing, fix the file —
 > do not just fix the conversation.
