@@ -22,16 +22,22 @@ what must never change is how it looks.
 ```
 > ### 📋 AAP KE LIYE
 >
-> **🔍 Kya mila** — what I found, including where I turned out to be wrong
-> **✅ Kya theek hua** — what changed, each with the measurement that proves it
-> **⏳ Kya baqi hai** — what is still open, and what it is waiting on
-> **👉 Aap ko kya karna hai** — his action, or the words "kuch nahi"
+> | | | |
+> |:--|:--|:--|
+> | 🔍 | **Mila** | what I found, including where I turned out to be wrong |
+> | 🟢 | **Theek hua** | what changed, each with the number that proves it |
+> | 🟡 | **Baqi** | what is still open, and what it is waiting on |
+> | 🔴 | **Aap karein** | his action, or the words "kuch nahi" |
 ```
 
 Rules for it:
 
-- **A blockquote, those four labels, that order, those emoji.** He recognises the shape; changing it
-  costs him the recognition.
+- **A table inside a blockquote, those four rows, that order, those coloured dots.** He chose this
+  shape on 2026-09-05 over a plain blockquote: the rules are what lift it off the page, and the
+  colour is carried by the emoji because markdown has no colour of its own. Changing the shape costs
+  him the recognition, which is the entire point of it.
+- **🔴 is always the last row**, because the eye finishes at the bottom and that is where his own
+  work should be waiting.
 - **Ten lines is the ceiling.** Past that it becomes the noise it exists to replace. If it will not
   fit, the reply is carrying more than one thing and should be split.
 - **"Theek ho gaya" is not an entry.** `30s → 0.2s`, `90% → 1%`, `643,182 streams → 3`. A claim with
