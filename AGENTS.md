@@ -223,7 +223,8 @@ Two that bite most often:
 - ⚠️ **Builds only on JDK 21.** The Mac's default `java` is 26, and Gradle fails with a bare
   `What went wrong: 26.0.1`. Use the JDK bundled with Android Studio:
   `JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" ./gradlew …`
-- `./gradlew test`: **268/268 is the clean baseline**, but two of them (`SpringContextBootTest`,
+- `./gradlew test`: **486/486 is the clean baseline** (measured 2026-09-07; this line said 268 until
+  then, so a suite that had simply grown read as something wrong). Two of them (`SpringContextBootTest`,
   `MigrationsApplyToLiveSchemaTest`) need a MySQL on `127.0.0.1:13306`. That's the `invotick-test-mysql`
   container (db `invotick_test`, root password `test`) — start Docker Desktop and
   `docker start invotick-test-mysql` first. Without it those two fail with `ConnectException` and you
