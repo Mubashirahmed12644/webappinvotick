@@ -9,6 +9,30 @@
 > preference. **Add to this file the moment a new rule is decided; do not let it live only in a
 > conversation.**
 
+## `ms_since_start` measures time since launch — from 2026-09-06, and not before
+
+The parameter is stamped on every event by `SessionJourney.stamps()`. Until 2026-09-06 it counted
+from `startedAtMillis`, set when that object is **first touched** — and the first thing that touches
+it is `app_cold_start` itself. It was measuring its own distance from itself. Across 1,826 launches
+in seven days the median was **4 ms**, which reads as "the app starts instantly" and is a fact about
+nothing.
+
+It now counts from `AppStartClock`, marked on the first line of `Application.onCreate` — before Koin,
+billing, the ad SDKs and the Room build. That makes it the real time since launch on **every** event
+that carries it, which is what makes "how long had they been waiting when they left" answerable from
+any event rather than only from the few with a bespoke timing.
+
+**The name did not change and the meaning did.** Rows written before 2026-09-06 carry the old,
+meaningless value; rows after carry real elapsed time. Any query that spans that date is mixing two
+different measurements — filter by date, or by the app version that ships this. The name was kept
+because the old values say nothing worth preserving, but the boundary is real and this is where it
+is written down.
+
+Related: `app_cold_start` does **not** fire at launch. It is deferred to the first foreground, after
+`Application.onCreate` has finished, so it was never a marker for "the app started" either. The
+platform's own splash is on screen well before it — measured once on a Pixel 7 Pro at 2.13 s to the
+icon and 4.88 s to our first frame — and nothing marks that stretch.
+
 ## 0. What this system is for
 
 A funnel that can answer **G1**: did this person create an invoice with their own real data, and if
@@ -271,6 +295,67 @@ Two things the rule does **not** settle, and both cost something the day it is a
 Deleting a coded call also splits nothing, which is why it is cheap: the name simply stops arriving.
 A **rename** does split (§1.8), and `add_item_click` → `add_item_added` is one — so every funnel step
 that reads it lists the old spellings too.
+
+### 1.12 A dimension is only as alive as the row it hangs on. *(decided 2026-09-05)*
+
+Before splitting a funnel by anything stored **beside** the events — anything on
+`analytics_sessions_v2` — count how many of the events in the range can actually reach it. Not how
+populated the column is. **How many rows exist to be populated.**
+
+> **The incident.** The owner asked to split the first-invoice journey by device language.
+> `device_language` is 99.8 % populated across all 31,098 session rows, which reads as a solved
+> problem and is the wrong number. The right one: of **20,017** distinct session ids on seven days of
+> events, **111** had a row at all — 0.6 %. So the split reached **129 of 521** first-open devices.
+>
+> The cause was upstream and silent. A session row is written only when the app sends
+> `session.action="start"`, and `startSession()` opens with `if (!isNew) return`. App commit
+> `0bcc846a` (2026-07-28, *"Never send a session-less event"*) made the first event of a process mint
+> the session — a correct fix for `app_cold_start` arriving with `sessionId=null` — and after it
+> `isNew` is essentially never true, so the announcement stopped. Coverage went from **72.8 %** on
+> builds ≤ 90 to **0.6 %** on versionCode 94, taking `device_language`, `device_class`,
+> `screen_width`/`height`, `network_type`, `city` and `device_manufacturer` with it. Nothing failed:
+> every batch answered 200 and every event kept its `session_id`, which is exactly what the fix set
+> out to achieve.
+
+Three rules out of it:
+
+1. **A column's fill rate is not its coverage.** Measure the join, from the events side, over the
+   window you are about to report on. A near-perfect percentage over a table that has stopped
+   growing is the most convincing wrong number available.
+2. **Nothing the app already sends on every batch may depend on one branch to be stored.**
+   `deviceLanguage` was on the top level of every `/v2/analytics/track` request the whole time. Read
+   it where it arrives; `AnalyticsTrackingServiceV2` now upserts the session row from any batch that
+   carries a session id (decision [0039](docs/decisions/0039-language-is-read-from-the-session-not-re-sent-per-event.md)).
+3. **Facet, do not filter, while coverage is partial.** A filter drops the devices it cannot name and
+   the remainder reads as the whole population. A facet puts them in an `unknown` row (§1.7). And
+   check the survivors for bias before reporting a difference: the 25 % of devices that *did* have a
+   language averaged **783 events and 4.5 opens** against **121 and 1.7** for the rest, so any funnel
+   gap between the two groups was a gap between heavy and light users wearing a language label.
+
+**A dimension that lives on the session gets a Health Centre check, not a page.**
+`SessionMetadataCoverageCheck` watches this one.
+
+### 1.13 A language tag is not a language. *(decided 2026-09-05)*
+
+`device_language` holds BCP-47 as `Locale.getDefault().toLanguageTag()` produces it — language,
+region **and** Unicode extensions. Production carries **37 distinct Arabic tags** and 15 French ones:
+`ar-EG-u-nu-arab`, `ar-SD-u-nu-latn`, `en-US-u-fw-sun-mu-fahrenhe`, `zh-Hans-CN`. Grouping by the raw
+tag scatters one language across dozens of rows, each small enough to read as noise, and the
+second-biggest language in the app disappears.
+
+Normalise to the primary subtag through `LanguageTag` (backend, `service/analytics`) before grouping,
+always. An unlisted subtag keeps its code rather than getting a guessed name — a wrong language name
+on a dashboard is worse than a bare `sw`, because nobody re-checks a word that reads like an answer.
+
+Two things this value is **not**:
+
+- **Not the phone's system language.** The in-app picker calls
+  `AppCompatDelegate.setApplicationLocales`, so this is the app's *effective* locale. That is the
+  more useful fact, but the column name claims otherwise. Do not report it as the device's language.
+- **Not evidence the user saw the app in that language.** As of 1.4.3 the app ships `values-fr` and
+  `values-es` with **one string each** (`app_name`; the Spanish one reads `Invoteeck`). The invoice
+  flow has no translated strings at all. So a "localized" user is one we did **not** serve in their
+  language — which is the question worth asking, and the opposite of how the label reads.
 
 ### 1.10 Layers
 
