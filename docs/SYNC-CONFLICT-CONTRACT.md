@@ -174,6 +174,16 @@ on the strength of a decision made the day before that.
 `SyncConflictRecord` holds it; `shouldKeepIncoming` reads it into `incomingVersion` /
 `existingVersion` — **and only logs it.** Every decision above is made on a clock the device owns.
 
+**The measurement was silent for two days** (2026-09-05 → 2026-09-07). `SyncConflictRecord` carries a
+`version`, but **not one of the 23 call sites constructed it with one** — every record reaching the
+policy was built as `SyncConflictRecord(updatedAt = …)` and defaulted to `null`. So all 2,920
+conflicts measured in that window answered `version_absent`, and the Health Centre card crossed its
+threshold and reported *"enough evidence to decide — 0 would improve, 0 would change"*. That reads as
+"a version rule would not help". Nothing had been measured at all. Fixed 2026-09-07: the call sites
+pass `dto.version` and `existing.version`, and the check now counts only conflicts where version
+could speak, warning instead when it cannot. **Server-side only — no app release was needed**, the
+push DTO has carried `version` on every entity all along.
+
 **Being measured now, not changed** (`SyncConflictPolicy.recordShadowVerdict`, live 2026-09-05). Every
 conflict computes both verdicts, acts on the clock exactly as before, and counts what version *would*
 have said:
@@ -198,6 +208,33 @@ A version-based rule would answer S6 and S7 outright, and would turn P4 into thr
 of one: *newer* → apply, *equal* → already applied, *older* → **superseded, and therefore done** —
 not "failed". Today the server says a record failed when what actually happened is that a newer
 version of it already arrived safely.
+
+### `version` is not an edit counter — read this before building G2
+
+Verified in the app on 2026-09-07, and it changes what the numbers above are allowed to mean.
+**19 of the 21 sync handlers bump `version` on a successful push**, not on an edit —
+`updateSyncInfo(id, SYNCED, now, it.version + 1)`, on both the CREATE-applied and UPDATE-applied
+branches. `Client` and `Business` are the only two that do not; they set `SYNCED` and leave the
+number alone. The bumped value is what `toDto()` sends on the next push.
+
+Three consequences, none of them theoretical:
+
+- **A device at rest holds `server + 1`** for those 19 types. The free +1 is backed by no content,
+  so `incoming > existing` is simply the normal case and its size means nothing.
+- **`superseded` cannot be read as "ancestor".** The row above says the incoming copy is an ancestor
+  of the server's. That holds for `Client` and `Business`; for the other 19 the counter advances
+  without the device having seen anything, so a higher number does not prove the writer saw the lower
+  state. Two devices can both move forward and one edit still disappears — with both verdicts
+  agreeing. Reporting that as "your newer copy is already here" would be a false all-is-well, which
+  is the one outcome this contract exists to prevent.
+- **G2's delete table has no row for what will actually arrive.** It answers *server holds the same
+  version* → delete, *server holds a higher version* → refuse. After a sync the delete carries
+  `server + 1`, so the server holds a **lower** version — neither row. G2 must add that case before
+  it is built, or it misfires on 19 of 21 entity types on the first delete after any sync.
+
+The fix is the same one S4 already points at: **the counter has to belong to the server.** Until it
+does, these outcomes are evidence about a device-owned number, exactly like the timestamps they are
+being compared against.
 
 It does not answer S4, where two devices independently produce `version 7`. That needs the counter
 to belong to the server (client sends the version it edited from; the server compares, applies, and
