@@ -357,6 +357,42 @@ Two things this value is **not**:
   flow has no translated strings at all. So a "localized" user is one we did **not** serve in their
   language — which is the question worth asking, and the opposite of how the label reads.
 
+### 1.14 A name says what was seen, never why. *(owner's instruction 2026-09-07)*
+
+This applies to every derived label as much as to an event: funnel stop reasons, buckets, facets,
+anything a reader will later count.
+
+Two stop reasons were called `left_waiting_for_ad` / `died_waiting_for_ad`, and the panel spelled it
+out — *"Ad ka intezaar karte hue chala gaya"*. Nothing in the signals observes waiting. What that
+branch actually requires is that **`splash_ready` had already fired — the app was usable** — and that
+an ad request had been made and not resolved. The name took a branch where the app was ready and told
+every future reader that the ad had held the user up. `save_watch_ad_no_invoice` did the same by
+juxtaposition, and the panel's own wording carried the verdict further still: *"phir bhi chala gaya"*,
+*"idhar udhar tap kiya"*, *"(bug shape)"*.
+
+**Why this is a rule and not a style note.** A funnel is read by counting its categories. If the
+verdict is already inside the category name, the funnel returns that verdict no matter what the
+numbers do — nobody has to argue for it, and nobody can argue against it, because it reads as data.
+That is precisely the failure `memory/monetisation-measure-never-assume.md` exists to prevent, and
+the owner has now had to say it twice.
+
+So:
+
+| don't | do | because |
+|---|---|---|
+| `left_waiting_for_ad` | `left_after_splash_ready_ad_pending` | waiting is a state of mind; "splash ready, ad request open" is a fact |
+| `save_watch_ad_no_invoice` | `save_then_watch_ad_clicked` | the first arranges two facts into a conclusion |
+| "phir bhi chala gaya" | "phir gaya" | *phir bhi* is a judgement about the user |
+| "idhar udhar tap kiya" | "tap hue, koi item add nahi hua" | *idhar udhar* is contempt, not a measurement |
+| "(bug shape)" | nothing — put it in the check, not the label | a label is not the place to file a hypothesis |
+
+Anyone may still conclude the ad cost the session. They should reach it **from the count, not from
+the name.**
+
+These labels are derived at query time (`JourneyStopReasons.reasonFor`, called by
+`LiveEventsController`) and never stored, so renaming one costs nothing and needs no app release —
+which is exactly why there is no excuse for leaving a dishonest one in place.
+
 ### 1.10 Layers
 
 `intent.screen` · `intent.action` · `response.outcome` · `response.gate` · `response.interruption` ·
