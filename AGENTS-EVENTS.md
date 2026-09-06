@@ -393,6 +393,34 @@ These labels are derived at query time (`JourneyStopReasons.reasonFor`, called b
 `LiveEventsController`) and never stored, so renaming one costs nothing and needs no app release —
 which is exactly why there is no excuse for leaving a dishonest one in place.
 
+### 1.15 One parameter name, one code space. A raw code is not a dimension. *(decided 2026-09-07)*
+
+`code` on `ad_load_failed` and `code` on `ad_show_failed` are **different integer tables that
+overlap**. `3` is `NO_FILL` on a load and `APP_NOT_FOREGROUND` on a show. Both events carry the key
+`code`, so any panel row, filter or `GROUP BY` that spans the two adds two enums together and
+returns a confident number for a question nobody asked. 5,668 rows were stored this way, 100 %
+populated — a fill rate that reads as a solved problem, which is §1.12 in a different costume.
+
+Three rules out of it:
+
+1. **A vendor's integer is not a value.** Store it (it is the ground truth and it never lies), but
+   put the SDK's own **word** beside it in a parameter of its own, resolved by the table that
+   integer actually belongs to. `reason` is that parameter here.
+2. **Never translate an integer across code spaces.** A mediation adapter's `AdError` carries its
+   own numbering; Pangle's `3` is not AdMob's `3`. Name a code only when the error's `domain` says
+   it is in the table you are reading, and send the domain alongside so the pair is self-describing.
+   `cause_domain=com.pangle.ads` + `cause_reason=unknown_20001` is a complete fact;
+   `cause_reason=no_fill` there would be fiction that nobody could ever catch.
+3. **An unrecognised code keeps its number** — `unknown_<n>`, never folded into the nearest named
+   bucket. A new SDK version adds codes; folding them makes the biggest bucket quietly grow while
+   every reader believes the SDK said something it never said. `unknown_17` names itself as work.
+
+Corollary, from the same change: **a constant `placement` is not attribution.** Every App Open
+request in the app's history carries `placement=app_open`, so grouping by it returns one row. What
+separates them is `path` — `splash|resume|landing|preload` — and without it "80 % of our App Open
+requests were fired by background process wakes, for nobody" was true for months and invisible.
+Before splitting anything by a parameter, check how many distinct values it actually has.
+
 ### 1.10 Layers
 
 `intent.screen` · `intent.action` · `response.outcome` · `response.gate` · `response.interruption` ·

@@ -315,8 +315,10 @@ Their sessions are still stored, so "how much of the install base has updated" s
 1.4.1 rolls out, **production stores no new events** — this is intended, not a fault. See
 `AGENTS-EVENTS.md` §3.11 and the Health Centre's *Old-build analytics traffic*.
 
-Explicitly coded event vocabulary today — **as the shipped build sends it** (`origin/VC_93_VN_142`,
-live as 1.4.2 / versionCode 94; re-verified against `analytics_events` on 2026-09-04). **Grep note:**
+Explicitly coded event vocabulary today — **as the shipped build sends it** (`origin/VC_96_VN_144`,
+live as **1.4.4 / versionCode 97**; the ads section re-read against `analytics_events` on
+2026-09-07. This line said 1.4.2 / versionCode 94 until then, two releases after it stopped being
+true — a stale build stamp makes every count under it read as the current app). **Grep note:**
 `trackClick(` is often a multi-line call, so a single-line grep silently misses events — always grep
 with trailing context. **A name in this list is a claim about the app; when it stops matching rows,
 the list is wrong, not the app.**
@@ -368,7 +370,13 @@ the list is wrong, not the app.**
   `shared_invoice_create_own_click`, `shared_invoice_approved`, `shared_invoice_rejected`,
   `shared_invoice_open_failed`, `shared_invoice_decision_failed`, `invoice_share_link_fallback`
 - **Money/ads:** `premium_click`, `watch_ad_click`, `ad_request`, `ad_loaded`, `ad_shown`,
-  `ad_dismissed`, `ad_load_failed`, `ad_show_failed`, `ad_dialog_dismissed`, `app_open_ad_loaded`
+  `ad_dismissed`, `ad_load_failed`, `ad_show_failed`, `ad_load_crashed`, `ad_dialog_dismissed`,
+  **`ad_impression_value`** (3,112 firings / 582 devices — what an impression actually paid, from
+  the network, so the ad trade has a revenue side at all) and **`app_open_decision`** (324 / 28
+  devices, 1.4.3+ — how one foreground's app-open ad ended, one row per `(foreground_id, path)`).
+  ⚠️ **`app_open_ad_loaded` is gone from the app** — 4 firings on 1 device, and `ad_loaded` carries
+  everything it did plus `type`, `ad_request_id` and `ad_source`. Old rows keep the name; nothing
+  new arrives under it, so a query that still reads it is measuring history only.
 - **Notifications:** `notification_permission_shown` / `_allowed` / `_denied`
 - **Parameters added 2026-09-04 (release after 1.4.2, branch `VC_93_VN_142`):** `app_cold_start.prev_exit`
   (`crash|anr|crash_native|user_request|low_memory|…|unknown`, API ≥ 30 only) + `prev_exit_ms_ago`;
@@ -378,6 +386,26 @@ the list is wrong, not the app.**
   `ui_mode` (`dark|light` — what the screen was actually in) + `theme_pref` (`system|light|dark`) stamped on
   **every** event by the gateway, so any funnel can be filtered by mode (`first-invoice-journey?uiMode=`).
   Absent parameter = unknown (§1.7); none of these is a new event.
+- **Parameters added 2026-09-07 (ad failures — decision [0043](docs/decisions/0043-an-ad-failure-is-named-in-the-sdks-own-words.md)).**
+  No new event; `code` is untouched on every one of them.
+  `ad_load_failed.reason` (`internal_error|invalid_request|network_error|no_fill|app_id_missing|mediation_no_fill|request_id_mismatch|invalid_ad_string|unknown_<n>`)
+  and `ad_show_failed.reason` (`internal_error|ad_reused|not_ready|app_not_foreground|mediation_show_error|unknown_<n>`)
+  — **two different tables**, which is the whole point: `code=3` is `no_fill` on a load and
+  `app_not_foreground` on a show, so anything grouping `code` across both events was adding two
+  enums together. Both events also gain `error_domain` (`gma` | the adapter's own domain) and one
+  level of `cause_reason` + `cause_domain`, all of which the SDK was giving us and we dropped.
+  `ad_show_failed` gains `ad_request_id` (the one event in the chain that could not be joined back
+  to its request) and `elapsed_ms`. `ad_loaded` and `ad_load_failed` also gain **`since_request_ms`**
+  — how long the request itself took. Nothing measured that before: `elapsed_ms` is time since
+  **launch**, and so is the `ms_since_start` the gateway stamps on every event, so the number the
+  splash's 6,000 ms gate is actually tuned against had to be reconstructed by pairing rows on
+  timestamps. `elapsed_ms` stays where it already was — it has history (§1.8) and answers a different
+  question. `path` (`splash|resume|landing|preload`) goes on `ad_request`,
+  `ad_loaded`, `ad_load_failed`, `ad_load_crashed`, `ad_shown`, `ad_dismissed`, `ad_show_failed` for
+  `type=app_open` — `placement` is the constant `app_open` there and so attributes nothing.
+  Deliberately **not** on `ad_impression_value` (registered at load time, so it can only see the
+  load's path while the show's path is what earned the money — join on `ad_request_id` instead) and
+  not on interstitial events (no such moments; `type` says an absent `path` is not-applicable).
 - **Lifecycle:** `app_cold_start`, `app_foreground`, `app_resumed`, `app_paused`, `app_background`,
   `app_heartbeat`, `session_break`, `screen_view`, `network_changed`, `app_exit_dialog_shown`
 
