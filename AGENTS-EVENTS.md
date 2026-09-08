@@ -421,6 +421,47 @@ separates them is `path` — `splash|resume|landing|preload` — and without it 
 requests were fired by background process wakes, for nobody" was true for months and invisible.
 Before splitting anything by a parameter, check how many distinct values it actually has.
 
+### 1.16 Attribution matches whole, or it does not match. *(decided 2026-09-08)*
+
+A campaign tag is matched by **equality on every value at once** — never a substring, a prefix, a
+case fold or a "contains". This is not a style preference about SQL; it is the difference between a
+number and a claim.
+
+> **The incident.** `JourneyFacets.installSource` bucketed install sources with `"facebook" in v`.
+> Facebook-for-Android sets its **own** Play install referrer on anything that reaches the store
+> through the FB app — `utm_source=apps.facebook.com`, `utm_campaign=fb4a`, where `fb4a` is the
+> Android client naming itself, not a campaign — and Play stores whatever the referring app set,
+> whether or not we ever built a link. The substring was true of both. **927 installs that were
+> nothing to do with us joined our 8 tagged ones in one bucket**, and the panel wrote *"Facebook
+> campaign"* across the pair: a label wrong by a factor of 116, on screen for as long as the bucket
+> existed, reading like an answer the whole time. Fixed in `8320714`; the matcher is now
+> `UtmTag` with `UtmTagTest` as the guard.
+
+Three rules out of it, and they generalise past UTM to every join between something we created and
+something a vendor sent back:
+
+1. **A vendor's identifier lives in the vendor's namespace, not ours.** `apps.facebook.com` is
+   Facebook's word for Facebook. `facebook` is ours. That they share six letters is a coincidence of
+   spelling, and a matcher that reads it as agreement will find the same coincidence again with the
+   next network. Under equality the two are simply different, which is a property nobody has to
+   remember.
+2. **Match on the fields, not on the whole raw string.** `install_referrer` carries `referrer_raw`,
+   which is exact and therefore tempting — and it breaks the day a network appends its own
+   parameter. Google Ads adds `gclid`; a raw-string match would then return **zero installs for a
+   campaign that had them**, and a zero on an attribution page reads as "the campaign failed". Match
+   the three tag values; extra parameters are allowed to be there.
+3. **State what the key cannot separate, in the row.** The short code never reaches the install
+   referrer, so seven links carrying an identical tag have **one** install count between them and no
+   query can divide it. Splitting it evenly, by click share, or by "newest link wins" is invention
+   wearing a number. Each link shows the same figure and says on its own row that the figure belongs
+   to the tag. Decision [0044](docs/decisions/0044-an-install-belongs-to-a-tag-not-to-a-link.md).
+
+**And a zero is an answer.** Most tags produce no installs; that is the finding, not a failure to
+measure. Rendering it as `—` or a blank cell puts back the state the page was already in, where
+nobody could tell "nothing came from this link" from "nothing was ever read". The only cell allowed
+to print as not-applicable is one where the thing could not have been measured at all — a link with
+no Play URL, which never had an install path (§1.7).
+
 ### 1.10 Layers
 
 `intent.screen` · `intent.action` · `response.outcome` · `response.gate` · `response.interruption` ·
