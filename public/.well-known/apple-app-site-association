@@ -1,0 +1,21 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": [
+          "UG6X672JBW.invotick.invoicemaker"
+        ],
+        "components": [
+          {
+            "/": "/i/*",
+            "comment": "A shared invoice. The receiver taps the OG card and, if Invotick is installed, it opens in the app instead of the browser."
+          },
+          {
+            "/": "/device-link/*",
+            "comment": "Device-link approval codes \u2014 the same prefix the Android manifest claims."
+          }
+        ]
+      }
+    ]
+  }
+}
