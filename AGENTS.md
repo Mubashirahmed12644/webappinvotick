@@ -366,9 +366,35 @@ the list is wrong, not the app.**
   auto-captured, so the **send policy** decides whether they ship; do not add a channel that bypasses it.
 - **Auth:** `login_success`, `register_success`, `guest_login_success`, **`guest_login_failed`**,
   `otp_verify_success`, `guest_merge_notice_dismissed`
-- **Growth (G2), receiver side:** `shared_invoice_opened`, `shared_invoice_opened_by_owner`,
-  `shared_invoice_create_own_click`, `shared_invoice_approved`, `shared_invoice_rejected`,
-  `shared_invoice_open_failed`, `shared_invoice_decision_failed`, `invoice_share_link_fallback`
+- **Growth (G2), receiver side — in the app:** `shared_invoice_opened`,
+  `shared_invoice_opened_by_owner`, `shared_invoice_create_own_click`, `shared_invoice_approved`,
+  `shared_invoice_rejected`, `shared_invoice_open_failed`, `shared_invoice_decision_failed`,
+  `invoice_share_link_fallback`.
+  ⚠️ Measured 2026-09-09, 30 days: `shared_invoice_open_failed` **138** against
+  `shared_invoice_opened` **70**, and `shared_invoice_approved` has fired **zero times ever**
+  (`shared_invoice_rejected`: one, on 2026-08-09). Not evidence the approval loop is unused —
+  evidence that the surface most receivers use had never been instrumented.
+- **Growth (G2), receiver side — on the web** *(`Webinvotick`, decision
+  [0045](docs/decisions/0045-the-share-link-page-reports-its-own-journey.md); **built, not
+  deployed**).* The `/i/{token}` page is the first non-app client in this pipeline. It posts to the
+  same `POST /v2/analytics/track` as `platform=Web`, through its own same-origin route
+  (`src/app/api/analytics/track/route.ts`) which fixes the permitted names and parameter values,
+  generates the event id, and stamps `surface` + `viewer_platform` server-side. Six names:
+  **`shared_invoice_page_view`** (new — `link_state` = `active|not_found|gone|fetch_failed`, plus
+  `http_status`; a separate name from `shared_invoice_opened` because the app fires that one only
+  after routing senders away, so its rows are receivers-only and the public page cannot tell the two
+  apart), **`shared_invoice_pdf_click`** (new — `destination` = `play_store|print_dialog`), and four
+  the app already owns, fired at the app's own moments: `shared_invoice_approved` /
+  `shared_invoice_rejected` on the backend's confirmation, `shared_invoice_decision_failed`
+  (`decision`, `http_status`) and `shared_invoice_create_own_click` (`destination` =
+  `play_store|web_app`) on the click.
+  Every web event carries **`surface=web_share_link`** and **`viewer_platform`**
+  (`android|ios|desktop`, from the User-Agent — deliberately **not** named `platform`, which is
+  already the batch-level `Android|iOS|Web` code space). The app sends no `surface`, so that facet
+  reads `web_share_link` against **NULL = unknown, not app** (§1.7).
+  ⚠️ **Backend deploys first.** `AnalyticsVersionGate` refused any batch with a null
+  `appVersionCode`, which is every web batch — 200 OK, zero stored. It now exempts `Platform.Web`.
+  Ship the web against the old gate and the funnel reads as a step nobody reached.
 - **Money/ads:** `premium_click`, `watch_ad_click`, `ad_request`, `ad_loaded`, `ad_shown`,
   `ad_dismissed`, `ad_load_failed`, `ad_show_failed`, `ad_load_crashed`, `ad_dialog_dismissed`,
   **`ad_impression_value`** (3,112 firings / 582 devices — what an impression actually paid, from

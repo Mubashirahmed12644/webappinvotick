@@ -30,7 +30,28 @@ export interface PublicSharedInvoice {
 }
 
 /**
- * Fetch a shared invoice by token; null when missing / revoked / expired.
+ * What was behind the token, as the backend actually answered.
+ *
+ * The four values are the four answers the web can observe, and no more:
+ * - `active`      — 200 with a document.
+ * - `not_found`   — 404. The token has never existed, or the row is gone.
+ * - `gone`        — 410. `SharedInvoice.isViewable()` said no. It answers the SAME status for a
+ *                   revoked link and an expired one, so those two are not separable from here.
+ *                   Naming one would be a value nobody could later catch as wrong.
+ * - `fetch_failed`— the read itself failed (network, 5xx, unparseable body). Not the same fact as
+ *                   the link being dead, and it must never be counted as one.
+ */
+export type SharedInvoiceLinkState = "active" | "not_found" | "gone" | "fetch_failed";
+
+export interface SharedInvoiceResult {
+  state: SharedInvoiceLinkState;
+  data: PublicSharedInvoice | null;
+  /** The HTTP status when there was one. Absent when the request never got an answer. */
+  status: number | null;
+}
+
+/**
+ * Fetch a shared invoice by token, keeping WHY it failed.
  *
  * Speed: the endpoint is PUBLIC (no auth) and the snapshot is immutable, so we
  * hit it with a plain fetch cached in the Next Data Cache (revalidate). The page
@@ -39,8 +60,8 @@ export interface PublicSharedInvoice {
  * resolves fast when the link is pasted. React cache() additionally dedupes the
  * page's own generateMetadata + component into one call per request.
  */
-export const getSharedInvoice = cache(
-  async (token: string): Promise<PublicSharedInvoice | null> => {
+export const getSharedInvoiceResult = cache(
+  async (token: string): Promise<SharedInvoiceResult> => {
     try {
       const res = await fetch(
         `${config.backendUrl}/v2/shared-invoice/${encodeURIComponent(token)}`,
@@ -57,14 +78,33 @@ export const getSharedInvoice = cache(
           next: { revalidate: 300, tags: [`shared-invoice:${token}`] },
         },
       );
-      if (!res.ok) return null;
+      if (!res.ok) {
+        const state: SharedInvoiceLinkState =
+          res.status === 404 ? "not_found" : res.status === 410 ? "gone" : "fetch_failed";
+        return { state, data: null, status: res.status };
+      }
       const json = (await res.json()) as { success?: boolean; data?: PublicSharedInvoice } | null;
-      return json?.success && json.data ? json.data : null;
+      // 200 with no usable body is the read failing, not the link being dead. Reporting it as
+      // `not_found` would put our own defect into the bucket we use to count dead links.
+      if (!json?.success || !json.data) {
+        return { state: "fetch_failed", data: null, status: res.status };
+      }
+      return { state: "active", data: json.data, status: res.status };
     } catch {
-      return null;
+      return { state: "fetch_failed", data: null, status: null };
     }
   },
 );
+
+/**
+ * The document, or null when missing / revoked / expired / unreachable.
+ *
+ * Kept as the reader for everything that only needs the document (the OG card, the page's own
+ * metadata). It shares the cached call above, so asking for the reason costs nothing extra.
+ */
+export async function getSharedInvoice(token: string): Promise<PublicSharedInvoice | null> {
+  return (await getSharedInvoiceResult(token)).data;
+}
 
 const PLAY_STORE_ID = "invotick.invoicemaker";
 

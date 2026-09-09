@@ -462,6 +462,48 @@ nobody could tell "nothing came from this link" from "nothing was ever read". Th
 to print as not-applicable is one where the thing could not have been measured at all — a link with
 no Play URL, which never had an install path (§1.7).
 
+### 1.17 A second surface joins the pipeline; it does not start one. *(decided 2026-09-09)*
+
+The `/i/{token}` share page is the first non-app client to send events. Four things had to be settled
+before it could send one, and each generalises to whatever comes next — the web dashboard, a future
+iOS build, an email pixel. Decision
+[0045](docs/decisions/0045-the-share-link-page-reports-its-own-journey.md).
+
+1. **The same action on a new surface keeps its name; the surface is a parameter.** Approving from a
+   browser and approving in the app are one action (§1.1). A web-only twin would split one funnel
+   step across two names, and the first query that forgot one half would report a smaller number with
+   nothing saying so. **And it must fire at the same MOMENT** — the app fires
+   `shared_invoice_approved` on the backend's confirmation, so the web does too. One name meaning
+   "decided" on one surface and "tried" on the other is a metric that moves for a reason that never
+   happened.
+
+2. **A new name is needed when the populations differ, even if the words match.** The app's
+   `shared_invoice_opened` fires only after senders have been routed away to their own invoice, so
+   its rows are receivers-only by construction. The public web page cannot tell a sender from a
+   receiver at all. Reusing the name would have put two populations under one id (§1.4) and quietly
+   raised the app's own count. `shared_invoice_page_view` is the twin, not the same event.
+
+3. **The surface must be stamped ON the event.** `analytics_events` has no platform column —
+   platform lives on `analytics_sessions_v2`, and §1.12 and §3.8 are both about why that join cannot
+   carry a dimension. So every web event carries `surface`. **The gap this leaves is real and is
+   named rather than papered over:** the app does not send `surface`, so the facet reads
+   `web_share_link` against **NULL**, and NULL means unknown, not app (§1.7).
+
+4. **Client-supplied identity is decided by the server, or it is not identity.** Three things are
+   never taken from a public browser body: the **event id** (`save()` on an existing id updates that
+   row, so accepting one lets anyone overwrite any analytics event we hold), the **surface**, and the
+   **platform of the viewer**. And the event **name** comes from a fixed list — a public endpoint that
+   accepts arbitrary names lets anyone forge `invoice_shared_success`, which is the G1 metric itself.
+   Volume limiting is the second line, not the first.
+
+**One more, and it is the trap that would have swallowed the whole thing:** the ingestion floor
+(§3.11) refuses any batch with no `appVersionCode`, and a web page has no Android build number. Every
+event would have been refused the way this system refuses things — 200 OK, summary says accepted,
+zero rows written. The page would have shipped, sent everything correctly, and produced a funnel that
+read as *a step nobody reached*. `AnalyticsVersionGate` now exempts `Platform.Web`, because the floor
+was never about age; it is about one body of event work on one client. **Before adding a client,
+walk the ingestion path and ask what silently drops it** — the answer is not in the client's code.
+
 ### 1.10 Layers
 
 `intent.screen` · `intent.action` · `response.outcome` · `response.gate` · `response.interruption` ·
@@ -623,6 +665,12 @@ Full detail in `memory/mysql-binary-uuid-and-test-clock.md`. In native queries:
       into a permanent retry loop against an endpoint that will never accept it — the shape of the
       sync defect that pushed one record 7,173 times. Refusing is a decision, so it is reported as
       one: accepted, zero stored.
+
+    - **`Platform.Web` is exempt** *(2026-09-09)*. The floor is not about age; it is about one body
+      of event work on one client. A web page has no Android build number, so the floor would have
+      refused every event from `/i/{token}` in exactly the invisible way described above — accepted,
+      zero stored, funnel reads as a step nobody reached. §1.17 and decision
+      [0045](docs/decisions/0045-the-share-link-page-reports-its-own-journey.md).
 
     `OldBuildTrafficCheck` reports it in the Health Centre, because a deliberate silence looks
     exactly like an accidental one on a dashboard, and reading a post-release funnel as
