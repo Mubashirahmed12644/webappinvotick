@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { trackWebEvent } from "@/lib/analytics/client";
 
 type Decision = "APPROVED" | "REJECTED";
 
@@ -11,6 +12,22 @@ type Decision = "APPROVED" | "REJECTED";
  * Web approval is allowed (low friction) — installing the app is a secondary growth
  * step, not a gate. On success we refresh so the server re-renders the page in its
  * decided state (the backend locks the decision after the first one).
+ *
+ * ## The events are the app's own names, and they fire where the app fires them
+ *
+ * `shared_invoice_approved` / `shared_invoice_rejected` on the backend's CONFIRMATION, and
+ * `shared_invoice_decision_failed` with `decision` when it refuses — the same three names and the
+ * same three moments as `ReceivedInvoiceViewModel.decide`. Approving from a browser and approving
+ * from the app are one action on two surfaces, so they are one name with the surface as a parameter
+ * (`AGENTS-EVENTS.md` §1.1); a web-only name would split one funnel step in two, and the first
+ * query that forgot one half would report a smaller number with nothing saying so.
+ *
+ * Firing on the click instead would have been the quiet defect: the same name would then mean
+ * "decided" for app rows and "tried" for web rows, and the approval rate would rise for a reason
+ * that never happened.
+ *
+ * `http_status` separates "already decided" (409) from "our backend was down" (5xx). Both look
+ * identical to the receiver and are completely different problems.
  */
 export function ApprovalActions({ token, compact = false }: { token: string; compact?: boolean }) {
   const router = useRouter();
@@ -30,15 +47,22 @@ export function ApprovalActions({ token, compact = false }: { token: string; com
       });
       const json = (await res.json().catch(() => null)) as { error?: string } | null;
       if (!res.ok) {
+        trackWebEvent("shared_invoice_decision_failed", {
+          decision,
+          http_status: res.status,
+        });
         setError(json?.error ?? "Something went wrong. Please try again.");
         setBusy(null);
         return;
       }
       // Show the outcome immediately (read-your-own-writes) and refresh in the
       // background so a later reload also reflects the server's decided state.
+      trackWebEvent(decision === "APPROVED" ? "shared_invoice_approved" : "shared_invoice_rejected");
       setDecided(decision);
       startTransition(() => router.refresh());
     } catch {
+      // No HTTP answer at all, so no `http_status` — absent means unknown, never a stand-in value.
+      trackWebEvent("shared_invoice_decision_failed", { decision });
       setError("Network error. Please check your connection and try again.");
       setBusy(null);
     }

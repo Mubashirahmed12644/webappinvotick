@@ -1,22 +1,26 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { headers } from "next/headers";
 import QRCode from "qrcode";
-import { getSharedInvoice, installUrlForToken } from "@/lib/shared-invoice";
+import {
+  getSharedInvoice,
+  getSharedInvoiceResult,
+  installUrlForToken,
+} from "@/lib/shared-invoice";
 import { ApprovalActions } from "@/components/shared-invoice/ApprovalActions";
 import { SharedInvoiceViewer } from "@/components/shared-invoice/SharedInvoiceViewer";
 import { ViewBeacon } from "@/components/shared-invoice/ViewBeacon";
+import { SharedInvoicePageView } from "@/components/shared-invoice/SharedInvoicePageView";
 import { PdfButton } from "@/components/shared-invoice/PdfButton";
+import { GetYourOwnCta } from "@/components/shared-invoice/GetYourOwnCta";
+import { platformFromUserAgent, type ViewerPlatform } from "@/lib/analytics/platform";
 
 const SITE = "https://www.invotick.com";
 
-type Platform = "android" | "ios" | "desktop";
-
-async function detectPlatform(): Promise<Platform> {
-  const ua = (await headers()).get("user-agent") ?? "";
-  if (/android/i.test(ua)) return "android";
-  if (/iphone|ipad|ipod/i.test(ua)) return "ios";
-  return "desktop";
+// The page branches its CTAs on this and the analytics route stamps the same value on every event,
+// both from `platformFromUserAgent`. One implementation, so a funnel can never describe a branch
+// the receiver was not shown.
+async function detectPlatform(): Promise<ViewerPlatform> {
+  return platformFromUserAgent((await headers()).get("user-agent"));
 }
 
 // Short, stable content hash of the invoice — changes whenever the invoice changes (total, items,
@@ -82,11 +86,20 @@ export default async function SharedInvoicePage({
   params: Promise<{ token: string }>;
 }) {
   const { token } = await params;
-  const shared = await getSharedInvoice(token);
+  // The reason the read failed is kept, not flattened to "no document": a revoked link, a token that
+  // never existed and our own backend being unreachable are three different outcomes for the person
+  // holding the link, and until now the web reported all three as the same blank page.
+  const { state: linkState, data: shared, status } = await getSharedInvoiceResult(token);
+  const platform = await detectPlatform();
+  const installUrl = installUrlForToken(token);
 
   if (!shared) {
     return (
       <main className="mx-auto flex min-h-[70vh] max-w-md flex-col items-center justify-center px-6 text-center">
+        {/* The dead-link branch reports too. A receiver who was sent a link that no longer works is
+            a real journey outcome, and it was invisible on the web. ViewBeacon deliberately does not
+            render here — there is no invoice to mark as received. */}
+        <SharedInvoicePageView linkState={linkState} status={status} />
         {/* Neutral wording on purpose: the share could not be loaded, so which kind of document it
             held is exactly what we do not know here. Guessing "invoice" is wrong half as often as
             it is right, and it is the last thing this person reads. */}
@@ -94,24 +107,24 @@ export default async function SharedInvoicePage({
         <p className="mt-3 text-neutral-600">
           It may have been revoked, replaced by a newer version, or expired.
         </p>
-        <Link
-          href="/"
-          className="mt-6 rounded-full bg-[#0D4DC0] px-6 py-3 font-medium text-white"
-        >
-          Create your own invoice — free
-        </Link>
+        <GetYourOwnCta
+          platform={platform}
+          installUrl={installUrl}
+          route="web_app"
+          className="mt-6 rounded-full bg-[#0D4DC0] px-6 py-3 text-center font-medium text-white"
+        />
       </main>
     );
   }
 
-  const installUrl = installUrlForToken(token);
   const businessName = shared.businessName?.trim() || "a business";
   // Derived again here: generateMetadata runs in its own scope, and the two must not drift — the
   // card and the page a receiver opens from it should not call the document different things.
   const kind = shared.documentType === "ESTIMATE" ? "Estimate" : "Invoice";
-  const status = shared.approvalStatus ?? "PENDING";
-  const decided = status === "APPROVED" || status === "REJECTED";
-  const platform = await detectPlatform();
+  // Renamed off `status`: the HTTP status of the read now lives in this scope too, and one word for
+  // two different things is how a wrong branch gets written and reads correctly.
+  const approvalStatus = shared.approvalStatus ?? "PENDING";
+  const decided = approvalStatus === "APPROVED" || approvalStatus === "REJECTED";
   // Desktop can't install directly → offer a QR that carries the deferred deep link.
   const qrDataUrl =
     platform === "desktop"
@@ -123,6 +136,9 @@ export default async function SharedInvoicePage({
       {/* Records that a person — not a link unfurler — has the document on screen. Renders nothing;
           it has to be a client component so crawlers, which never run JS, are excluded by design. */}
       <ViewBeacon token={token} />
+      {/* Separate from ViewBeacon on purpose: that one dates the SENDER'S "Received" tag, which is a
+          product feature; this one is the receiver's journey in the analytics pipeline. */}
+      <SharedInvoicePageView linkState={linkState} status={status} />
 
       <header className="no-print shrink-0 px-4 pt-3 pb-2 text-center">
         <h1 className="truncate text-base font-semibold text-neutral-900 sm:text-lg">
@@ -144,17 +160,19 @@ export default async function SharedInvoicePage({
         {decided ? (
           <div
             className={`rounded-2xl border p-3 text-center ${
-              status === "APPROVED"
+              approvalStatus === "APPROVED"
                 ? "border-[#16A34A]/30 bg-[#16A34A]/5"
                 : "border-[#DC2626]/30 bg-[#DC2626]/5"
             }`}
           >
             <p
               className={`text-base font-semibold ${
-                status === "APPROVED" ? "text-[#15803D]" : "text-[#DC2626]"
+                approvalStatus === "APPROVED" ? "text-[#15803D]" : "text-[#DC2626]"
               }`}
             >
-              {status === "APPROVED" ? "✓ You approved this invoice" : "✕ You rejected this invoice"}
+              {approvalStatus === "APPROVED"
+                ? "✓ You approved this invoice"
+                : "✕ You rejected this invoice"}
             </p>
             <p className="text-xs text-neutral-600">The sender has been notified.</p>
           </div>
@@ -167,21 +185,7 @@ export default async function SharedInvoicePage({
             no iOS app to install and a desktop has nowhere to be sent. */}
         <div className="flex gap-2">
           <PdfButton platform={platform} installUrl={installUrl} kind={kind} />
-          {platform === "android" ? (
-            <a
-              href={installUrl}
-              className="flex-1 rounded-full bg-[#0D4DC0] px-4 py-2.5 text-center text-sm font-medium text-white"
-            >
-              Install Invotick — free
-            </a>
-          ) : (
-            <Link
-              href="/"
-              className="flex-1 rounded-full bg-[#0D4DC0] px-4 py-2.5 text-center text-sm font-medium text-white"
-            >
-              Create yours — free
-            </Link>
-          )}
+          <GetYourOwnCta platform={platform} installUrl={installUrl} />
         </div>
       </footer>
     </main>
