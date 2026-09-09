@@ -680,6 +680,33 @@ Full detail in `memory/mysql-binary-uuid-and-test-clock.md`. In native queries:
    the `invotick-test-mysql` container. That container's clock reports a UTC five hours ahead of the
    one it accepts, so never assert a narrow time window against it.
 
+13. **`first-invoice-journey` needs ISO-8601 datetimes. A bare `YYYY-MM-DD` is silently ignored.**
+    *(measured 2026-09-09)*
+
+    | `from` / `to` | firstTimeUsers | createdInvoice |
+    |---|---:|---:|
+    | `2026-09-08` → `2026-09-09` (2 days) | 156 | 32 |
+    | `2026-09-02` → `2026-09-10` (8 days) | 156 | 32 |
+    | `2026-08-10` → `2026-09-09` (30 days) | 156 | 32 |
+    | `2026-07-01` → `2026-09-09` (70 days) | 156 | 32 |
+    | `2026-09-08T00:00:00Z` → `2026-09-09T23:59:59Z` | **221** | 43 |
+    | `2026-09-02T00:00:00Z` → `2026-09-09T23:59:59Z` | **1360** | 287 |
+
+    Four ranges spanning two days to seventy return **the same population**, which is not a range at
+    all. The ISO form varies correctly and agrees with SQL: `COUNT(DISTINCT app_instance_id)` for
+    `app_cold_start` with `params.is_first_open='true'` over 2026-09-02→09-10 is **1,359** against the
+    endpoint's 1,360.
+
+    **What makes it dangerous is not the size of the error, it is the plausibility of the answer.**
+    156/32 is **20.5 %**; the true figure over the eight days asked for is 287/1360 = **21.1 %**. The
+    percentage is almost identical, so every sanity check passes — the ratio looks right, the buckets
+    look right, and only the population is wrong, by a factor of nine. A funnel read this way reports
+    a correct-looking rate over a cohort nobody selected.
+
+    Always pass the full ISO instant, and **prove the range is being read** by asking for two
+    different windows and checking the numbers differ. A parameter that changes nothing is not a
+    parameter.
+
 ---
 
 ## 4. Admin panel rules
