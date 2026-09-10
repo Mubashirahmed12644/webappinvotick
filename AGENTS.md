@@ -432,6 +432,16 @@ the list is wrong, not the app.**
   Deliberately **not** on `ad_impression_value` (registered at load time, so it can only see the
   load's path while the show's path is what earned the money — join on `ad_request_id` instead) and
   not on interstitial events (no such moments; `type` says an absent `path` is not-applicable).
+- **Parameters added 2026-09-10:** `shared_invoice_approved` / `shared_invoice_rejected` gain
+  **`has_note`** (`true|false`) — whether the receiver wrote anything to the sender, which could not
+  be known before because nothing had ever asked them to; the note itself reaches the sender in the
+  decision push. `shared_invoice_open_failed` gains **`reason`**
+  (`revoked|not_found|expired|no_response|server_error_<n>|http_<n>|exception_<Class>`), and
+  `invoice_share_link_fallback.reason` becomes a code
+  (`auth_invalid_token|dns_failure|request_timeout|connect_refused|cancelled|offline|exception_<Class>`)
+  instead of raw exception text — 4 of 29 had been an auth defect counted as network.
+  `shared_invoice_create_own_click` is no longer sent by the app: it fired 2–14 ms after the button's
+  own auto-captured id, every time. Old rows keep the name, so queries reading it read history.
 - **Lifecycle:** `app_cold_start`, `app_foreground`, `app_resumed`, `app_paused`, `app_background`,
   `app_heartbeat`, `session_break`, `screen_view`, `network_changed`, `app_exit_dialog_shown`
 
