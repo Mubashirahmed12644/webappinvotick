@@ -8,6 +8,52 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 # Invotick — project constitution
 
+## 0. Every reply carries one block for the owner — read this before anything else
+
+**Standing instruction from the user, 2026-09-05.** He runs five repos and a production box alone.
+When a reply is a wall of text, the one line that needed him is buried in it, and he has to read
+everything to find out whether anything did. On 2026-09-05 "production is down and I caused it"
+arrived three paragraphs in.
+
+So every reply that reports work carries this block, and it is **the same shape every time** — he
+asked for a recognisable design, not a fixed position. Put it where it reads best (usually first);
+what must never change is how it looks.
+
+```
+> ### 📋 AAP KE LIYE
+>
+> | | | |
+> |:--|:--|:--|
+> | 🔍 | **Mila** | what I found, including where I turned out to be wrong |
+> | 🟢 | **Theek hua** | what changed, each with the number that proves it |
+> | 🟡 | **Baqi** | what is still open, and what it is waiting on |
+> | 🔴 | **Aap karein** | his action, or the words "kuch nahi" |
+```
+
+Rules for it:
+
+- **A table inside a blockquote, those four rows, that order, those coloured dots.** He chose this
+  shape on 2026-09-05 over a plain blockquote: the rules are what lift it off the page, and the
+  colour is carried by the emoji because markdown has no colour of its own. Changing the shape costs
+  him the recognition, which is the entire point of it.
+- **🔴 is always the last row**, because the eye finishes at the bottom and that is where his own
+  work should be waiting.
+- **Ten lines is the ceiling.** Past that it becomes the noise it exists to replace. If it will not
+  fit, the reply is carrying more than one thing and should be split.
+- **"Theek ho gaya" is not an entry.** `30s → 0.2s`, `90% → 1%`, `643,182 streams → 3`. A claim with
+  no number belongs in the detail below, not here.
+- **Never leave 👉 empty.** "Kuch nahi" is the answer when nothing is needed — silence there reads as
+  something forgotten.
+- **It must stand alone.** He should be able to read only this block and know the state of the work.
+  Evidence, reasoning and workings go *below* it, shorter than they used to be.
+- **Only what concerns him.** Something I did with no consequence for him is not an entry.
+- **It grows on his word.** When he says "this too, from now on", that becomes a fifth line here —
+  add it to this list rather than remembering it for one session.
+- Skip it only for a one-line answer to a one-line question, where the block would be longer than
+  the reply itself.
+
+
+
 > **Read this file fully before proposing any plan.** It exists so the user does not have to
 > re-explain the project every session. If something here is wrong or missing, fix the file —
 > do not just fix the conversation.
@@ -146,10 +192,16 @@ produced it. The ones that bite hardest:
 
 ## 4b. Engineering rules that already exist — read them, don't re-derive
 
-`invoice-kmp-app/PROJECT_RULES.md` and `invotick-apis/PROJECT_RULES.md` hold the full change-risk
-system: **Tier 1** (data/schema migration, financial logic, auth/identity — zero tolerance),
-**Tier 2** (sync engine, API contract), **Tier 3** (monetisation, analytics, admin panel), plus
-per-repo pre-push checklists. Universal rules: additive-only, idempotent, local-first, backward
+`invoice-kmp-app/PROJECT_RULES.md` holds the full change-risk system: **Tier 1** (data/schema
+migration, financial logic, auth/identity — zero tolerance), **Tier 2** (sync engine, API contract),
+**Tier 3** (monetisation, analytics, admin panel), plus a pre-push checklist.
+
+⚠️ **`invotick-apis/PROJECT_RULES.md` does not exist** — this file claimed it did until 2026-08-23.
+The backend's own rules live in `invotick-apis/CLAUDE.md`, which now also carries the deploy rules:
+`stage` **is** production, and **never retry an old pipeline once a newer commit has deployed** —
+a retry re-runs against the commit it was created for, so it ships the older image over the newer
+one while every pipeline in the list stays green. That happened on 2026-08-23 and silently removed
+three things from production. Universal rules: additive-only, idempotent, local-first, backward
 compatible, behind a remote kill-switch, staged rollout ready.
 
 Two that bite most often:
@@ -171,7 +223,8 @@ Two that bite most often:
 - ⚠️ **Builds only on JDK 21.** The Mac's default `java` is 26, and Gradle fails with a bare
   `What went wrong: 26.0.1`. Use the JDK bundled with Android Studio:
   `JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" ./gradlew …`
-- `./gradlew test`: **268/268 is the clean baseline**, but two of them (`SpringContextBootTest`,
+- `./gradlew test`: **486/486 is the clean baseline** (measured 2026-09-07; this line said 268 until
+  then, so a suite that had simply grown read as something wrong). Two of them (`SpringContextBootTest`,
   `MigrationsApplyToLiveSchemaTest`) need a MySQL on `127.0.0.1:13306`. That's the `invotick-test-mysql`
   container (db `invotick_test`, root password `test`) — start Docker Desktop and
   `docker start invotick-test-mysql` first. Without it those two fail with `ConnectException` and you
@@ -211,53 +264,201 @@ Two that bite most often:
   open before payment-gateway work: `memory/admin-panel-security-audit.md`.
 - Read-mostly by rule; never recompute money client-side — show what the backend computed.
 
+## 5a. Reading rules — a page costs what it shows *(decision [0034](docs/decisions/0034-a-page-costs-what-it-shows.md))*
+
+The backend died twice on 2026-09-04 because one 20-minute job loaded all 988,339 `analytics_events`
+rows to summarise 12,341 users. It had done that ~72 times a day since April, growing with the table.
+
+- **No unbounded `findAll()`** in a webpanel/admin path. Every list endpoint takes `page`/`size` with
+  a cap; paging happens in the database, never by slicing a full list.
+- **Count and summarise in SQL.** Loading rows to count them moves the table into the heap.
+- **Every analytics query carries a date range**, and that range is indexed.
+- **Pre-compute only what cannot be produced without scanning a large table** (a rollup, read by the
+  page). A pre-computed figure can be stale, so it is a cost — not a default.
+- **Heavy per-user detail lives in that user's drill-down**, never in a list of all users.
+- The test is **cost, not popularity**: the page that killed production had not been opened in weeks.
+- Before writing a new page or job, answer in the commit message: **how many rows does this touch?**
+
+`WebpanelReadsAreBoundedTest` fails the build when this is broken. The JVM exits on OOM and writes a
+heap dump (`-XX:+ExitOnOutOfMemoryError`), and the container has a healthcheck, so a repeat is a
+restart and an alert rather than a silent outage — see `memory/backend-oom-all-users-cache.md`.
+
 ## 5b. The analytics pipeline (this is how G1 gets measured)
 
 Flow: app records → local queue (`core/analytics`, its own Room DB) → flush → backend
 `/v2/analytics/track` → admin panel reads it back.
 
+> ⚠️ **Before touching ANY event, read [`AGENTS-EVENTS.md`](AGENTS-EVENTS.md).** It is the
+> constitution for this system — one action one event, one screen one event, no shared ids, which
+> channel is allowlist-governed, the backend query traps, and how to verify. Every rule in it was
+> paid for by a defect that looked like data rather than a bug. Add to it whenever a rule is decided.
+
 Two classes of event:
 1. **Explicitly coded** events — `gateway.trackClick("name", params)`. These **always send**.
-2. **Auto-captured taps** — a codemod stamped a stable `analyticsId` (`<FileSlug>.<label>_N`) on
-   every button/clickable. These are firehose-scale, so release builds send one **only if it is
-   allowlisted**; debug builds send everything.
+2. **Auto-captured taps** — a codemod stamped a stable `analyticsId` on every button/clickable, and
+   `guardedTrackedClick` prefixes the screen, so the identity is `tap:<screen>:<File>.<label>_N`.
+   Release builds send one **unless somebody switched it off**; debug builds send everything.
 
-⚠️ **`AnalyticsAllowlist.DEFAULT` is currently EMPTY** — deliberately cleared on 2026-07-14
-(commit `92a3bb96`) to rebuild the list via Live Event Discovery, after a 41-key seed on 07-13.
-So in release builds **auto-captured taps send nothing** unless the backend override
-(`GET /v2/analytics/allowlist`) supplies keys. Check this before trusting any tap-based number.
+**Send policy — inverted on 2026-08-23.** `AnalyticsSendPolicy.shouldSend(key) = key !in denied`,
+where `denied` comes from `GET /v2/analytics/denylist` at app start. It was an allowlist, and an
+allowlist can only list keys that have already been seen — so a control added in a later release was
+silent in release and undiscoverable for ever. Switching one off now takes effect from the panel with
+no release. Full reasoning: `AGENTS-EVENTS.md` §1.5a.
 
-Explicitly coded event vocabulary today. **Grep note:** `trackClick(` is often a multi-line call, so
-a single-line grep silently misses events — always grep with trailing context.
+⚠️ **The old allowlist was never wired at all.** `setOverride` had no caller and nothing ever fetched
+`/v2/analytics/allowlist`, so with an empty bundled default the gate was a constant `false`: **no
+release build has ever sent an auto-captured tap**, and the panel's Track toggle never affected one.
+Every tap-based number from before 1.4.1 is debug-only for that reason.
 
-- **Activation:** `invoice_created`, `ci_save_clicked`, `ci_preview_clicked`, `ci_save_validation_failed`,
-  `ci_celebration_shown`, `Invoice_preview_create_click`, `DB_create_Invoice_click`, `Draft_click`,
-  `Discard_click`, `Create_Invoice_Backpress_click`, `estimate_created`, `estimate_converted_to_invoice`
-- **G1 primary — proof an invoice is real:** `invoice_shared` (fires only on a **confirmed** share:
-  the user picks a target app in the OS chooser, tagged `mode` + `target`) and `payment_added`.
-- **Form-typing proxies:** `business_form_text_add`, `client_form_text_add`, `item_form_text_add` —
+⚠️ **Events from builds ≤ versionCode 90 are refused at ingestion** (`analytics.min-app-version-code`).
+Their sessions are still stored, so "how much of the install base has updated" stays answerable. Until
+1.4.1 rolls out, **production stores no new events** — this is intended, not a fault. See
+`AGENTS-EVENTS.md` §3.11 and the Health Centre's *Old-build analytics traffic*.
+
+Explicitly coded event vocabulary today — **as the shipped build sends it** (`origin/VC_96_VN_144`,
+live as **1.4.4 / versionCode 97**; the ads section re-read against `analytics_events` on
+2026-09-07. This line said 1.4.2 / versionCode 94 until then, two releases after it stopped being
+true — a stale build stamp makes every count under it read as the current app). **Grep note:**
+`trackClick(` is often a multi-line call, so a single-line grep silently misses events — always grep
+with trailing context. **A name in this list is a claim about the app; when it stops matching rows,
+the list is wrong, not the app.**
+
+- **Activation:** `invoice_created_success`, `ci_save_clicked`, `ci_preview_clicked`,
+  `ci_save_validation_failed`, `ci_celebration_shown`, `Saved_clicked`, `Draft_click`,
+  `create_inv_discard_dailog_shown` (sic), `discard_dialog_closed`, `estimated_success` (sic),
+  `estimate_converted_to_invoice`
+- **G1 primary — proof an invoice is real:** **`invoice_shared_success`** (fires only on a **confirmed**
+  share: the user picks a target app in the OS chooser, tagged `mode` + `target`; **live since 1.4.1**)
+  and `payment_added`. `estimate_shared` is the estimate twin.
+- **Form-typing proxies:** `business_form_text_typed`, `client_form_text_add`, `item_form_text_add` —
   fired **once per form**, on the first non-blank keystroke in the *name* field. They prove the user
-  started typing, **not** that the data was real. Plus `*_form_dismissed`, `Business/Client/Item_added`.
-- **Auth:** `login_success`, `register_success`, `guest_login_success`, `otp_verify_success`
-- **Growth (G2), receiver side:** `shared_invoice_opened`, `shared_invoice_opened_by_owner`,
-  `shared_invoice_create_own_click`, `shared_invoice_approved`, `shared_invoice_rejected`,
-  `shared_invoice_open_failed`, `shared_invoice_decision_failed`, `invoice_share_link_fallback`
-- **Money/ads:** `premium_click`, `watch_ad_click`, `ad_shown`, `ad_dismissed`, `ad_load_failed`,
-  `ad_show_failed`, `app_open_ad_loaded`
+  started typing, **not** that the data was real. Plus `client_add_success` and `Item_added`.
+
+- ⚠️ **1.4.3 (`VC_95_VN_143`) removes nine coded duplicates — the UI layer now owns the press.**
+  *(owner decision 2026-09-05, from the Health Centre's "One press, two events" check.)* Every one
+  of these was an `analytics.trackClick` firing 0–29ms after the same button's own auto-captured id,
+  so the count for that action was **doubled on 1.4.1 and 1.4.2 alike** — the doubling is as old as
+  the data, not new in 1.4.2. What the app sends from 1.4.3:
+
+  | Was two events | Survives as | Gone from the app |
+  |---|---|---|
+  | `add_item_click` + `add_item_success` | **`add_item_added`** (auto, renamed) | `add_item_success` |
+  | `business_form_saved` + `business_saved_click` + `business_add_success` | `business_form_saved` (auto) | both coded |
+  | `db_create_first_inv_click` + `DB_create_Invoice_click` | `db_create_first_inv_click` (auto) | `DB_create_Invoice_click` |
+  | `create_inv_discard_click` + `discard_confirmed` + `Discard_click` | first two | `Discard_click` |
+  | `saved_inv_signature_click` + `SI_Signature_click` | `saved_inv_signature_click` (auto) | `SI_Signature_click` |
+  | `saved_inv_send_invoice` ×2 · `saved_inv_back_click` ×2 · `create_inv_preview_click` ×2 | the auto emit; **name unchanged** | the coded twin |
+
+  **The old names stay in the backend funnel queries** (`AnalyticsEventRepository` steps 3, 5, 7 and
+  `discarded`) because `analytics_events` keeps whatever was sent at the time — the app stops sending
+  them, the query must keep reading them, and `add_item_added` was added alongside. Three losses that
+  are **not** behaviour changes and must not be read as any: `saved_inv_back_click` no longer covers
+  the **system back gesture** on the saved-invoice screen (the top bar cannot see it);
+  `DB_create_Invoice_click` covered **every** dashboard create press, the survivor only the
+  first-invoice empty state; and the `optional_fields_filled` / `has_logo` / `has_description` /
+  `has_discount` parameters are gone, so **nothing in the app now separates real data from the
+  minimum that clears validation** — the G1 question. Putting those back means **parameters on the
+  surviving event** (`AGENTS-EVENTS.md` §1.1), never a second event.
+- **Abandonment:** a sheet's **own per-sheet close id** (`invoice_create_client_screen_close`, …)
+  carries `method` (`close_button` | `swipe` | `scrim_or_back`) and `had_input`. There is **no**
+  separate dismissal event: one action, one event, with parameters — decision
+  [0023](docs/decisions/0023-one-dismissal-event-the-method-is-a-parameter.md). These are
+  auto-captured, so the **send policy** decides whether they ship; do not add a channel that bypasses it.
+- **Auth:** `login_success`, `register_success`, `guest_login_success`, **`guest_login_failed`**,
+  `otp_verify_success`, `guest_merge_notice_dismissed`
+- **Growth (G2), receiver side — in the app:** `shared_invoice_opened`,
+  `shared_invoice_opened_by_owner`, `shared_invoice_create_own_click`, `shared_invoice_approved`,
+  `shared_invoice_rejected`, `shared_invoice_open_failed`, `shared_invoice_decision_failed`,
+  `invoice_share_link_fallback`.
+  ⚠️ Measured 2026-09-09, 30 days: `shared_invoice_open_failed` **138** against
+  `shared_invoice_opened` **70**, and `shared_invoice_approved` has fired **zero times ever**
+  (`shared_invoice_rejected`: one, on 2026-08-09). Not evidence the approval loop is unused —
+  evidence that the surface most receivers use had never been instrumented.
+- **Growth (G2), receiver side — on the web** *(`Webinvotick`, decision
+  [0045](docs/decisions/0045-the-share-link-page-reports-its-own-journey.md); **built, not
+  deployed**).* The `/i/{token}` page is the first non-app client in this pipeline. It posts to the
+  same `POST /v2/analytics/track` as `platform=Web`, through its own same-origin route
+  (`src/app/api/analytics/track/route.ts`) which fixes the permitted names and parameter values,
+  generates the event id, and stamps `surface` + `viewer_platform` server-side. Six names:
+  **`shared_invoice_page_view`** (new — `link_state` = `active|not_found|gone|fetch_failed`, plus
+  `http_status`; a separate name from `shared_invoice_opened` because the app fires that one only
+  after routing senders away, so its rows are receivers-only and the public page cannot tell the two
+  apart), **`shared_invoice_pdf_click`** (new — `destination` = `play_store|print_dialog`), and four
+  the app already owns, fired at the app's own moments: `shared_invoice_approved` /
+  `shared_invoice_rejected` on the backend's confirmation, `shared_invoice_decision_failed`
+  (`decision`, `http_status`) and `shared_invoice_create_own_click` (`destination` =
+  `play_store|web_app`) on the click.
+  Every web event carries **`surface=web_share_link`** and **`viewer_platform`**
+  (`android|ios|desktop`, from the User-Agent — deliberately **not** named `platform`, which is
+  already the batch-level `Android|iOS|Web` code space). The app sends no `surface`, so that facet
+  reads `web_share_link` against **NULL = unknown, not app** (§1.7).
+  ⚠️ **Backend deploys first.** `AnalyticsVersionGate` refused any batch with a null
+  `appVersionCode`, which is every web batch — 200 OK, zero stored. It now exempts `Platform.Web`.
+  Ship the web against the old gate and the funnel reads as a step nobody reached.
+- **Money/ads:** `premium_click`, `watch_ad_click`, `ad_request`, `ad_loaded`, `ad_shown`,
+  `ad_dismissed`, `ad_load_failed`, `ad_show_failed`, `ad_load_crashed`, `ad_dialog_dismissed`,
+  **`ad_impression_value`** (3,112 firings / 582 devices — what an impression actually paid, from
+  the network, so the ad trade has a revenue side at all) and **`app_open_decision`** (324 / 28
+  devices, 1.4.3+ — how one foreground's app-open ad ended, one row per `(foreground_id, path)`).
+  ⚠️ **`app_open_ad_loaded` is gone from the app** — 4 firings on 1 device, and `ad_loaded` carries
+  everything it did plus `type`, `ad_request_id` and `ad_source`. Old rows keep the name; nothing
+  new arrives under it, so a query that still reads it is measuring history only.
 - **Notifications:** `notification_permission_shown` / `_allowed` / `_denied`
+- **Parameters added 2026-09-04 (release after 1.4.2, branch `VC_93_VN_142`):** `app_cold_start.prev_exit`
+  (`crash|anr|crash_native|user_request|low_memory|…|unknown`, API ≥ 30 only) + `prev_exit_ms_ago`;
+  `splash_ready.reason|wait_ms|guest_login_ms|rc_ms|session_ms`; `guest_login_failed.reason` is now a
+  **code** (`save_timeout|auth_error|offline|exception_<Class>`), never a message; `invoice_screen_close.method` (`close_button|back_press|discard_confirmed`) + `had_input`
+  (decision 0023 on the invoice screen); `ad_dialog_dismissed.outcome` (`draft_saved|draft_failed|autosave_only|edits_kept`, decision 0032).
+  `ui_mode` (`dark|light` — what the screen was actually in) + `theme_pref` (`system|light|dark`) stamped on
+  **every** event by the gateway, so any funnel can be filtered by mode (`first-invoice-journey?uiMode=`).
+  Absent parameter = unknown (§1.7); none of these is a new event.
+- **Parameters added 2026-09-07 (ad failures — decision [0043](docs/decisions/0043-an-ad-failure-is-named-in-the-sdks-own-words.md)).**
+  No new event; `code` is untouched on every one of them.
+  `ad_load_failed.reason` (`internal_error|invalid_request|network_error|no_fill|app_id_missing|mediation_no_fill|request_id_mismatch|invalid_ad_string|unknown_<n>`)
+  and `ad_show_failed.reason` (`internal_error|ad_reused|not_ready|app_not_foreground|mediation_show_error|unknown_<n>`)
+  — **two different tables**, which is the whole point: `code=3` is `no_fill` on a load and
+  `app_not_foreground` on a show, so anything grouping `code` across both events was adding two
+  enums together. Both events also gain `error_domain` (`gma` | the adapter's own domain) and one
+  level of `cause_reason` + `cause_domain`, all of which the SDK was giving us and we dropped.
+  `ad_show_failed` gains `ad_request_id` (the one event in the chain that could not be joined back
+  to its request) and `elapsed_ms`. `ad_loaded` and `ad_load_failed` also gain **`since_request_ms`**
+  — how long the request itself took. Nothing measured that before: `elapsed_ms` is time since
+  **launch**, and so is the `ms_since_start` the gateway stamps on every event, so the number the
+  splash's 6,000 ms gate is actually tuned against had to be reconstructed by pairing rows on
+  timestamps. `elapsed_ms` stays where it already was — it has history (§1.8) and answers a different
+  question. `path` (`splash|resume|landing|preload`) goes on `ad_request`,
+  `ad_loaded`, `ad_load_failed`, `ad_load_crashed`, `ad_shown`, `ad_dismissed`, `ad_show_failed` for
+  `type=app_open` — `placement` is the constant `app_open` there and so attributes nothing.
+  Deliberately **not** on `ad_impression_value` (registered at load time, so it can only see the
+  load's path while the show's path is what earned the money — join on `ad_request_id` instead) and
+  not on interstitial events (no such moments; `type` says an absent `path` is not-applicable).
+- **Parameters added 2026-09-10:** `shared_invoice_approved` / `shared_invoice_rejected` gain
+  **`has_note`** (`true|false`) — whether the receiver wrote anything to the sender, which could not
+  be known before because nothing had ever asked them to; the note itself reaches the sender in the
+  decision push. `shared_invoice_open_failed` gains **`reason`**
+  (`revoked|not_found|expired|no_response|server_error_<n>|http_<n>|exception_<Class>`), and
+  `invoice_share_link_fallback.reason` becomes a code
+  (`auth_invalid_token|dns_failure|request_timeout|connect_refused|cancelled|offline|exception_<Class>`)
+  instead of raw exception text — 4 of 29 had been an auth defect counted as network.
+  `shared_invoice_create_own_click` is no longer sent by the app: it fired 2–14 ms after the button's
+  own auto-captured id, every time. Old rows keep the name, so queries reading it read history.
 - **Lifecycle:** `app_cold_start`, `app_foreground`, `app_resumed`, `app_paused`, `app_background`,
-  `app_heartbeat`, `nav_screen_view`
+  `app_heartbeat`, `session_break`, `screen_view`, `network_changed`, `app_exit_dialog_shown`
+
+⚠️ The names this section carried until 2026-09-04 (`invoice_created`, `Business_added`,
+`business_form_text_add`, `Client_added`) return **zero rows** on the live build; a funnel built on
+them reads as steps nobody reached. Memory: `g1-real-data-metric-gap`.
 
 **G1 measurement (decision [0006](docs/decisions/0006-g1-real-invoice-metric.md)):** a real invoice =
 confirmed share **or** payment recorded; repeat use is the supporting signal. Nothing is prefilled
 anywhere in the app, so the enemy is **throwaway data**, not our template.
 
-⚠️ **`invoice_shared` is not live yet** — present only on `feat/presentation-json-migration` and
-`fix/analytics-reliable-delivery`, absent from `origin/main` and the released `VC_90_VN_140`.
-G1 cannot be measured from production until it ships.
+✅ **`invoice_shared_success` is live** (1.4.1+; 44 firings / 33 sessions in the 7 days to 2026-09-04),
+so G1 **can** be measured from production now. The earlier note that it was not live referred to the
+name `invoice_shared` on pre-release branches.
 
-Known defect: `memory/analytics-session-attribution-bug.md` — events after the first batch can
-arrive with `sessionId=null`, undercounting admin reports.
+~~Known defect: `memory/analytics-session-attribution-bug.md` — `sessionId=null` after the first batch.~~
+**Fixed in 1.4.2** — 0.0 % NULL session ids across 81,834 events on versionCode ≥ 94 (measured 2026-09-04).
 
 ## 6. Glossary (use these words precisely)
 
@@ -280,13 +481,20 @@ arrive with `sessionId=null`, undercounting admin reports.
 5. **Do not self-verify** with screenshot/device loops unless asked. Finish, report, user checks.
 6. Prefer Maestro flows + logcat/API traces over tapping coordinates and reading screenshots.
 7. Unexplained state changes on the shared test device are usually the user, not a bug — ask first.
+8. **User journey / funnel / event work always loops in the `user-journey` agent**
+   (`.claude/agents/user-journey.md`) — *standing instruction from the user, 2026-09-04*. Diagnosing
+   the journey, reading or adding any analytics event, the send policy, the panel's funnel pages: the
+   agent owns that context. If a session starts on this without it, invoke it first.
 
 ## 8. Where the rest of the knowledge lives
 
+- `AGENTS-EVENTS.md` — **event management constitution**: the rules, the incidents behind them, the
+  verification standard, and the open suggestions. Read before adding, renaming or removing an event.
 - `docs/decisions/` — decision log (what was decided, why, what was rejected). **Read the index before planning.**
 - `~/.claude/projects/-Users-ahmedmubashir-Documents-Webinvotick/memory/` — per-topic memory files, indexed by `MEMORY.md`.
 - `docs/MOBILE-APP-REQUIREMENTS.md`, `docs/SERVER-SIDE-CHANGES.md` — cross-repo contracts (this repo).
-- `invoice-kmp-app/PROJECT_RULES.md`, `invotick-apis/PROJECT_RULES.md` — change rules + pre-push gates.
+- `invoice-kmp-app/PROJECT_RULES.md` — change rules + pre-push gates. The backend equivalent is
+  `invotick-apis/CLAUDE.md` (there is no `invotick-apis/PROJECT_RULES.md`); it also holds the deploy rules.
 - Backend docs: `invotick-apis/` holds `SYNC_V2_MOBILE_PROTOCOL.md`, `AUTH_API.md`, `WEBPANEL_API.md`,
   `analytics.md`, `AppFlow.md`, `HANDOVER.md`.
 - Each repo has its own `CLAUDE.md` with build commands and local conventions — read the one for the
