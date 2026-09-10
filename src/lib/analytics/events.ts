@@ -65,6 +65,9 @@ export const CTA_DESTINATIONS = ["play_store", "web_app", "print_dialog"] as con
 export type CtaDestination = (typeof CTA_DESTINATIONS)[number];
 
 export const DECISIONS = ["APPROVED", "REJECTED"] as const;
+
+/** `has_note` as the app sends it — a boolean's string form, so both surfaces share one code space. */
+export const HAS_NOTE = ["true", "false"] as const;
 export type DecisionValue = (typeof DECISIONS)[number];
 
 /**
@@ -86,8 +89,12 @@ const PARAM_SCHEMA: Record<WebEventName, Record<string, ParamRule>> = {
     // becoming a permanent "unknown" row — the mandate is that unknown shrinks release by release.
     http_status: { kind: "http_status", required: false },
   },
-  shared_invoice_approved: {},
-  shared_invoice_rejected: {},
+  // Whether the receiver wrote anything to the sender. The note itself goes to the backend with the
+  // decision and never into analytics: a receiver's words are not a metric. Declared here because
+  // this route answers an undeclared parameter with a 400, so an unlisted `has_note` would have
+  // dropped the approval event itself.
+  shared_invoice_approved: { has_note: { kind: "enum", values: HAS_NOTE, required: false } },
+  shared_invoice_rejected: { has_note: { kind: "enum", values: HAS_NOTE, required: false } },
   shared_invoice_decision_failed: {
     decision: { kind: "enum", values: DECISIONS, required: true },
     // "The link was already decided" (409) and "our backend was down" (5xx) are two different
