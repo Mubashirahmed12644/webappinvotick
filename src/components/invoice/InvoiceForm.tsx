@@ -355,7 +355,12 @@ export function InvoiceForm({
                     <option value="PERCENTAGE">%</option>
                     <option value="FLAT">Fixed</option>
                   </select>
-                  <input placeholder="Item tax %" inputMode="decimal" value={it.taxValue} onChange={(e) => updateItem(it.id, { taxValue: e.target.value })} className={cn(selectCls, "sm:col-span-2 h-9")} />
+                  {/* A saved item's tax rate stays as saved: the update has no field for it, so a new rate
+                      would land in the net price while the invoice's Tax column kept showing the old one. */}
+                  <input placeholder="Item tax %" inputMode="decimal" value={it.taxValue} readOnly={it.saved}
+                    title={it.saved ? "A saved item's tax can't be changed on the web yet." : undefined}
+                    onChange={(e) => updateItem(it.id, { taxValue: e.target.value })}
+                    className={cn(selectCls, "sm:col-span-2 h-9", it.saved ? "cursor-not-allowed opacity-70" : "")} />
                   <div className="flex items-center sm:col-span-6 sm:justify-end">
                     {/* A saved item cannot be taken off from here: the update only adds and changes items,
                         so the server would keep it on the invoice while the total dropped it. */}
