@@ -2,7 +2,23 @@
 // webapp and mobile always produce identical totals.
 // Source of truth: InvoiceItemUiState.kt (per-item) + CreateInvoiceUiState.kt.
 
-export type DiscountType = "PERCENTAGE" | "FIXED";
+/**
+ * How a discount or a tax is measured: a percentage, or a fixed amount per unit.
+ *
+ * FLAT is the fixed amount's name in the app and in the database, and the only name the app reads as
+ * fixed: its `toDiscountType` and `toTaxType` read every other word, FIXED included, as a percentage.
+ * So the invoice form saves FLAT. FIXED stays for the free tool, which saves nothing. The math below
+ * treats everything other than PERCENTAGE as a fixed amount.
+ */
+export type DiscountType = "PERCENTAGE" | "FLAT" | "FIXED";
+
+/**
+ * A stored discount or tax type, read the way the app reads it (`toDiscountType`, `toTaxType`):
+ * "flat" is a fixed amount, and anything else, a missing value included, is a percentage.
+ */
+export function discountTypeOf(stored: string | null | undefined): DiscountType {
+  return stored?.trim().toLowerCase() === "flat" ? "FLAT" : "PERCENTAGE";
+}
 
 function round2(n: number): number {
   return Math.round((n + Number.EPSILON) * 100) / 100;

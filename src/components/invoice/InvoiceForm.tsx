@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { TextField } from "@/components/ui/TextField";
 import { cn } from "@/lib/cn";
 import { formatMoney } from "@/lib/format";
-import { computeInvoiceTotals, computeLineItem, type DiscountType } from "@/lib/invoice-calc";
+import { computeInvoiceTotals, computeLineItem, discountTypeOf, type DiscountType } from "@/lib/invoice-calc";
 import { nextBusinessInvoiceNumber } from "@/lib/invoice-number";
 import { invoicePreviewData, keptInvoiceFields, savedItemFields } from "@/lib/invoice-preview";
 import { InvoicePreviewDialog } from "./InvoicePreviewDialog";
@@ -105,7 +105,7 @@ export function InvoiceForm({
   );
   const [notes, setNotes] = useState(invoice?.notes ?? "");
   const [discountValue, setDiscountValue] = useState(invoice?.discountValue && Number(invoice.discountValue) ? invoice.discountValue : "");
-  const [discountType, setDiscountType] = useState<DiscountType>((invoice?.discountType as DiscountType) ?? "PERCENTAGE");
+  const [discountType, setDiscountType] = useState<DiscountType>(discountTypeOf(invoice?.discountType));
   const [taxId, setTaxId] = useState("");
   const [shipping, setShipping] = useState(invoice?.shippingCost && Number(invoice.shippingCost) ? invoice.shippingCost : "");
   const [items, setItems] = useState<FormItem[]>(
@@ -113,7 +113,7 @@ export function InvoiceForm({
       ? invoice.items.map((it) => ({
           id: it.id, inventoryItemId: "", name: it.name, description: it.description ?? "",
           quantity: String(Number(it.quantity)), unitPrice: String(Number(it.unitPrice)),
-          discountValue: it.discount ? String(Number(it.discount)) : "", discountType: (it.discountType as DiscountType) ?? "PERCENTAGE", taxValue: "",
+          discountValue: it.discount ? String(Number(it.discount)) : "", discountType: discountTypeOf(it.discountType), taxValue: "",
         }))
       : [blankItem()],
   );
@@ -338,7 +338,7 @@ export function InvoiceForm({
                   <input placeholder="Discount" inputMode="decimal" value={it.discountValue} onChange={(e) => updateItem(it.id, { discountValue: e.target.value })} className={cn(selectCls, "sm:col-span-2 h-9")} />
                   <select value={it.discountType} onChange={(e) => updateItem(it.id, { discountType: e.target.value as DiscountType })} className={cn(selectCls, "sm:col-span-2 h-9")}>
                     <option value="PERCENTAGE">%</option>
-                    <option value="FIXED">Fixed</option>
+                    <option value="FLAT">Fixed</option>
                   </select>
                   <input placeholder="Item tax %" inputMode="decimal" value={it.taxValue} onChange={(e) => updateItem(it.id, { taxValue: e.target.value })} className={cn(selectCls, "sm:col-span-2 h-9")} />
                   <div className="flex items-center sm:col-span-6 sm:justify-end">
@@ -364,7 +364,7 @@ export function InvoiceForm({
               <label className={labelCls}>Type</label>
               <select value={discountType} onChange={(e) => setDiscountType(e.target.value as DiscountType)} className={selectCls}>
                 <option value="PERCENTAGE">Percentage</option>
-                <option value="FIXED">Fixed</option>
+                <option value="FLAT">Fixed</option>
               </select>
             </div>
           </div>
