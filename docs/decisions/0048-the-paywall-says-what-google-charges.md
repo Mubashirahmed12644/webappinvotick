@@ -58,6 +58,10 @@
   - move him to `annual` (an in-app switch, not built).
 
   Decide before 2027-09.
+- **The Health Centre watches it** (check `retired-plan-renewals`, built 2026-09-11). It reports
+  WARNING 45 days before any renewal on the retired monthly plan and CRITICAL within 7 days, and each
+  finding carries the runbook above. It asks Google for the base plan, and answers UNKNOWN — never
+  OK — when Google cannot be asked.
 
 ## Rejected
 
