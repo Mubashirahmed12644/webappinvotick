@@ -35,10 +35,12 @@ export async function GET(
   // changed OG image URL also makes crawlers re-fetch on re-share.
   const v = (new URL(req.url).searchParams.get("v") ?? "").replace(/[^a-z0-9]/gi, "").slice(0, 20);
   const blobPath = v ? `og/${safe}-${v}.png` : `og/${safe}.png`;
-  // @vercel/blob 2.x resolves its own credentials: a read-write token, or — on Vercel — the request's
-  // OIDC token plus BLOB_STORE_ID. Checking only the token skipped Blob for a store connected the
-  // second way, so accept either and let the SDK decide.
-  const hasBlob = Boolean(process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_STORE_ID);
+  // Blob is used only with an explicit read-write token. @vercel/blob 2.x can also authenticate with
+  // the request's OIDC token plus BLOB_STORE_ID, but a stored card has no TTL and nothing deletes it
+  // yet, and AGENTS.md invariant 3 says a stored, ephemeral artifact needs both from day one. A store
+  // that merely happens to be connected must not start filling up by accident. Accept BLOB_STORE_ID
+  // here once the clean-up exists.
+  const hasBlob = Boolean(process.env.BLOB_READ_WRITE_TOKEN);
 
   // 1. Already stored → redirect to the global Blob CDN.
   if (hasBlob) {
