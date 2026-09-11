@@ -287,6 +287,8 @@ export function InvoiceHome({
   const activeBusiness = businesses.find((b) => b.id === businessId) ?? null;
   const activeName = activeBusiness?.name ?? "All Businesses";
   const activeCurrency = activeBusiness?.currencyCode || currency;
+  // The business chosen here carries into a new invoice; with "All Businesses" the form asks.
+  const newInvoiceHref = businessId ? `/invoices/new?business=${encodeURIComponent(businessId)}` : "/invoices/new";
   const sym = symbolOf(activeCurrency);
 
   // Invoices scoped to the selected business (or all).
@@ -410,7 +412,7 @@ export function InvoiceHome({
           <p className="text-[13px] font-semibold" style={{ color: C.grey }}>
             Recent Invoices <span style={{ color: C.primary }}>({shown.length})</span>
           </p>
-          <Link href="/invoices/new" className="hidden items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-bold text-white transition-all hover:-translate-y-0.5 xl:inline-flex" style={{ background: C.primary, boxShadow: "0 4px 12px rgba(13,77,192,0.3)" }}>
+          <Link href={newInvoiceHref} className="hidden items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-bold text-white transition-all hover:-translate-y-0.5 xl:inline-flex" style={{ background: C.primary, boxShadow: "0 4px 12px rgba(13,77,192,0.3)" }}>
             <span className="text-base leading-none">+</span> New Invoice
           </Link>
         </div>
@@ -438,7 +440,7 @@ export function InvoiceHome({
 
         {/* Create invoice */}
         <div className="sticky bottom-4 flex justify-end xl:hidden">
-          <Link href="/invoices/new" className="inline-flex items-center gap-2 rounded-[14px] px-5 py-3 text-[15px] font-bold text-white" style={{ background: C.primary, boxShadow: "0 6px 16px rgba(13,77,192,0.4)" }}>
+          <Link href={newInvoiceHref} className="inline-flex items-center gap-2 rounded-[14px] px-5 py-3 text-[15px] font-bold text-white" style={{ background: C.primary, boxShadow: "0 6px 16px rgba(13,77,192,0.4)" }}>
             <span className="text-xl leading-none">+</span> Create Invoice
           </Link>
         </div>
