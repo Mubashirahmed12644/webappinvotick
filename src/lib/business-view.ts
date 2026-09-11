@@ -4,6 +4,8 @@ import { useSyncExternalStore } from "react";
  * Which business the invoices page shows — All Businesses, or one — remembered in this browser
  * (decision 0052: "jo latest change hy wo hi dikhy har open per").
  *
+ * - The choice exists only when the user has more than one business. With one there is nothing to
+ *   choose: the page goes by that business's name, and a stored choice is not read.
  * - Never chosen, or the chosen business no longer exists: All.
  * - Read after hydration. The server cannot see localStorage, so the server render and the first
  *   client render both show All (React hydrates from the server snapshot) and the stored choice
@@ -16,13 +18,37 @@ import { useSyncExternalStore } from "react";
 export const BUSINESS_VIEW_KEY = "invotick.business-view";
 const ALL = "all";
 
-/** The business to show for a stored value: its id, or null for All Businesses. */
+/** What the page calls the view that spans every business. */
+export const ALL_BUSINESSES = "All Businesses";
+
+/**
+ * The business to show for a stored value: its id, or null for every invoice combined. Always null
+ * with one business or none, where there is no choice to apply.
+ */
 export function resolveBusinessView(
   stored: string | null | undefined,
   businesses: readonly { id: string }[],
 ): string | null {
+  if (businesses.length < 2) return null;
   if (!stored || stored === ALL) return null;
   return businesses.some((b) => b.id === stored) ? stored : null;
+}
+
+/**
+ * The name the page gives the view: the chosen business; with exactly one business, that business,
+ * because "All Businesses" reads as if there were others; otherwise All Businesses.
+ *
+ * With one business the page still lists every invoice, as it did under All, including the ones with
+ * no business recorded (3,282 of 6,674 live invoices on 2026-09-11). Filtering by the business would
+ * have hidden them.
+ */
+export function businessViewName(
+  chosen: { name: string } | null,
+  businesses: readonly { name: string }[],
+): string {
+  if (chosen) return chosen.name;
+  if (businesses.length === 1) return businesses[0].name;
+  return ALL_BUSINESSES;
 }
 
 // The value this page is showing; undefined until it has been read from storage.
