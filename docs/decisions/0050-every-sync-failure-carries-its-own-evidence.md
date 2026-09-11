@@ -2,7 +2,12 @@
 
 **Status:** decided (owner, 2026-09-11: *"tracing ka aik solid jaal bichao jo apny sath sari detail
 information ly ker aye taky andazoon ky bajaye evidence ky sath fixation ker sakin"*); telemetry
-reviewed by the event owner the same day (changes folded in below); being built ·
+reviewed by the event owner the same day (changes folded in below). **Built and live:**
+- backend `188164ce`, with migrations `bfcd6796` deployed first, on 2026-09-11 at 09:13 PKT;
+- panel `8f41469`;
+- app in 1.4.5 (`6c3f4f62`).
+
+
 **Date:** 2026-09-11 · **Goals:** G3 (trust — data that silently fails to sync), engineering ·
 **Related:** [0029](0029-a-sync-failure-is-an-attempt-the-server-refused.md),
 [0042](0042-the-server-owns-the-version-and-the-device-merges.md)
@@ -199,4 +204,17 @@ testers are measured as zero.
   - same id;
   - the gateway already stamps the screen.
 - When it ships, add to AGENTS.md §5b and to AGENTS-EVENTS.md §1.18 ("an id on an event is a join
-  key, not a dimension") the texts the event owner drafted in their 2026-09-11 review.
+  key, not a dimension") the texts the event owner drafted in their 2026-09-11 review. *(Done the same
+  night.)*
+
+## Verified live, 2026-09-11 04:15 UTC
+
+- An unauthenticated `/v2/sync/pull` sent with `X-Request-Id: nightcheck-0911-091441` got the same id
+  back on its 401.
+- The trace endpoint returned that request's three server log lines from Loki: the JWT start, the
+  skip (no header), and the 401.
+- The occurrences JSON carries `requestId`, `httpStatus`, `exception`, `localVersion`, `serverVersion`,
+  `appVersionCode`, `appStage` and `source`.
+- The Pixel's 1.4.5 debug build sends `X-Request-Id` on every sync call.
+- **Still to do: restart promtail once** so its new labels run. The deploy copies
+  `promtail-config.yml` after `docker compose up -d`, and promtail reads its config only at start.
