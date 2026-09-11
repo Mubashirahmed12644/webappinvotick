@@ -1,8 +1,8 @@
 # 0049 — The app-open ad is asked for at the first onStart, not when the SDK is ready
 
-**Status:** decided, built (app branch `VC_96_VN_144`; next release 1.4.5, versionCode 100) ·
-**Date:** 2026-09-11 · **Goals:** monetisation, G1 (a shorter first-open splash) · **Related:**
-[0047](0047-plays-answer-decides-premium-on-a-device.md)
+**Status:** decided, built, verified on a device (app branch `VC_96_VN_144`; next release 1.4.5,
+versionCode 100) · **Date:** 2026-09-11 · **Goals:** monetisation, G1 (a shorter first-open splash) ·
+**Related:** [0047](0047-plays-answer-decides-premium-on-a-device.md)
 
 ## What happened
 
@@ -65,11 +65,30 @@
   change; the path they are filed under does.
 - To watch after release:
   - how soon each process makes its first app-open request (`ms_since_start` on the first app_open
-    `ad_request`);
+    `ad_request`), against 1.4.4's 35 / 63 / 69 / 51;
   - `splash_ready.wait_ms` on first opens;
   - `app_open_decision` on the splash path — `load_timeout` should fall and `ad_dismissed` rise;
   - `store_unverified`, which should stay near zero.
 - The AABs on the Desktop — named 1.4.6 and 1.4.7, built before the next release was renamed 1.4.5 —
   predate this change. The 1.4.5 bundle is built only on the owner's word.
-- **Verification on the Pixel (debug):** pending. The owner was using the debug app, and installing
-  the new build closes it.
+- The `ad eligibility at launch` log always printed UNVERIFIED, because it read the flow's starting
+  value. It now logs the verdict when it resolves.
+
+## Verified on the Pixel, 2026-09-11 01:47 UTC
+
+Setup: debug 1.4.5 (versionCode 100), a returning open. The owner's data was kept, so this could not
+be a first open.
+
+| Moment | Time from process start |
+|---|---|
+| `ad eligibility resolved: ALLOWED` — Play had answered before the request | 1,671 ms |
+| `app_cold_start` | 1,926 ms |
+| `[AppOpen] preload — firing background load`, at onStart | 1,953 ms |
+| the SDK's own callback: `already loading` — the case the old guard blocked | 53 ms later |
+| `splash_ready`; the splash joined the load (`already loading, joined listener`) | 2,920 ms |
+| ad loaded (2,057 ms after the request) | 4,010 ms |
+| ad shown on the splash | 4,100 ms |
+
+- No crash.
+- Production stored `ad_request path=preload` at 1,953 ms and `ad_shown path=splash` at 4,100 ms.
+- The first-open effect is measured after release.
