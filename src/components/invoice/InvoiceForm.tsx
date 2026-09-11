@@ -10,21 +10,27 @@ import { cn } from "@/lib/cn";
 import { formatMoney } from "@/lib/format";
 import { computeInvoiceTotals, computeLineItem, discountTypeOf, type DiscountType } from "@/lib/invoice-calc";
 import { nextBusinessInvoiceNumber } from "@/lib/invoice-number";
-import { editBlocker, invoicePreviewData, keptInvoiceFields, savedItemFields } from "@/lib/invoice-preview";
+import {
+  editBlocker,
+  formRowFromSaved,
+  invoicePreviewData,
+  keptInvoiceFields,
+  lineInput,
+  savedItemFields,
+  type FormItemValues,
+  type SavedInvoiceItem,
+} from "@/lib/invoice-preview";
 import { InvoicePreviewDialog } from "./InvoicePreviewDialog";
 import type { Business, Product, Tax, InvoiceDetail, Template, InvoiceAsset } from "@/lib/data";
 import type { Client, InvoiceStatus } from "@/lib/types";
 
-interface FormItem {
+interface FormItem extends FormItemValues {
   id: string;
   inventoryItemId: string;
-  name: string;
-  description: string;
-  quantity: string;
-  unitPrice: string;
-  discountValue: string;
-  discountType: DiscountType;
-  taxValue: string;
+  // A saved item's links, sent back as it has them. A new row has none.
+  taxId: string | null;
+  unitTypeId: string | null;
+  itemCategoryId: string | null;
 }
 
 interface Props {
@@ -39,6 +45,8 @@ interface Props {
   headers?: InvoiceAsset[];
   backgrounds?: InvoiceAsset[];
   invoice?: InvoiceDetail;
+  /** The edited invoice's items as its page shows them (getInvoiceItemsForEdit). */
+  savedItems?: SavedInvoiceItem[];
   /** The business to start with: the one chosen on the invoices page, or the invoice's own. */
   initialBusinessId?: string | null;
   /** Invoice numbers already taken, so a new invoice continues its business's series. */
@@ -50,7 +58,11 @@ const uuid = () => (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.r
 const today = () => new Date().toISOString().slice(0, 10);
 
 function blankItem(): FormItem {
-  return { id: uuid(), inventoryItemId: "", name: "", description: "", quantity: "1", unitPrice: "", discountValue: "", discountType: "PERCENTAGE", taxValue: "" };
+  return {
+    id: uuid(), inventoryItemId: "", taxId: null, unitTypeId: null, itemCategoryId: null,
+    name: "", description: "", quantity: "1", unitPrice: "", discountValue: "", discountType: "PERCENTAGE",
+    taxValue: "", taxType: "PERCENTAGE",
+  };
 }
 
 export function InvoiceForm({
@@ -64,6 +76,7 @@ export function InvoiceForm({
   headers = [],
   backgrounds = [],
   invoice,
+  savedItems = [],
   initialBusinessId = null,
   takenNumbers = [],
 }: Props) {
@@ -110,15 +123,8 @@ export function InvoiceForm({
   const [discountType, setDiscountType] = useState<DiscountType>(discountTypeOf(invoice?.discountType));
   const [taxId, setTaxId] = useState("");
   const [shipping, setShipping] = useState(invoice?.shippingCost && Number(invoice.shippingCost) ? invoice.shippingCost : "");
-  const [items, setItems] = useState<FormItem[]>(
-    invoice?.items?.length
-      ? invoice.items.map((it) => ({
-          id: it.id, inventoryItemId: "", name: it.name, description: it.description ?? "",
-          quantity: String(Number(it.quantity)), unitPrice: String(Number(it.unitPrice)),
-          discountValue: it.discount ? String(Number(it.discount)) : "", discountType: discountTypeOf(it.discountType), taxValue: "",
-        }))
-      : [blankItem()],
-  );
+  // A saved item starts as the invoice's page shows it, with its own tax and its links.
+  const [items, setItems] = useState<FormItem[]>(() => (savedItems.length ? savedItems.map(formRowFromSaved) : [blankItem()]));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -128,7 +134,7 @@ export function InvoiceForm({
   const totals = useMemo(
     () =>
       computeInvoiceTotals({
-        items: items.map((it) => ({ name: it.name, quantity: it.quantity, unitPrice: it.unitPrice, discountValue: it.discountValue, discountType: it.discountType, taxValue: it.taxValue })),
+        items: items.map(lineInput),
         invoiceDiscountValue: discountValue,
         invoiceDiscountType: discountType,
         invoiceTaxRate: selectedTax?.rate ?? 0,
@@ -182,7 +188,8 @@ export function InvoiceForm({
       .filter((it) => it.name)
       .map((it) => ({
         id: it.id, invoiceId, inventoryItemId: it.inventoryItemId || uuid(),
-        taxId: null, unitTypeId: null, itemCategoryId: null,
+        // A saved item's links go back as it has them: the update copies each, and a null erases it.
+        taxId: it.taxId, unitTypeId: it.unitTypeId, itemCategoryId: it.itemCategoryId,
         ...savedItemFields(it),
       }));
 
@@ -325,7 +332,7 @@ export function InvoiceForm({
         </div>
         <div className="space-y-3">
           {items.map((it, idx) => {
-            const c = computeLineItem({ quantity: it.quantity, unitPrice: it.unitPrice, discountValue: it.discountValue, discountType: it.discountType, taxValue: it.taxValue });
+            const c = computeLineItem(lineInput(it));
             return (
               <div key={it.id} className="rounded-[var(--radius-sm)] border border-[var(--color-outline-variant)] p-3">
                 <div className="grid gap-2 sm:grid-cols-12">

@@ -37,6 +37,8 @@ export interface LineItemInput {
   discountType?: DiscountType;
   taxValue?: string | number;
   taxType?: DiscountType;
+  /** A net price already known, used as it is: a saved item the form has not changed keeps its own. */
+  netPrice?: number;
 }
 
 export interface LineItemComputed {
@@ -61,7 +63,7 @@ export function computeLineItem(item: LineItemInput): LineItemComputed {
     discountType === "PERCENTAGE" ? (unitPrice * discountValue) / 100 : discountValue;
   const discountedPrice = unitPrice - discountAmount;
   const taxAmount = taxType === "PERCENTAGE" ? (discountedPrice * taxValue) / 100 : taxValue;
-  const netPrice = discountedPrice + taxAmount;
+  const netPrice = item.netPrice ?? discountedPrice + taxAmount;
 
   return {
     unitPrice,

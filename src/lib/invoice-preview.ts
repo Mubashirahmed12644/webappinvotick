@@ -3,7 +3,8 @@
 // as the share link, the app's Online tab and the free tool — there is no second renderer to drift.
 import type { Business, InvoiceAsset, InvoiceDetail, InvoiceRenderData, RenderItem, Template } from "./data";
 import type { Client, InvoiceStatus } from "./types";
-import { computeLineItem, type DiscountType, type InvoiceTotals } from "./invoice-calc";
+import { computeLineItem, discountTypeOf, type DiscountType, type InvoiceTotals, type LineItemInput } from "./invoice-calc";
+import { sortByOrder } from "./givens";
 import { templateLook } from "./render-look";
 
 /** The fields of an invoice that the form does not show. */
@@ -59,6 +60,34 @@ export interface FormItemValues {
   discountValue: string;
   discountType: DiscountType;
   taxValue: string;
+  /** How the item's own tax is measured. A saved item keeps its own; a new row's is a percentage. */
+  taxType?: DiscountType;
+  /**
+   * A saved item's own net price, with the price, discount and tax it was saved with (moneyKey).
+   * While those are unchanged the item goes back at that net price, to the cent. Some live items
+   * do not come out at their stored net price when recomputed from what the form shows: a price the
+   * server clamped to 0.00, a tax inside the price with no rate recorded, a cent the app rounded
+   * its own way. Recomputing an item the user did not touch would change its price.
+   */
+  kept?: { netPrice: number; key: string };
+}
+
+/** A row's price, discount and tax as one value. A saved item's kept net price holds while it is unchanged. */
+export function moneyKey(it: Pick<FormItemValues, "unitPrice" | "discountValue" | "discountType" | "taxValue" | "taxType">): string {
+  return [it.unitPrice.trim(), it.discountValue.trim(), it.discountType, it.taxValue.trim(), it.taxType ?? "PERCENTAGE"].join("|");
+}
+
+/** A row as the calculator reads it. A saved item that has not been changed keeps its own net price. */
+export function lineInput(it: FormItemValues): LineItemInput {
+  return {
+    quantity: it.quantity,
+    unitPrice: it.unitPrice,
+    discountValue: it.discountValue,
+    discountType: it.discountType,
+    taxValue: it.taxValue,
+    taxType: it.taxType,
+    netPrice: it.kept && it.kept.key === moneyKey(it) ? it.kept.netPrice : undefined,
+  };
 }
 
 /**
@@ -66,17 +95,12 @@ export interface FormItemValues {
  * preview cannot show an item differently from the one that gets saved.
  *
  * There is no tax rate here because the request has no field for one (`InvoiceItemRequest`): an
- * item's own tax reaches the server only inside `netPrice`. The saved invoice therefore shows 0.00%
- * in the item Tax column while its Amount includes the tax — and so does the preview.
+ * item's own tax reaches the server only inside `netPrice`. A new item therefore shows 0.00% in the
+ * item Tax column while its Amount includes the tax, and so does the preview. A saved item keeps the
+ * rate it has, because the update does not touch that column.
  */
 export function savedItemFields(it: FormItemValues) {
-  const c = computeLineItem({
-    quantity: it.quantity,
-    unitPrice: it.unitPrice,
-    discountValue: it.discountValue,
-    discountType: it.discountType,
-    taxValue: it.taxValue,
-  });
+  const c = computeLineItem(lineInput(it));
   return {
     name: it.name,
     description: it.description || null,
@@ -89,6 +113,103 @@ export function savedItemFields(it: FormItemValues) {
 }
 
 export type SavedItemFields = ReturnType<typeof savedItemFields>;
+
+/**
+ * One item of a saved invoice as the edit form starts from it: the sync pull's row, which is what the
+ * invoice's page shows. The REST detail used to be the source, and it has no item tax, none of the
+ * item's links, and it lists the items deleted in the app as well.
+ */
+export interface SavedInvoiceItem {
+  id: string;
+  inventoryItemId: string | null;
+  taxId: string | null;
+  unitTypeId: string | null;
+  itemCategoryId: string | null;
+  name: string;
+  description: string | null;
+  quantity: string;
+  unitPrice: string;
+  /** What one unit costs on the invoice, its own tax included. */
+  netPrice: string;
+  discountValue: string | null;
+  discountType: string | null;
+  taxRate: string | null;
+  taxType: string | null;
+}
+
+/** The fields of a sync pull item row that the edit form reads. */
+export interface PulledInvoiceItem {
+  id: string;
+  invoiceId?: string | null;
+  name: string;
+  description?: string | null;
+  quantity: string;
+  unitPrice: string;
+  netPrice: string;
+  discountValue?: string | null;
+  discountType?: string | null;
+  taxRate?: string | null;
+  taxType?: string | null;
+  taxId?: string | null;
+  inventoryItemId?: string | null;
+  unitTypeId?: string | null;
+  itemCategoryId?: string | null;
+  orderIndex?: number | null;
+  createdAt?: string | null;
+  isDeleted?: boolean;
+}
+
+/** An invoice's live items from the sync pull, in the order its page shows them (getInvoiceRenderData). */
+export function savedItemsOf(invoiceId: string, items: readonly PulledInvoiceItem[]): SavedInvoiceItem[] {
+  return sortByOrder(items.filter((it) => it.invoiceId === invoiceId && !it.isDeleted)).map((it) => ({
+    id: it.id,
+    inventoryItemId: it.inventoryItemId ?? null,
+    taxId: it.taxId ?? null,
+    unitTypeId: it.unitTypeId ?? null,
+    itemCategoryId: it.itemCategoryId ?? null,
+    name: it.name,
+    description: it.description ?? null,
+    quantity: it.quantity,
+    unitPrice: it.unitPrice,
+    netPrice: it.netPrice,
+    discountValue: it.discountValue ?? null,
+    discountType: it.discountType ?? null,
+    taxRate: it.taxRate ?? null,
+    taxType: it.taxType ?? null,
+  }));
+}
+
+/**
+ * A saved item as a form row. Every number is as the invoice has it, the item's own tax included,
+ * and the item keeps its own net price until its price, discount or tax is changed
+ * (FormItemValues.kept), so an edit that changes nothing sends the same prices back. The item's
+ * links go back as they are: the update copies each of them from the request, and a null would
+ * erase it.
+ */
+export function formRowFromSaved(it: SavedInvoiceItem) {
+  const plain = (v: string | null) => (v == null || v.trim() === "" ? "" : String(Number(v)));
+  const unlessZero = (v: string | null) => (Number(v) ? plain(v) : "");
+  const money = {
+    unitPrice: plain(it.unitPrice),
+    discountValue: unlessZero(it.discountValue),
+    discountType: discountTypeOf(it.discountType),
+    taxValue: unlessZero(it.taxRate),
+    taxType: discountTypeOf(it.taxType),
+  };
+  const stored = Number(it.netPrice);
+  return {
+    id: it.id,
+    inventoryItemId: it.inventoryItemId ?? "",
+    taxId: it.taxId,
+    unitTypeId: it.unitTypeId,
+    itemCategoryId: it.itemCategoryId,
+    name: it.name,
+    description: it.description ?? "",
+    quantity: plain(it.quantity),
+    ...money,
+    kept: Number.isFinite(stored) ? { netPrice: stored, key: moneyKey(money) } : undefined,
+  };
+}
 
 /** Stands in for the business until one is chosen. Create still refuses without one. */
 export const PLACEHOLDER_BUSINESS_NAME = "Your business";

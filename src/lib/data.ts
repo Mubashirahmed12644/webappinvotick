@@ -6,6 +6,7 @@ import { mockClients, mockInvoices, mockStats } from "./mock";
 import { templateLook } from "./render-look";
 import { localDate, summarizeInvoices } from "./invoice-status";
 import { sortByOrder } from "./givens";
+import { savedItemsOf, type SavedInvoiceItem } from "./invoice-preview";
 import type { Client, InvoiceStatus, InvoiceSummary } from "./types";
 
 interface RawInvoice {
@@ -33,6 +34,11 @@ interface RawInvoice {
 interface RawInvoiceItem {
   id: string;
   invoiceId?: string | null;
+  // The item's links. The edit form sends them back as they are (savedItemsOf).
+  inventoryItemId?: string | null;
+  taxId?: string | null;
+  unitTypeId?: string | null;
+  itemCategoryId?: string | null;
   name: string;
   description?: string | null;
   quantity: string;
@@ -345,6 +351,18 @@ export interface InvoiceDetail {
 export async function getInvoiceDetail(id: string): Promise<InvoiceDetail | null> {
   const res = await backendFetch<InvoiceDetail>(`/v1/invoices/${id}`);
   return res.success ? res.data : null;
+}
+
+/**
+ * The invoice's items for the edit form, from the sync pull: what the invoice's page shows, each with
+ * its own tax and its links (savedItemsOf). The same cached pull getWorkspace reads, so no extra call.
+ * null when the pull does not have the invoice (the pull failed, or mock mode): the form must not
+ * start from a guess.
+ */
+export async function getInvoiceItemsForEdit(id: string): Promise<SavedInvoiceItem[] | null> {
+  const data = await getRawSync();
+  if (!(data.invoices ?? []).some((i) => i.id === id && !i.isDeleted)) return null;
+  return savedItemsOf(id, data.invoiceItems ?? []);
 }
 
 export interface ClientDetail {
