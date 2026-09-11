@@ -1,6 +1,6 @@
 # 0048 — What the paywall says is what Google charges; a refusal is final only when Google gives it
 
-**Status:** decided, built (backend deploys 2026-09-11; app 1.4.7) · **Date:** 2026-09-11 · **Goals:** G3
+**Status:** decided, built (backend live 2026-09-11; app: next release 1.4.5, versionCode 100) · **Date:** 2026-09-11 · **Goals:** G3
 (trust), monetisation · **Related:** [0047](0047-plays-answer-decides-premium-on-a-device.md)
 
 ## What happened
@@ -74,5 +74,5 @@
 
 - The service account needs "View financial data, orders…" and "Manage orders and subscriptions" in Play
   Console.
-- Apps older than 1.4.7 read `UNVERIFIED` as their own UNKNOWN (the same behaviour), and still take a 503
+- Apps older than the next release (1.4.5, versionCode 100) read `UNVERIFIED` as their own UNKNOWN (the same behaviour), and still take a 503
   for a refusal until they update — exactly what they did with the old 400.
