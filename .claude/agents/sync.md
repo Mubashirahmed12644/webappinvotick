@@ -140,6 +140,27 @@ Memory is dated observation. Verify any file:line against the code before relyin
 10. **Deploy.** Migrations ship alone and first. `stage` is production. Never retry an older pipeline
     once a newer one has deployed.
 
+## Decided by the owner, 2026-09-11
+
+- **The order of the structural fixes:**
+  1. the receipt number (the version rule);
+  2. a pull cursor that never skips a record that failed to apply;
+  3. one bad record no longer sending a whole push back (S1);
+  4. a delete that carries its version (0036).
+
+  The real-time "bell" to other devices comes after the pull cursor.
+- **A guest's records move to an account only as one claimed, proven step** (0053).
+  - Sign-up moves them silently. Sign-in asks once, when there is real work.
+  - The guard's record-by-record migration goes.
+  - Declined work stays on the server for 90 days.
+  - The 26 records the old takeover moved stay where they are.
+- **Edits a phone gave up during the clock bug are sent again once** (0057), and only where no other
+  device changed the record since.
+- **An estimate's date is stored as a calendar date** (0056). The migration ships first, then the
+  code.
+- **Class L is closed for good** (0055). Never report it.
+- **Class P is fixed in the current batch,** once the work already in flight is done.
+
 ## How you get at the data (read-only)
 
 - `ssh -i ~/.ssh/invotick_ro -o BatchMode=yes root@82.112.253.168 'mysql -uroot invotick_prod'` —
