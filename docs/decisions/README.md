@@ -43,6 +43,7 @@ Numbering: next free number, zero-padded to 4.
 | [0020](0020-the-payment-tag-goes-the-card-says-it-in-words.md) | The payment tag goes; the card says it in words | accepted, built |
 | [0021](0021-dynamic-colour-is-offered-never-assumed.md) | Dynamic colour is offered, never assumed; it stops at the document | accepted, built |
 | [0022](0022-edge-to-edge-verified-for-targetsdk-36.md) | Edge-to-edge verified for targetSdk 36 — 17 surfaces measured, no code needed |
+| [0023](0023-one-dismissal-event-the-method-is-a-parameter.md) | One dismissal, one event; the route (`method`) is a parameter on the sheet's own close id | decided, implemented |
 | [0024](0024-a-double-tap-is-stopped-at-the-button-not-counted-later.md) | A double tap is stopped at the button, not counted around later | decided |
 | [0025](0025-voice-input-is-offered-only-where-the-device-can-do-it.md) | Voice input is offered only where the device can do it | decided |
 | [0026](0026-a-session-is-renewed-before-it-dies-never-revived-after.md) | A session is renewed before it dies, never revived after | decided, implemented |
@@ -54,6 +55,8 @@ Numbering: next free number, zero-padded to 4.
 | [0032](0032-dismissing-the-save-gate-keeps-the-invoice-as-a-draft.md) | Dismissing the Save gate keeps the invoice as a draft | decided, in app branch |
 | [0033](0033-no-banner-under-the-first-open-onboarding-overlay.md) | No banner under the first-open onboarding overlay (owner's call; measure impressions alongside) | decided, in app branch |
 | [0034](0034-a-page-costs-what-it-shows.md) | A page costs what it shows, not what the database holds | decided, being applied |
+| [0035](0035-a-build-must-not-be-able-to-take-the-database.md) | A build must not be able to take the database | partly done, one number still to measure |
+| [0036](0036-a-delete-must-say-what-it-is-deleting.md) | A delete must say what it is deleting (sync contract gap G2) | decided, not yet built |
 | [0037](0037-the-ui-layer-owns-the-press.md) | The UI layer owns the press; the coded `trackClick` twin goes | decided, in app branch |
 | [0038](0038-the-hold-shows-one-branded-loader-not-a-picture-of-the-screen.md) | The hold shows one branded loader, not a picture of the screen it is heading to (reverses 0031's remedy) | decided, in app branch |
 | [0039](0039-language-is-read-from-the-session-not-re-sent-per-event.md) | Language is read from the session, not re-sent per event; the session row is written from any batch | decided, in backend tree |
@@ -68,3 +71,4 @@ Numbering: next free number, zero-padded to 4.
 | [0048](0048-the-paywall-says-what-google-charges.md) | What the paywall says is what Google charges — price, period and saving from the offer actually bought, never a product's name; a refusal is final only when Google gives it (400), "could not ask" is 503; the server keeps tokens and every restore answer; an admin can defer one customer's renewal | decided, built (next release 1.4.5) |
 | [0049](0049-the-app-open-ad-is-asked-for-at-the-first-onstart.md) | The app-open ad is asked for at the first onStart, not when the SDK is ready: the only question is the saved premium flag (false by default), Play answers in parallel, the show still refuses premium and still waits (≤1.5 s from splash start) for Play's "not premium"; cold-start requests move from `path=splash` to `path=preload` | decided, built, verified on the Pixel (next release 1.4.5) |
 | [0050](0050-every-sync-failure-carries-its-own-evidence.md) | Every sync failure carries its own evidence, joined by one request id: `X-Request-Id` app → server → response → `sync_failure.last_trace_id` → Loki; `sync_failed` gains ids, codes and versions (never field values); the ingest keeps device, version and record and shares the server's signature; promtail stops labelling `traceId`; the panel shows the evidence and the server's log lines | decided, live (backend + panel; app in 1.4.5) |
+| [0051](0051-sync-and-billing-each-have-an-owner-agent.md) | Sync and billing each have a dedicated agent (`.claude/agents/sync.md`, `billing.md`) whose file holds that domain's policy in one place; a decided rule is written there first, memory keeps incidents and dated state, and every line is checked against code | decided |
