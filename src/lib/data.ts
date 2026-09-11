@@ -51,6 +51,7 @@ interface RawInvoiceItem {
 
 interface RawClient {
   id: string;
+  businessId?: string | null;
   name: string;
   companyName?: string | null;
   emailAddress?: string | null;
@@ -604,6 +605,7 @@ export const getWorkspace = cache(async (): Promise<WorkspaceData> => {
 
   const clients: Client[] = rawClients.map((c) => ({
     id: c.id,
+    businessId: c.businessId ?? null,
     name: c.name,
     companyName: c.companyName,
     emailAddress: c.emailAddress,

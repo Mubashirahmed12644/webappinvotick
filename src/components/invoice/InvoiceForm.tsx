@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -8,7 +9,8 @@ import { TextField } from "@/components/ui/TextField";
 import { cn } from "@/lib/cn";
 import { formatMoney } from "@/lib/format";
 import { computeInvoiceTotals, computeLineItem, type DiscountType } from "@/lib/invoice-calc";
-import type { Product, Tax, InvoiceDetail, Template, InvoiceAsset } from "@/lib/data";
+import { nextBusinessInvoiceNumber } from "@/lib/invoice-number";
+import type { Business, Product, Tax, InvoiceDetail, Template, InvoiceAsset } from "@/lib/data";
 import type { Client, InvoiceStatus } from "@/lib/types";
 
 interface FormItem {
@@ -24,6 +26,7 @@ interface FormItem {
 }
 
 interface Props {
+  businesses: Business[];
   clients: Client[];
   products: Product[];
   taxes: Tax[];
@@ -31,6 +34,10 @@ interface Props {
   signatures?: InvoiceAsset[];
   stamps?: InvoiceAsset[];
   invoice?: InvoiceDetail;
+  /** The business to start with: the one chosen on the invoices page, or the invoice's own. */
+  initialBusinessId?: string | null;
+  /** Invoice numbers already taken, so a new invoice continues its business's series. */
+  takenNumbers?: { businessId?: string | null; invoiceNumber: string }[];
 }
 
 const STATUSES: InvoiceStatus[] = ["DRAFT", "SENT", "PAID", "OVERDUE", "CANCELLED"];
@@ -41,7 +48,18 @@ function blankItem(): FormItem {
   return { id: uuid(), inventoryItemId: "", name: "", description: "", quantity: "1", unitPrice: "", discountValue: "", discountType: "PERCENTAGE", taxValue: "" };
 }
 
-export function InvoiceForm({ clients, products, taxes, templates = [], signatures = [], stamps = [], invoice }: Props) {
+export function InvoiceForm({
+  businesses,
+  clients,
+  products,
+  taxes,
+  templates = [],
+  signatures = [],
+  stamps = [],
+  invoice,
+  initialBusinessId = null,
+  takenNumbers = [],
+}: Props) {
   const router = useRouter();
   const isEdit = Boolean(invoice);
   const [templateId, setTemplateId] = useState(invoice?.templateId ?? templates[0]?.id ?? "");
@@ -49,12 +67,32 @@ export function InvoiceForm({ clients, products, taxes, templates = [], signatur
   const [stampId, setStampId] = useState(invoice?.stampId ?? "");
   const selectedTemplate = templates.find((t) => t.id === templateId);
 
+  // Every invoice is issued from a business — the owner's rule, 2026-09-11. This form had no such
+  // field, so INV-69850 reached the server with none. A client belongs to one business, so the
+  // client list follows the business chosen here, and choosing a client picks its business.
+  const knownBusiness = (id?: string | null) => (id && businesses.some((b) => b.id === id) ? id : "");
+  const businessOfClient = (id: string) => clients.find((c) => c.id === id)?.businessId ?? null;
+  const [businessId, setBusinessId] = useState(() =>
+    invoice
+      ? knownBusiness(initialBusinessId) || knownBusiness(businessOfClient(invoice.clientId))
+      : knownBusiness(initialBusinessId) || (businesses.length === 1 ? businesses[0].id : ""),
+  );
+  const numberFor = (id: string) => {
+    const b = businesses.find((x) => x.id === id);
+    if (!b) return "";
+    return nextBusinessInvoiceNumber(b.name, takenNumbers.filter((t) => t.businessId === b.id).map((t) => t.invoiceNumber));
+  };
+
   const [clientId, setClientId] = useState(invoice?.clientId ?? "");
-  const [invoiceNumber, setInvoiceNumber] = useState(invoice?.invoiceNumber ?? `INV-${Date.now().toString().slice(-5)}`);
+  const [invoiceNumber, setInvoiceNumber] = useState(() => invoice?.invoiceNumber ?? numberFor(businessId));
+  // A number the user typed is theirs; only a number this form wrote follows a change of business.
+  const [numberTyped, setNumberTyped] = useState(false);
   const [invoiceDate, setInvoiceDate] = useState(invoice?.invoiceDate ?? today());
   const [dueDate, setDueDate] = useState(invoice?.dueDate ?? today());
   const [status, setStatus] = useState<InvoiceStatus>(invoice?.status ?? "DRAFT");
-  const [currency, setCurrency] = useState(invoice?.currency ?? "USD");
+  const [currency, setCurrency] = useState(
+    () => invoice?.currency ?? (businesses.find((b) => b.id === businessId)?.currencyCode?.toUpperCase() || "USD"),
+  );
   const [notes, setNotes] = useState(invoice?.notes ?? "");
   const [discountValue, setDiscountValue] = useState(invoice?.discountValue && Number(invoice.discountValue) ? invoice.discountValue : "");
   const [discountType, setDiscountType] = useState<DiscountType>((invoice?.discountType as DiscountType) ?? "PERCENTAGE");
@@ -73,6 +111,7 @@ export function InvoiceForm({ clients, products, taxes, templates = [], signatur
   const [error, setError] = useState<string | null>(null);
 
   const selectedTax = taxes.find((t) => t.id === taxId);
+  const shownClients = businessId ? clients.filter((c) => !c.businessId || c.businessId === businessId) : clients;
 
   const totals = useMemo(
     () =>
@@ -86,6 +125,27 @@ export function InvoiceForm({ clients, products, taxes, templates = [], signatur
     [items, discountValue, discountType, selectedTax, shipping],
   );
 
+  function chooseBusiness(id: string) {
+    setBusinessId(id);
+    const clientBusiness = clientId ? businessOfClient(clientId) : null;
+    const keepsClient = Boolean(clientId) && (!clientBusiness || clientBusiness === id);
+    if (clientId && !keepsClient) setClientId("");
+    if (!isEdit && !numberTyped) setInvoiceNumber(numberFor(id));
+    const cc = businesses.find((b) => b.id === id)?.currencyCode;
+    if (cc && !keepsClient) setCurrency(cc.toUpperCase());
+  }
+
+  function chooseClient(id: string) {
+    setClientId(id);
+    const c = clients.find((x) => x.id === id);
+    if (c?.currencyCode) setCurrency(c.currencyCode.toUpperCase());
+    const cb = knownBusiness(c?.businessId);
+    if (cb && cb !== businessId) {
+      setBusinessId(cb);
+      if (!isEdit && !numberTyped) setInvoiceNumber(numberFor(cb));
+    }
+  }
+
   function updateItem(id: string, patch: Partial<FormItem>) {
     setItems((prev) => prev.map((it) => (it.id === id ? { ...it, ...patch } : it)));
   }
@@ -97,7 +157,10 @@ export function InvoiceForm({ clients, products, taxes, templates = [], signatur
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    if (!businessId) return setError("Please choose a business — every invoice is issued from one.");
     if (!clientId) return setError("Please choose a client.");
+    const clientBusiness = businessOfClient(clientId);
+    if (clientBusiness && clientBusiness !== businessId) return setError("This client belongs to another business.");
     if (items.length === 0 || items.every((i) => !i.name)) return setError("Add at least one item.");
 
     const invoiceId = invoice?.id ?? uuid();
@@ -116,7 +179,7 @@ export function InvoiceForm({ clients, products, taxes, templates = [], signatur
       });
 
     const payload = {
-      id: invoiceId, clientId, invoiceNumber, invoiceDate, dueDate, poNumber: null,
+      id: invoiceId, businessId, clientId, invoiceNumber, invoiceDate, dueDate, poNumber: null,
       subtotal: totals.subtotal, discountAmount: totals.discountAmount, taxAmount: totals.taxAmount,
       shippingCost: totals.shippingCost, totalAmount: totals.total, status,
       discountType: discountValue ? discountType : null, discountValue: discountValue ? Number(discountValue) : null,
@@ -158,21 +221,32 @@ export function InvoiceForm({ clients, products, taxes, templates = [], signatur
       <Card className="space-y-4 p-6">
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-1.5">
+            <label className={labelCls}>Business</label>
+            {businesses.length === 0 ? (
+              <p className="text-sm text-[var(--color-on-surface-variant)]">
+                An invoice is issued from a business, and you have none yet.{" "}
+                <Link href="/settings/business/new" className="font-semibold text-[var(--color-primary)] hover:underline">Add a business</Link>
+              </p>
+            ) : (
+              <select value={businessId} onChange={(e) => chooseBusiness(e.target.value)} className={selectCls} aria-required="true">
+                <option value="">Select a business…</option>
+                {businesses.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+              </select>
+            )}
+          </div>
+          <div className="flex flex-col gap-1.5">
             <label className={labelCls}>Client</label>
-            <select
-              value={clientId}
-              onChange={(e) => {
-                setClientId(e.target.value);
-                const cc = clients.find((c) => c.id === e.target.value)?.currencyCode;
-                if (cc) setCurrency(cc.toUpperCase());
-              }}
-              className={selectCls}
-            >
+            <select value={clientId} onChange={(e) => chooseClient(e.target.value)} className={selectCls}>
               <option value="">Select a client…</option>
-              {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              {shownClients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
-          <TextField label="Invoice number" value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} />
+          <TextField
+            label="Invoice number"
+            value={invoiceNumber}
+            placeholder={businessId ? undefined : "Set by the business"}
+            onChange={(e) => { setInvoiceNumber(e.target.value); setNumberTyped(true); }}
+          />
           <TextField label="Invoice date" type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} />
           <TextField label="Due date" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
           <div className="flex flex-col gap-1.5">
