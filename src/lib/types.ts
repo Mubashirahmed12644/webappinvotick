@@ -50,6 +50,7 @@ export interface Client {
   companyName?: string | null;
   emailAddress?: string | null;
   phone?: string | null;
+  addressLine1?: string | null;
   currencyCode?: string | null;
   credit?: string;
   openingBalance?: string;

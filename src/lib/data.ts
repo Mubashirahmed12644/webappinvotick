@@ -3,7 +3,7 @@ import { cache } from "react";
 import { config } from "./config";
 import { backendFetch } from "./backend";
 import { mockClients, mockInvoices, mockStats } from "./mock";
-import { systemAssetImage } from "./system-assets";
+import { templateLook } from "./render-look";
 import { sortByOrder } from "./givens";
 import type { Client, InvoiceStatus, InvoiceSummary } from "./types";
 
@@ -56,6 +56,7 @@ interface RawClient {
   companyName?: string | null;
   emailAddress?: string | null;
   phone?: string | null;
+  addressLine1?: string | null;
   currencyCode?: string | null;
   city?: string | null;
   country?: string | null;
@@ -196,6 +197,12 @@ export interface Template {
   headerId?: string | null;
   signatureId?: string | null;
   stampId?: string | null;
+  // The rest of what the template draws with, so the form's Preview matches the saved invoice.
+  titleColor?: string | null;
+  backgroundId?: string | null;
+  backgroundOpacity?: number | null;
+  itemTableHeaderAlignment?: string | null;
+  itemTableBodyAlignment?: string | null;
   showBusinessLogo: boolean;
   showTitle: boolean;
   showSender: boolean;
@@ -265,6 +272,7 @@ export interface WorkspaceData {
   signatures: InvoiceAsset[];
   stamps: InvoiceAsset[];
   headers: InvoiceAsset[];
+  backgrounds: InvoiceAsset[];
   primaryBusinessId: string | null;
   stats: {
     totalRevenue: number;
@@ -484,19 +492,9 @@ export async function getInvoiceRenderData(id: string): Promise<InvoiceRenderDat
       amount: num(it.netPrice) * num(it.quantity),
     }));
 
-  const toggles: Record<string, boolean> = {
-    logo: template?.showBusinessLogo ?? true,
-    title: template?.showTitle ?? true,
-    sender: template?.showSender ?? true,
-    receiver: template?.showReceiver ?? true,
-    notes: template?.showNotes ?? true,
-    signature: template?.showSignature ?? true,
-    stamp: template?.showStamp ?? true,
-    total: template?.showTotal ?? true,
-    items: template?.showItemsTable ?? true,
-    terms: template?.showTerms ?? true,
-    payment: template?.showPayment ?? true,
-  };
+  // Colour, blocks, header and background come from the one function the invoice form's Preview
+  // uses too, so a preview cannot fall back to a different default from this page.
+  const look = templateLook(template, { header: header?.image, background: background?.image });
 
   return {
     id: inv.id,
@@ -514,18 +512,11 @@ export async function getInvoiceRenderData(id: string): Promise<InvoiceRenderDat
     notes: inv.notes,
     terms: null,
     paymentInstructions: null,
-    itemTableHeaderAlignment: template?.itemTableHeaderAlignment ?? null,
-    itemTableBodyAlignment: template?.itemTableBodyAlignment ?? null,
-    color: template?.color || "#0D4DC0",
-    titleColor: template?.titleColor ?? null, // auto-applies when mobile/server sends it
-    toggles,
+    ...look,
     business: business ? { name: business.name, logo: business.logo } : null,
     client: (client as ClientDetail) ?? null,
-    headerImage: header?.image ?? systemAssetImage(template?.headerId),
-    backgroundImage: background?.image ?? systemAssetImage(template?.backgroundId),
-    backgroundOpacity: template?.backgroundOpacity ?? 1,
-    signatureImage: toggles.signature ? sig?.image ?? null : null,
-    stampImage: toggles.stamp ? stamp?.image ?? null : null,
+    signatureImage: look.toggles.signature ? sig?.image ?? null : null,
+    stampImage: look.toggles.stamp ? stamp?.image ?? null : null,
     items,
   };
 }
@@ -542,7 +533,7 @@ export const getWorkspace = cache(async (): Promise<WorkspaceData> => {
     return {
       clients: mockClients, invoices: mockInvoices, products: [], taxes: [],
       businesses: [], merchants: [], expenses: [], payments: [], estimates: [],
-      templates: [], signatures: [], stamps: [], headers: [],
+      templates: [], signatures: [], stamps: [], headers: [], backgrounds: [],
       primaryBusinessId: null, stats: mockStats,
     };
   }
@@ -564,6 +555,7 @@ export const getWorkspace = cache(async (): Promise<WorkspaceData> => {
   const signatures = (data.signatures ?? []).filter((s) => !s.isDeleted && s.image).map(asset);
   const stamps = (data.stamps ?? []).filter((s) => !s.isDeleted && s.image).map(asset);
   const headers = (data.headers ?? []).filter((h) => !h.isDeleted && h.image).map(asset);
+  const backgrounds = (data.backgrounds ?? []).filter((b) => !b.isDeleted && b.image).map(asset);
   const templates: Template[] = (data.templates ?? [])
     .filter((t) => !t.isDeleted)
     .map((t) => ({
@@ -573,6 +565,11 @@ export const getWorkspace = cache(async (): Promise<WorkspaceData> => {
       headerId: t.headerId,
       signatureId: t.signatureId,
       stampId: t.stampId,
+      titleColor: t.titleColor,
+      backgroundId: t.backgroundId,
+      backgroundOpacity: t.backgroundOpacity,
+      itemTableHeaderAlignment: t.itemTableHeaderAlignment,
+      itemTableBodyAlignment: t.itemTableBodyAlignment,
       showBusinessLogo: t.showBusinessLogo ?? true,
       showTitle: t.showTitle ?? true,
       showSender: t.showSender ?? true,
@@ -610,6 +607,7 @@ export const getWorkspace = cache(async (): Promise<WorkspaceData> => {
     companyName: c.companyName,
     emailAddress: c.emailAddress,
     phone: c.phone,
+    addressLine1: c.addressLine1,
     currencyCode: c.currencyCode,
     city: c.city,
     country: c.country,
@@ -649,6 +647,7 @@ export const getWorkspace = cache(async (): Promise<WorkspaceData> => {
     signatures,
     stamps,
     headers,
+    backgrounds,
     primaryBusinessId: businesses[0]?.id ?? null,
     stats: {
       totalRevenue,

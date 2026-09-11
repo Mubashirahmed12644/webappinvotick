@@ -8,7 +8,8 @@ export default async function NewInvoicePage({
 }) {
   // ?business= carries the business chosen on the invoices page into the form.
   const { business } = await searchParams;
-  const { businesses, clients, invoices, products, taxes, templates, signatures, stamps } = await getWorkspace();
+  const { businesses, clients, invoices, products, taxes, templates, signatures, stamps, headers, backgrounds } =
+    await getWorkspace();
   return (
     <InvoiceForm
       businesses={businesses}
@@ -18,6 +19,8 @@ export default async function NewInvoicePage({
       templates={templates}
       signatures={signatures}
       stamps={stamps}
+      headers={headers}
+      backgrounds={backgrounds}
       initialBusinessId={typeof business === "string" ? business : null}
       takenNumbers={invoices.map((i) => ({ businessId: i.businessId, invoiceNumber: i.invoiceNumber }))}
     />

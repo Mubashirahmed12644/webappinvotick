@@ -16,6 +16,8 @@ export default async function EditInvoicePage({ params }: { params: Promise<{ id
       templates={ws.templates}
       signatures={ws.signatures}
       stamps={ws.stamps}
+      headers={ws.headers}
+      backgrounds={ws.backgrounds}
       invoice={invoice}
       // The REST detail omits the business; the sync pull carries it (or its client's).
       initialBusinessId={ws.invoices.find((i) => i.id === id)?.businessId ?? null}

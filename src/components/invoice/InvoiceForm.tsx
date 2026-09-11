@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/Card";
@@ -10,6 +10,8 @@ import { cn } from "@/lib/cn";
 import { formatMoney } from "@/lib/format";
 import { computeInvoiceTotals, computeLineItem, type DiscountType } from "@/lib/invoice-calc";
 import { nextBusinessInvoiceNumber } from "@/lib/invoice-number";
+import { invoicePreviewData, savedItemFields } from "@/lib/invoice-preview";
+import { InvoicePreviewDialog } from "./InvoicePreviewDialog";
 import type { Business, Product, Tax, InvoiceDetail, Template, InvoiceAsset } from "@/lib/data";
 import type { Client, InvoiceStatus } from "@/lib/types";
 
@@ -33,6 +35,9 @@ interface Props {
   templates?: Template[];
   signatures?: InvoiceAsset[];
   stamps?: InvoiceAsset[];
+  /** Header and background images, so Preview draws a template the way the saved invoice will. */
+  headers?: InvoiceAsset[];
+  backgrounds?: InvoiceAsset[];
   invoice?: InvoiceDetail;
   /** The business to start with: the one chosen on the invoices page, or the invoice's own. */
   initialBusinessId?: string | null;
@@ -56,6 +61,8 @@ export function InvoiceForm({
   templates = [],
   signatures = [],
   stamps = [],
+  headers = [],
+  backgrounds = [],
   invoice,
   initialBusinessId = null,
   takenNumbers = [],
@@ -66,6 +73,9 @@ export function InvoiceForm({
   const [signatureId, setSignatureId] = useState(invoice?.signatureId ?? "");
   const [stampId, setStampId] = useState(invoice?.stampId ?? "");
   const selectedTemplate = templates.find((t) => t.id === templateId);
+  // Preview only shows (the owner, 2026-09-11): it opens before a business is chosen and saves nothing.
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const closePreview = useCallback(() => setPreviewOpen(false), []);
 
   // Every invoice is issued from a business — the owner's rule, 2026-09-11. This form had no such
   // field, so INV-69850 reached the server with none. A client belongs to one business, so the
@@ -164,19 +174,14 @@ export function InvoiceForm({
     if (items.length === 0 || items.every((i) => !i.name)) return setError("Add at least one item.");
 
     const invoiceId = invoice?.id ?? uuid();
+    // The item's money fields come from savedItemFields, which Preview reads as well.
     const payloadItems = items
       .filter((it) => it.name)
-      .map((it) => {
-        const c = computeLineItem({ quantity: it.quantity, unitPrice: it.unitPrice, discountValue: it.discountValue, discountType: it.discountType, taxValue: it.taxValue });
-        return {
-          id: it.id, invoiceId, inventoryItemId: it.inventoryItemId || uuid(),
-          taxId: null, unitTypeId: null, itemCategoryId: null,
-          name: it.name, description: it.description || null,
-          quantity: Number(it.quantity) || 1, unitPrice: Number(it.unitPrice) || 0, netPrice: c.netPrice,
-          discount: it.discountValue ? Number(it.discountValue) : null,
-          discountType: it.discountValue ? it.discountType : null,
-        };
-      });
+      .map((it) => ({
+        id: it.id, invoiceId, inventoryItemId: it.inventoryItemId || uuid(),
+        taxId: null, unitTypeId: null, itemCategoryId: null,
+        ...savedItemFields(it),
+      }));
 
     const payload = {
       id: invoiceId, businessId, clientId, invoiceNumber, invoiceDate, dueDate, poNumber: null,
@@ -207,11 +212,17 @@ export function InvoiceForm({
   const labelCls = "text-sm font-semibold text-[var(--color-on-surface)]";
   const selectCls = "h-11 rounded-[var(--radius-sm)] border border-[var(--color-outline-variant)] bg-[var(--color-surface)] px-3 text-sm text-[var(--color-on-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]";
 
+  const saveLabel = isEdit ? "Save changes" : "Create invoice";
+
   return (
     <form onSubmit={handleSubmit} className="mx-auto max-w-4xl space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-extrabold text-[var(--color-on-surface)]">{isEdit ? "Edit invoice" : "New invoice"}</h1>
-        <Button type="submit" loading={saving}>{isEdit ? "Save changes" : "Create invoice"}</Button>
+        <div className="flex gap-2">
+          {/* Enabled before a business is chosen, on purpose: a preview may come first, an invoice may not. */}
+          <Button type="button" variant="outline" onClick={() => setPreviewOpen(true)}>Preview</Button>
+          <Button type="submit" loading={saving}>{saveLabel}</Button>
+        </div>
       </div>
 
       {error && (
@@ -384,6 +395,23 @@ export function InvoiceForm({
           </div>
         </Card>
       </div>
+      {previewOpen && (
+        <InvoicePreviewDialog
+          // Built from what Create would send, read back the way the saved invoice's page reads it.
+          data={invoicePreviewData({
+            invoiceNumber, invoiceDate, dueDate, status, currency, notes,
+            items: items.filter((it) => it.name).map(savedItemFields),
+            totals,
+            business: businesses.find((b) => b.id === businessId) ?? null,
+            client: clients.find((c) => c.id === clientId) ?? null,
+            template: selectedTemplate ?? null,
+            signatureId, stampId, signatures, stamps, headers, backgrounds,
+          })}
+          businessMissing={!businessId}
+          saveLabel={saveLabel}
+          onClose={closePreview}
+        />
+      )}
     </form>
   );
 }
