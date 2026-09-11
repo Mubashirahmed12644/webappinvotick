@@ -314,6 +314,9 @@ Every tap-based number from before 1.4.1 is debug-only for that reason.
 Their sessions are still stored, so "how much of the install base has updated" stays answerable. Until
 1.4.1 rolls out, **production stores no new events** — this is intended, not a fault. See
 `AGENTS-EVENTS.md` §3.11 and the Health Centre's *Old-build analytics traffic*.
+The floor is **Android's**. `Platform.Web` is exempt (decision 0045), and so is `Platform.iOS` since
+2026-09-11: iOS sends its build number (15) as `appVersionCode`, so every TestFlight batch was answered
+200 and stored nowhere (`AGENTS-EVENTS.md` §1.18).
 
 Explicitly coded event vocabulary today — **as the shipped build sends it** (`origin/VC_96_VN_144`,
 live as **1.4.4 / versionCode 97**; the ads section re-read against `analytics_events` on
@@ -442,6 +445,22 @@ the list is wrong, not the app.**
   instead of raw exception text — 4 of 29 had been an auth defect counted as network.
   `shared_invoice_create_own_click` is no longer sent by the app: it fired 2–14 ms after the button's
   own auto-captured id, every time. Old rows keep the name, so queries reading it read history.
+- **Sync, from 1.4.5 (decision [0050](docs/decisions/0050-every-sync-failure-carries-its-own-evidence.md)).**
+  `sync_failed` keeps `stage`, `reason` (≤200) and `attempts`, and gains these parameters:
+  - `request_id` — the call's `X-Request-Id`; it joins `sync_failure.last_trace_id` and the server's
+    log line;
+  - `http_status` — only when an answer arrived;
+  - `error_type` — the server's `SyncErrorType`;
+  - `entity` — the server's group name; `_request` means the whole request;
+  - `op` — `CREATE|UPDATE|DELETE`;
+  - `field`, `record_id`, `local_version`, `server_version`, `exception_class`, `batch_size`;
+  - `run` — `push|pull|push_after_images|reconcile|image_upload|image_download`;
+  - `queue_age_ms`.
+
+  New stages: `image_upload`, `image_download`, `reconcile_failed`, `worker_failed`. Which stage
+  carries which parameter is 0050's table, enforced in `SyncFailureEvidence.STAGE_PARAMS`; an absent
+  parameter means not applicable at that stage. Network failures and cancellations are no longer
+  reported (0029). Builds up to 1.4.4 send only the first three.
 - **Lifecycle:** `app_cold_start`, `app_foreground`, `app_resumed`, `app_paused`, `app_background`,
   `app_heartbeat`, `session_break`, `screen_view`, `network_changed`, `app_exit_dialog_shown`
 
