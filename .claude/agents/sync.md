@@ -98,18 +98,30 @@ Memory is dated observation. Verify any file:line against the code before relyin
    transaction, with the row read back through a fresh persistence context.
 4. **A create is a persist, never a merge.** `InsertNew.insertNew` persists the given instance. A
    duplicate key then surfaces as an exception instead of a silent update.
-5. **One push is one transaction**, declared as
-   `@Transactional(noRollbackFor = [SyncV2OperationException::class])`.
+5. **One push is one transaction** — a `TransactionTemplate` inside
+   `SyncV2PushService.processPushSync` (b0b9eb6). Until then it was an
+   `@Transactional(noRollbackFor = …)` whose rule never fired, because every refusal is caught per
+   record.
    - A refusal of one record does not roll the push back. A DB error at commit discards the whole
-     batch, and the device resends it (class S1).
-   - **Suspected, not yet proven (2026-09-11):** since a refusal does not roll back, a record
-     changed before its refusal is thrown may be committed half-applied. Example: `resolveTax` in
-     `InventoryItemSyncV2Service.updateFromSync` can refuse after fields are already set.
-   - **Known gap:** the `@Transactional(REQUIRES_NEW)` written for `SyncFailureRecorder.record()`
-     sits above `recordDrift`, which was later inserted between the two. So `record()` joins the
-     push's transaction, and a failure recorded in a push that then rolls back is lost with it.
-     Moving the annotation is not free: each failure would take a second connection from the same
-     pool while the push holds one (memory `one-pool-serves-everything`).
+     batch, and the device resends it (class S1); it is still answered 400.
+   - **A record is refused before it is touched** (83e31ba).
+     - Every update resolves everything that can refuse it into locals, and only then assigns: the
+       ownership check, a guest takeover, the timestamp, the conflict rule and every reference. Each
+       service marks the line: "Checked above, written below".
+     - Before, a refused record was committed half-applied, with the server's clock. That was 26 of
+       the 33 create-time OWNERSHIP_VIOLATION refusals in 30 days, and all 26 guest records moved to
+       the account.
+     - Rejected: undoing after a refusal. A savepoint leaves Hibernate's memory dirty, clear/detach
+       needs a flush per operation, and a clear drops the unflushed half of the guest migration.
+     - Guard: `ARefusedRecordIsNotWrittenTest`.
+   - So a child whose parent is refused in the same push is refused too. It used to be judged by the
+     parent's half-applied owner: 12 invoice items and 1 invoice payment, in 10 pushes in 30 days.
+   - **A push's failures are written after it** (b0b9eb6). `SyncFailureRecorder.holdUntilAfter`
+     holds them until the transaction has ended and its connection is back in the pool.
+     - Never give the recorder REQUIRES_NEW inside a push. On `recordForEmail` it takes a second
+       connection per failure; with a pool of one, the push waited 5 s and then failed whole. On
+       `record()` it does nothing, because it is reached from inside the class.
+     - Guard: `AFailureOutlivesItsPushTest`, on a pool of one connection.
 6. **The pull cursor must never skip a record that failed to apply.** Open, Tier 1. Proposal
    (2026-09-11): handlers return an outcome, and failed ids are offered again.
 7. **One vocabulary.**
