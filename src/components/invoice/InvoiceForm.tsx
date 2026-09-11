@@ -10,7 +10,7 @@ import { cn } from "@/lib/cn";
 import { formatMoney } from "@/lib/format";
 import { computeInvoiceTotals, computeLineItem, discountTypeOf, type DiscountType } from "@/lib/invoice-calc";
 import { nextBusinessInvoiceNumber } from "@/lib/invoice-number";
-import { invoicePreviewData, keptInvoiceFields, savedItemFields } from "@/lib/invoice-preview";
+import { editBlocker, invoicePreviewData, keptInvoiceFields, savedItemFields } from "@/lib/invoice-preview";
 import { InvoicePreviewDialog } from "./InvoicePreviewDialog";
 import type { Business, Product, Tax, InvoiceDetail, Template, InvoiceAsset } from "@/lib/data";
 import type { Client, InvoiceStatus } from "@/lib/types";
@@ -69,6 +69,8 @@ export function InvoiceForm({
 }: Props) {
   const router = useRouter();
   const isEdit = Boolean(invoice);
+  // An invoice whose own tax this form cannot show is not saved over from here (editBlocker).
+  const blocker = isEdit ? editBlocker(invoice) : null;
   const [templateId, setTemplateId] = useState(invoice?.templateId ?? templates[0]?.id ?? "");
   const [signatureId, setSignatureId] = useState(invoice?.signatureId ?? "");
   const [stampId, setStampId] = useState(invoice?.stampId ?? "");
@@ -167,6 +169,7 @@ export function InvoiceForm({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    if (blocker) return setError(blocker);
     if (!businessId) return setError("Please choose a business — every invoice is issued from one.");
     if (!clientId) return setError("Please choose a client.");
     const clientBusiness = businessOfClient(clientId);
@@ -228,6 +231,9 @@ export function InvoiceForm({
 
       {error && (
         <div className="rounded-[var(--radius-sm)] bg-[var(--color-error-container)] px-4 py-2.5 text-sm font-medium text-[var(--color-on-error-container)]">{error}</div>
+      )}
+      {blocker && error !== blocker && (
+        <div className="rounded-[var(--radius-sm)] bg-[var(--color-secondary-container)] px-4 py-2.5 text-sm font-medium text-[var(--color-on-secondary-container)]">{blocker}</div>
       )}
 
       <Card className="space-y-4 p-6">

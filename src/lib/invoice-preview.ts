@@ -35,6 +35,22 @@ export function keptInvoiceFields(invoice?: KeptInvoiceFields | null) {
   };
 }
 
+/**
+ * Why an edit cannot be saved from this form, known before anything is typed; null when it can.
+ *
+ * An invoice's own tax, the one on its total, is stored as a rate on the invoice: 104 live invoices
+ * carry one, and 81 of them have no tax record that the form's Tax list could select. The form starts
+ * every edit on "No tax" and recomputes the total, so saving would drop that tax without a word. Until
+ * the form can show an invoice's own tax, such an invoice is edited in the app.
+ */
+export function editBlocker(invoice?: { taxAmount?: string | number | null } | null): string | null {
+  if (!invoice) return null;
+  const tax = Number(invoice.taxAmount ?? 0);
+  return Number.isFinite(tax) && tax > 0
+    ? "This invoice has a tax on its total that can't be shown here yet. Saving it on the web would remove that tax, so please edit this invoice in the Invotick app."
+    : null;
+}
+
 export interface FormItemValues {
   name: string;
   description: string;
