@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { ImageResponse } from "next/og";
-import { getSharedInvoice } from "@/lib/shared-invoice";
+import { getSharedInvoiceResult, type SharedInvoiceLinkState } from "@/lib/shared-invoice";
 
 export const OG_SIZE = { width: 1200, height: 630 };
 
@@ -25,12 +25,15 @@ function ogCurrency(raw?: string | null): { text: string; pad: boolean } {
 }
 
 /**
- * Render the per-invoice OG card (real invoice summary, not generic). Returns an
- * ImageResponse. Served by the on-demand route `/api/og/[token]`, whose response the
- * edge cache keeps; nothing is stored (decision 0054).
+ * Render the per-invoice OG card (real invoice summary, not generic). Served by the on-demand route
+ * `/api/og/[token]`, whose response the edge cache keeps; nothing is stored (decision 0054).
+ *
+ * Returns the image together with what the backend answered for the token. Only `active` draws this
+ * invoice's card. Every other state draws the generic one ("A business", no amount), because the read
+ * failed or the link is dead, and the route keeps that one for a minute rather than a week.
  */
-export async function renderOgCard(token: string): Promise<ImageResponse> {
-  const shared = await getSharedInvoice(token);
+export async function renderOgCard(token: string): Promise<{ image: ImageResponse; state: SharedInvoiceLinkState }> {
+  const { state, data: shared } = await getSharedInvoiceResult(token);
 
   // Brand icon embedded as a data URL (no network fetch, same local + prod).
   const iconBuffer = await readFile(new URL("./og-brand-icon.png", import.meta.url));
@@ -62,7 +65,7 @@ export async function renderOgCard(token: string): Promise<ImageResponse> {
   const al = (amount ?? "").length;
   const amountSize = al <= 10 ? 70 : al <= 14 ? 58 : al <= 18 ? 48 : 40;
 
-  return new ImageResponse(
+  const image = new ImageResponse(
     (
       <div
         style={{
@@ -115,4 +118,5 @@ export async function renderOgCard(token: string): Promise<ImageResponse> {
     ),
     { ...OG_SIZE },
   );
+  return { image, state };
 }
