@@ -10,7 +10,7 @@ import { cn } from "@/lib/cn";
 import { formatMoney } from "@/lib/format";
 import { computeInvoiceTotals, computeLineItem, type DiscountType } from "@/lib/invoice-calc";
 import { nextBusinessInvoiceNumber } from "@/lib/invoice-number";
-import { invoicePreviewData, savedItemFields } from "@/lib/invoice-preview";
+import { invoicePreviewData, keptInvoiceFields, savedItemFields } from "@/lib/invoice-preview";
 import { InvoicePreviewDialog } from "./InvoicePreviewDialog";
 import type { Business, Product, Tax, InvoiceDetail, Template, InvoiceAsset } from "@/lib/data";
 import type { Client, InvoiceStatus } from "@/lib/types";
@@ -184,13 +184,14 @@ export function InvoiceForm({
       }));
 
     const payload = {
-      id: invoiceId, businessId, clientId, invoiceNumber, invoiceDate, dueDate, poNumber: null,
+      id: invoiceId, businessId, clientId, invoiceNumber, invoiceDate, dueDate,
       subtotal: totals.subtotal, discountAmount: totals.discountAmount, taxAmount: totals.taxAmount,
       shippingCost: totals.shippingCost, totalAmount: totals.total, status,
       discountType: discountValue ? discountType : null, discountValue: discountValue ? Number(discountValue) : null,
-      taxId: taxId || null, termsId: null, paymentMethodId: null, notes: notes || null,
-      templateId: templateId || null, signatureId: signatureId || null, stampId: stampId || null, language: null, currency,
-      signatureOffset: null, stampOffset: null, signatureScale: null, stampScale: null,
+      taxId: taxId || null, notes: notes || null,
+      templateId: templateId || null, signatureId: signatureId || null, stampId: stampId || null, currency,
+      // What the form does not show goes back as the invoice has it: the update would erase a null.
+      ...keptInvoiceFields(invoice),
       items: payloadItems,
     };
 
@@ -400,6 +401,7 @@ export function InvoiceForm({
           // Built from what Create would send, read back the way the saved invoice's page reads it.
           data={invoicePreviewData({
             invoiceNumber, invoiceDate, dueDate, status, currency, notes,
+            poNumber: invoice?.poNumber ?? null,
             items: items.filter((it) => it.name).map(savedItemFields),
             totals,
             business: businesses.find((b) => b.id === businessId) ?? null,

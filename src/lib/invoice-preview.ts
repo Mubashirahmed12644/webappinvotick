@@ -1,10 +1,39 @@
 // The invoice form's Preview: the render data the invoice will have once it is saved, built from
 // exactly what the form is about to send. It is drawn by the same <A4PagedFrame> / <InvoiceDocument>
 // as the share link, the app's Online tab and the free tool — there is no second renderer to drift.
-import type { Business, InvoiceAsset, InvoiceRenderData, RenderItem, Template } from "./data";
+import type { Business, InvoiceAsset, InvoiceDetail, InvoiceRenderData, RenderItem, Template } from "./data";
 import type { Client, InvoiceStatus } from "./types";
 import { computeLineItem, type DiscountType, type InvoiceTotals } from "./invoice-calc";
 import { templateLook } from "./render-look";
+
+/** The fields of an invoice that the form does not show. */
+export type KeptInvoiceFields = Pick<
+  InvoiceDetail,
+  "poNumber" | "termsId" | "paymentInstructionId" | "language" | "signatureOffset" | "stampOffset" | "signatureScale" | "stampScale"
+>;
+
+/**
+ * What the request carries for the fields the form does not show: the invoice's own values.
+ *
+ * PUT /v1/invoices/{id} copies each of these from the request onto the invoice
+ * (InvoiceService.updateInvoice), so the null the form used to send erased them on every edit: the
+ * PO number, the terms, the payment instructions, the language, and where the signature and the
+ * stamp had been placed and at what size. A new invoice has none of them and sends null, as before.
+ *
+ * `paymentMethodId` is the request's name for what the detail calls `paymentInstructionId`.
+ */
+export function keptInvoiceFields(invoice?: KeptInvoiceFields | null) {
+  return {
+    poNumber: invoice?.poNumber ?? null,
+    termsId: invoice?.termsId ?? null,
+    paymentMethodId: invoice?.paymentInstructionId ?? null,
+    language: invoice?.language ?? null,
+    signatureOffset: invoice?.signatureOffset ?? null,
+    stampOffset: invoice?.stampOffset ?? null,
+    signatureScale: invoice?.signatureScale ?? null,
+    stampScale: invoice?.stampScale ?? null,
+  };
+}
 
 export interface FormItemValues {
   name: string;
@@ -52,6 +81,8 @@ export interface InvoicePreviewInput {
   invoiceNumber: string;
   invoiceDate: string;
   dueDate: string;
+  /** The PO number an edit keeps. The form has no field for one, so a new invoice has none. */
+  poNumber?: string | null;
   status: InvoiceStatus;
   currency: string;
   notes: string;
@@ -100,8 +131,8 @@ export function invoicePreviewData(p: InvoicePreviewInput): InvoiceRenderData {
     invoiceNumber: p.invoiceNumber,
     invoiceDate: p.invoiceDate,
     dueDate: p.dueDate || null,
-    // The form has no PO field and sends null, so the saved invoice has none.
-    poNumber: null,
+    // The form has no PO field: an edit keeps the invoice's own, and a new invoice has none.
+    poNumber: p.poNumber ?? null,
     status: p.status,
     currency: p.currency,
     subtotal: p.totals.subtotal,

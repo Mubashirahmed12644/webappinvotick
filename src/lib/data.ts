@@ -330,6 +330,15 @@ export interface InvoiceDetail {
   templateId?: string | null;
   signatureId?: string | null;
   stampId?: string | null;
+  // The form shows none of these, and an edit sends each back as it is (keptInvoiceFields): the
+  // update copies every field of the request, so one left out would be erased.
+  termsId?: string | null;
+  paymentInstructionId?: string | null;
+  language?: string | null;
+  signatureOffset?: string | null;
+  stampOffset?: string | null;
+  signatureScale?: string | null;
+  stampScale?: string | null;
   items: InvoiceItemDetail[];
 }
 
