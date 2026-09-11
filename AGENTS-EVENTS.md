@@ -504,6 +504,22 @@ read as *a step nobody reached*. `AnalyticsVersionGate` now exempts `Platform.We
 was never about age; it is about one body of event work on one client. **Before adding a client,
 walk the ingestion path and ask what silently drops it** — the answer is not in the client's code.
 
+### 1.18 An id on an event is a join key, not a dimension. *(decided 2026-09-11)*
+
+`request_id` and `record_id` on `sync_failed` (decision 0050) exist to find one failure: in the
+server's log, and in its `sync_failure` row. Grouped, they return 200 values of 1 each. So Event
+detail must show id-like keys as a distinct count, never as a breakdown.
+
+Two more rules from the same change:
+- Every parameter is stored as a string, so CAST before comparing versions or statuses.
+- A class name reaches us only if R8 keeps it. `exception_class` depends on
+  `-keepnames class * extends java.lang.Throwable`.
+
+**The same night, the §1.17 trap again, on a client that already existed.** The version floor refused
+every iOS batch. iOS sends its build number (15) as `appVersionCode`, which is below 91, so TestFlight
+testers read as zero while every batch was answered 200. The floor is now Android's: Web and iOS are
+exempt.
+
 ### 1.10 Layers
 
 `intent.screen` · `intent.action` · `response.outcome` · `response.gate` · `response.interruption` ·
