@@ -1,6 +1,6 @@
 # 0047 — Play's answer decides premium on a device; only the ad's show waits for it
 
-**Status:** decided, built (app 1.4.6, not yet released) · **Date:** 2026-09-11 · **Goals:** G3 (trust),
+**Status:** decided, built (next release 1.4.5, versionCode 100 — not on Play yet) · **Date:** 2026-09-11 · **Goals:** G3 (trust),
 monetisation · **Related:** [0041](0041-premium-is-a-date-on-the-device-refreshed-daily.md) (planned —
 the server half)
 
