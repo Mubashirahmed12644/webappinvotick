@@ -3,7 +3,14 @@
 // as the share link, the app's Online tab and the free tool — there is no second renderer to drift.
 import type { Business, InvoiceAsset, InvoiceDetail, InvoiceRenderData, RenderItem, Template } from "./data";
 import type { Client, InvoiceStatus } from "./types";
-import { computeLineItem, discountTypeOf, type DiscountType, type InvoiceTotals, type LineItemInput } from "./invoice-calc";
+import {
+  computeInvoiceTotals,
+  computeLineItem,
+  discountTypeOf,
+  type DiscountType,
+  type InvoiceTotals,
+  type LineItemInput,
+} from "./invoice-calc";
 import { sortByOrder } from "./givens";
 import { templateLook } from "./render-look";
 
@@ -72,19 +79,51 @@ export interface FormItemValues {
   kept?: { netPrice: number; key: string };
 }
 
+/** A form row as prepareInvoice reads it. */
+export interface FormRow extends FormItemValues {
+  /**
+   * On the saved invoice already. The update only adds and changes items, so an item it is not sent
+   * stays on the invoice: a saved row is always sent.
+   */
+  saved?: boolean;
+}
+
+const PLAIN_NUMBER = /^(?:\d+(?:\.\d*)?|\.\d+)$/;
+
+/**
+ * A number exactly as typed: digits with at most one decimal point, spaces around it ignored, and a
+ * blank field as 0. Anything else is NaN: "1,000", "-5", "2e3", "12abc". The form used to read such
+ * input two ways at once, parseFloat for the totals and Number for the request, so "1,000" counted
+ * as 1 in the totals and went out as 0.
+ */
+export function typedNumber(raw: string): number {
+  const s = raw.trim();
+  if (s === "") return 0;
+  return PLAIN_NUMBER.test(s) ? Number(s) : NaN;
+}
+
+function decimalsOf(raw: string): number {
+  const s = raw.trim();
+  const dot = s.indexOf(".");
+  return dot < 0 ? 0 : s.length - dot - 1;
+}
+
 /** A row's price, discount and tax as one value. A saved item's kept net price holds while it is unchanged. */
 export function moneyKey(it: Pick<FormItemValues, "unitPrice" | "discountValue" | "discountType" | "taxValue" | "taxType">): string {
   return [it.unitPrice.trim(), it.discountValue.trim(), it.discountType, it.taxValue.trim(), it.taxType ?? "PERCENTAGE"].join("|");
 }
 
-/** A row as the calculator reads it. A saved item that has not been changed keeps its own net price. */
+/**
+ * A row as the calculator reads it: every number through typedNumber, and a saved item that has not
+ * been changed at its own net price.
+ */
 export function lineInput(it: FormItemValues): LineItemInput {
   return {
-    quantity: it.quantity,
-    unitPrice: it.unitPrice,
-    discountValue: it.discountValue,
+    quantity: typedNumber(it.quantity),
+    unitPrice: typedNumber(it.unitPrice),
+    discountValue: typedNumber(it.discountValue),
     discountType: it.discountType,
-    taxValue: it.taxValue,
+    taxValue: typedNumber(it.taxValue),
     taxType: it.taxType,
     netPrice: it.kept && it.kept.key === moneyKey(it) ? it.kept.netPrice : undefined,
   };
@@ -94,6 +133,9 @@ export function lineInput(it: FormItemValues): LineItemInput {
  * One item as the form sends it (POST/PUT /v1/invoices). Create and Preview both read this, so the
  * preview cannot show an item differently from the one that gets saved.
  *
+ * Every number is the one typed (typedNumber), with no fallback: prepareInvoice sends only rows whose
+ * numbers it could read. The form used to send a quantity it could not read, or a 0, as 1.
+ *
  * There is no tax rate here because the request has no field for one (`InvoiceItemRequest`): an
  * item's own tax reaches the server only inside `netPrice`. A new item therefore shows 0.00% in the
  * item Tax column while its Amount includes the tax, and so does the preview. A saved item keeps the
@@ -101,18 +143,126 @@ export function lineInput(it: FormItemValues): LineItemInput {
  */
 export function savedItemFields(it: FormItemValues) {
   const c = computeLineItem(lineInput(it));
+  const discount = typedNumber(it.discountValue);
   return {
     name: it.name,
     description: it.description || null,
-    quantity: Number(it.quantity) || 1,
-    unitPrice: Number(it.unitPrice) || 0,
+    quantity: typedNumber(it.quantity),
+    unitPrice: typedNumber(it.unitPrice),
     netPrice: c.netPrice,
-    discount: it.discountValue ? Number(it.discountValue) : null,
-    discountType: it.discountValue ? it.discountType : null,
+    discount: discount ? discount : null,
+    discountType: discount ? it.discountType : null,
   };
 }
 
 export type SavedItemFields = ReturnType<typeof savedItemFields>;
+
+export interface PreparedInvoice<R extends FormRow> {
+  /** The rows that will be sent, each with the fields it is sent with. The totals come from these alone. */
+  sent: { row: R; fields: SavedItemFields }[];
+  totals: InvoiceTotals;
+  /** What stands between the form and Save, in the form's order. Empty when it can be sent. */
+  problems: string[];
+  /** Each row's own problem, by its index in the rows given; null for a row with none, or one left out. */
+  rowProblems: (string | null)[];
+  /** The invoice's own discount and shipping, as they will be sent. */
+  discountValue: number;
+  shippingCost: number;
+}
+
+const SKIP = Symbol("skip");
+
+/**
+ * The invoice as Save would send it, read once from the form: which rows go, what each goes with, the
+ * totals over exactly those rows, and what stands in the way. Save, the Summary and the Preview all
+ * read this one result, so none of them can count a row that another leaves out. The form's totals
+ * used to run over every row while the request carried only the named ones, with a quantity of 0 sent
+ * as 1: rows adding up to 214 went out under a subtotal of 239.
+ *
+ * - A row left completely empty is the one the form offers, and is not sent. A row with anything in it
+ *   and no name is a problem, so a typed price cannot vanish from the invoice.
+ * - A saved row is always sent (FormRow.saved).
+ * - A number the server would store as a different one is refused rather than sent: a quantity below
+ *   1 (InvoiceItem.normalizeMoney raises it to 1), more than 2 decimals (it keeps 2), and a discount
+ *   past the price or past the subtotal (it stores the negative amount as 0.00).
+ */
+export function prepareInvoice<R extends FormRow>(input: {
+  rows: R[];
+  discountValue: string;
+  discountType: DiscountType;
+  /** The chosen tax's rate. The invoice's own tax is always a percentage. */
+  taxRate: number | string;
+  shipping: string;
+}): PreparedInvoice<R> {
+  const problems: string[] = [];
+  const rowProblems: (string | null)[] = [];
+  const sent: { row: R; fields: SavedItemFields }[] = [];
+  input.rows.forEach((row, i) => {
+    const problem = rowProblem(row, i + 1);
+    if (problem === SKIP) {
+      rowProblems.push(null);
+      return;
+    }
+    rowProblems.push(problem);
+    if (problem) problems.push(problem);
+    else sent.push({ row, fields: savedItemFields(row) });
+  });
+  if (sent.length === 0 && problems.length === 0) problems.push("Add at least one item.");
+
+  const discountValue = invoiceNumber("The discount", input.discountValue, problems);
+  const shippingCost = invoiceNumber("The shipping", input.shipping, problems);
+  const totals = computeInvoiceTotals({
+    // Each row at the net price it is sent with, to the cent as the server keeps it, so the subtotal
+    // is what the invoice's rows add up to on its page (netPrice × quantity). From the unrounded unit
+    // price, 99.99 + 5% at a quantity of 100 came to 10,498.95 against rows showing 10,499.00.
+    items: sent.map(({ row, fields }) => ({ ...lineInput(row), netPrice: fields.netPrice })),
+    invoiceDiscountValue: discountValue,
+    invoiceDiscountType: input.discountType,
+    invoiceTaxRate: input.taxRate,
+    shippingCost,
+  });
+  if (totals.discountedSubtotal < 0) problems.push("The discount is more than the subtotal.");
+  return { sent, totals, problems, rowProblems, discountValue, shippingCost };
+}
+
+function rowProblem(row: FormRow, n: number): string | null | typeof SKIP {
+  if (!row.name.trim()) {
+    const empty = [row.description, row.unitPrice, row.discountValue, row.taxValue].every((v) => !v.trim());
+    if (empty && !row.saved) return SKIP;
+    return row.saved
+      ? `Item ${n} has no name. Give it its name back: a saved item can't be removed on the web yet.`
+      : `Item ${n} has no name. Give it one, or remove the row.`;
+  }
+  const q = row.quantity.trim();
+  if (!q) return `Item ${n}: enter a quantity.`;
+  const quantity = typedNumber(q);
+  if (Number.isNaN(quantity)) return `Item ${n}: "${q}" is not a quantity. Use a number such as 2 or 1.5.`;
+  if (quantity < 1) return `Item ${n}: the quantity must be at least 1. A smaller quantity would be saved as 1.`;
+  if (decimalsOf(q) > 2) return `Item ${n}: the quantity can have at most 2 decimal places.`;
+  const typed = [
+    ["price", row.unitPrice],
+    ["discount", row.discountValue],
+    ["tax", row.taxValue],
+  ] as const;
+  for (const [label, raw] of typed) {
+    if (Number.isNaN(typedNumber(raw))) return `Item ${n}: the ${label} "${raw.trim()}" is not a number. Use digits only, such as 1500 or 12.50.`;
+  }
+  if (decimalsOf(row.unitPrice) > 2) return `Item ${n}: the price can have at most 2 decimal places.`;
+  if (decimalsOf(row.discountValue) > 2) return `Item ${n}: the discount can have at most 2 decimal places.`;
+  if (savedItemFields(row).netPrice < 0) return `Item ${n}: the discount is more than the price.`;
+  return null;
+}
+
+/** The invoice's own discount or shipping as typed; a problem, and 0, when it cannot be read. */
+function invoiceNumber(label: string, raw: string, problems: string[]): number {
+  const value = typedNumber(raw);
+  if (Number.isNaN(value)) {
+    problems.push(`${label} "${raw.trim()}" is not a number. Use digits only, such as 500 or 12.50.`);
+    return 0;
+  }
+  if (decimalsOf(raw) > 2) problems.push(`${label} can have at most 2 decimal places.`);
+  return value;
+}
 
 /**
  * One item of a saved invoice as the edit form starts from it: the sync pull's row, which is what the
@@ -199,6 +349,7 @@ export function formRowFromSaved(it: SavedInvoiceItem) {
   const stored = Number(it.netPrice);
   return {
     id: it.id,
+    saved: true,
     inventoryItemId: it.inventoryItemId ?? "",
     taxId: it.taxId,
     unitTypeId: it.unitTypeId,
@@ -223,9 +374,9 @@ export interface InvoicePreviewInput {
   status: InvoiceStatus;
   currency: string;
   notes: string;
-  /** The items that will be sent: `savedItemFields` of every item with a name. */
+  /** The items that will be sent: prepareInvoice's `sent`. */
   items: SavedItemFields[];
-  /** The form's own totals — the same numbers the request carries. */
+  /** The totals over exactly those items: the same numbers the request carries. */
   totals: InvoiceTotals;
   business: Business | null;
   client: Client | null;

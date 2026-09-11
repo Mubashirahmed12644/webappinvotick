@@ -19,11 +19,14 @@ import type { InvoiceRenderData } from "@/lib/data";
 export function InvoicePreviewDialog({
   data,
   businessMissing,
+  problems = [],
   saveLabel,
   onClose,
 }: {
   data: InvoiceRenderData;
   businessMissing: boolean;
+  /** What stands between the form and Save. The preview draws only the items that can be sent. */
+  problems?: string[];
   saveLabel: string;
   onClose: () => void;
 }) {
@@ -65,6 +68,16 @@ export function InvoicePreviewDialog({
             No business chosen yet, so &ldquo;{PLACEHOLDER_BUSINESS_NAME}&rdquo; stands in for it. The invoice can be
             created once you choose one.
           </p>
+        )}
+        {problems.length > 0 && (
+          <div className="shrink-0 bg-[var(--color-error-container)] px-4 py-2 text-sm text-[var(--color-on-error-container)]">
+            <p className="font-semibold">To fix before saving:</p>
+            <ul className="list-disc pl-5">
+              {problems.map((p) => (
+                <li key={p}>{p}</li>
+              ))}
+            </ul>
+          </div>
         )}
         {/* A4PagedFrame fills its positioned parent. */}
         <div className="relative min-h-0 flex-1">

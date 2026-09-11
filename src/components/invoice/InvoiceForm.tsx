@@ -8,23 +8,22 @@ import { Button } from "@/components/ui/Button";
 import { TextField } from "@/components/ui/TextField";
 import { cn } from "@/lib/cn";
 import { formatMoney } from "@/lib/format";
-import { computeInvoiceTotals, computeLineItem, discountTypeOf, type DiscountType } from "@/lib/invoice-calc";
+import { discountTypeOf, type DiscountType } from "@/lib/invoice-calc";
 import { nextBusinessInvoiceNumber } from "@/lib/invoice-number";
 import {
   editBlocker,
   formRowFromSaved,
   invoicePreviewData,
   keptInvoiceFields,
-  lineInput,
-  savedItemFields,
-  type FormItemValues,
+  prepareInvoice,
+  type FormRow,
   type SavedInvoiceItem,
 } from "@/lib/invoice-preview";
 import { InvoicePreviewDialog } from "./InvoicePreviewDialog";
 import type { Business, Product, Tax, InvoiceDetail, Template, InvoiceAsset } from "@/lib/data";
 import type { Client, InvoiceStatus } from "@/lib/types";
 
-interface FormItem extends FormItemValues {
+interface FormItem extends FormRow {
   id: string;
   inventoryItemId: string;
   // A saved item's links, sent back as it has them. A new row has none.
@@ -59,7 +58,7 @@ const today = () => new Date().toISOString().slice(0, 10);
 
 function blankItem(): FormItem {
   return {
-    id: uuid(), inventoryItemId: "", taxId: null, unitTypeId: null, itemCategoryId: null,
+    id: uuid(), saved: false, inventoryItemId: "", taxId: null, unitTypeId: null, itemCategoryId: null,
     name: "", description: "", quantity: "1", unitPrice: "", discountValue: "", discountType: "PERCENTAGE",
     taxValue: "", taxType: "PERCENTAGE",
   };
@@ -127,21 +126,20 @@ export function InvoiceForm({
   const [items, setItems] = useState<FormItem[]>(() => (savedItems.length ? savedItems.map(formRowFromSaved) : [blankItem()]));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Each row's own problem shows beside it once Save has been tried; the Summary never counts it.
+  const [showRowProblems, setShowRowProblems] = useState(false);
 
   const selectedTax = taxes.find((t) => t.id === taxId);
   const shownClients = businessId ? clients.filter((c) => !c.businessId || c.businessId === businessId) : clients;
 
-  const totals = useMemo(
-    () =>
-      computeInvoiceTotals({
-        items: items.map(lineInput),
-        invoiceDiscountValue: discountValue,
-        invoiceDiscountType: discountType,
-        invoiceTaxRate: selectedTax?.rate ?? 0,
-        shippingCost: shipping,
-      }),
+  // What Save sends, and what the Summary and the Preview show: the rows read once, the totals over
+  // exactly the rows that go, and what stands in the way (prepareInvoice).
+  const prepared = useMemo(
+    () => prepareInvoice({ rows: items, discountValue, discountType, taxRate: selectedTax?.rate ?? 0, shipping }),
     [items, discountValue, discountType, selectedTax, shipping],
   );
+  const totals = prepared.totals;
+  const sentFields = new Map(prepared.sent.map((s) => [s.row.id, s.fields] as const));
 
   function chooseBusiness(id: string) {
     setBusinessId(id);
@@ -180,24 +178,26 @@ export function InvoiceForm({
     if (!clientId) return setError("Please choose a client.");
     const clientBusiness = businessOfClient(clientId);
     if (clientBusiness && clientBusiness !== businessId) return setError("This client belongs to another business.");
-    if (items.length === 0 || items.every((i) => !i.name)) return setError("Add at least one item.");
+    if (prepared.problems.length) {
+      setShowRowProblems(true);
+      return setError(prepared.problems.join("\n"));
+    }
 
     const invoiceId = invoice?.id ?? uuid();
-    // The item's money fields come from savedItemFields, which Preview reads as well.
-    const payloadItems = items
-      .filter((it) => it.name)
-      .map((it) => ({
-        id: it.id, invoiceId, inventoryItemId: it.inventoryItemId || uuid(),
-        // A saved item's links go back as it has them: the update copies each, and a null erases it.
-        taxId: it.taxId, unitTypeId: it.unitTypeId, itemCategoryId: it.itemCategoryId,
-        ...savedItemFields(it),
-      }));
+    // Exactly the rows prepareInvoice read, each with the fields it computed; the totals are theirs.
+    const payloadItems = prepared.sent.map(({ row, fields }) => ({
+      id: row.id, invoiceId, inventoryItemId: row.inventoryItemId || uuid(),
+      // A saved item's links go back as it has them: the update copies each, and a null erases it.
+      taxId: row.taxId, unitTypeId: row.unitTypeId, itemCategoryId: row.itemCategoryId,
+      ...fields,
+    }));
 
     const payload = {
       id: invoiceId, businessId, clientId, invoiceNumber, invoiceDate, dueDate,
       subtotal: totals.subtotal, discountAmount: totals.discountAmount, taxAmount: totals.taxAmount,
       shippingCost: totals.shippingCost, totalAmount: totals.total, status,
-      discountType: discountValue ? discountType : null, discountValue: discountValue ? Number(discountValue) : null,
+      // Sent even when cleared: the update keeps the old discount when it is sent null.
+      discountType, discountValue: prepared.discountValue,
       taxId: taxId || null, notes: notes || null,
       templateId: templateId || null, signatureId: signatureId || null, stampId: stampId || null, currency,
       // What the form does not show goes back as the invoice has it: the update would erase a null.
@@ -237,7 +237,7 @@ export function InvoiceForm({
       </div>
 
       {error && (
-        <div className="rounded-[var(--radius-sm)] bg-[var(--color-error-container)] px-4 py-2.5 text-sm font-medium text-[var(--color-on-error-container)]">{error}</div>
+        <div className="whitespace-pre-line rounded-[var(--radius-sm)] bg-[var(--color-error-container)] px-4 py-2.5 text-sm font-medium text-[var(--color-on-error-container)]">{error}</div>
       )}
       {blocker && error !== blocker && (
         <div className="rounded-[var(--radius-sm)] bg-[var(--color-secondary-container)] px-4 py-2.5 text-sm font-medium text-[var(--color-on-secondary-container)]">{blocker}</div>
@@ -332,7 +332,9 @@ export function InvoiceForm({
         </div>
         <div className="space-y-3">
           {items.map((it, idx) => {
-            const c = computeLineItem(lineInput(it));
+            // Only a row that will be sent has an amount, and the Summary adds up exactly these.
+            const fields = sentFields.get(it.id);
+            const problem = showRowProblems ? prepared.rowProblems[idx] : null;
             return (
               <div key={it.id} className="rounded-[var(--radius-sm)] border border-[var(--color-outline-variant)] p-3">
                 <div className="grid gap-2 sm:grid-cols-12">
@@ -346,7 +348,7 @@ export function InvoiceForm({
                   <input placeholder="Qty" inputMode="decimal" value={it.quantity} onChange={(e) => updateItem(it.id, { quantity: e.target.value })} className={cn(selectCls, "sm:col-span-2 h-9")} />
                   <input placeholder="Unit price" inputMode="decimal" value={it.unitPrice} onChange={(e) => updateItem(it.id, { unitPrice: e.target.value })} className={cn(selectCls, "sm:col-span-3 h-9")} />
                   <div className="flex items-center justify-end sm:col-span-2">
-                    <span className="text-sm font-bold text-[var(--color-on-surface)]">{formatMoney(c.lineTotal, currency)}</span>
+                    <span className="text-sm font-bold text-[var(--color-on-surface)]">{fields ? formatMoney(fields.netPrice * fields.quantity, currency) : "—"}</span>
                   </div>
                   <input placeholder="Discount" inputMode="decimal" value={it.discountValue} onChange={(e) => updateItem(it.id, { discountValue: e.target.value })} className={cn(selectCls, "sm:col-span-2 h-9")} />
                   <select value={it.discountType} onChange={(e) => updateItem(it.id, { discountType: e.target.value as DiscountType })} className={cn(selectCls, "sm:col-span-2 h-9")}>
@@ -355,13 +357,19 @@ export function InvoiceForm({
                   </select>
                   <input placeholder="Item tax %" inputMode="decimal" value={it.taxValue} onChange={(e) => updateItem(it.id, { taxValue: e.target.value })} className={cn(selectCls, "sm:col-span-2 h-9")} />
                   <div className="flex items-center sm:col-span-6 sm:justify-end">
-                    {items.length > 1 && (
-                      <button type="button" onClick={() => setItems((p) => p.filter((x) => x.id !== it.id))} className="text-sm font-semibold text-[var(--color-error)] hover:underline">
-                        Remove item {idx + 1}
-                      </button>
-                    )}
+                    {/* A saved item cannot be taken off from here: the update only adds and changes items,
+                        so the server would keep it on the invoice while the total dropped it. */}
+                    {items.length > 1 &&
+                      (it.saved ? (
+                        <span className="text-xs text-[var(--color-on-surface-variant)]">Saved items can&apos;t be removed on the web yet.</span>
+                      ) : (
+                        <button type="button" onClick={() => setItems((p) => p.filter((x) => x.id !== it.id))} className="text-sm font-semibold text-[var(--color-error)] hover:underline">
+                          Remove item {idx + 1}
+                        </button>
+                      ))}
                   </div>
                 </div>
+                {problem && <p className="mt-2 text-xs font-medium text-[var(--color-error)]">{problem}</p>}
               </div>
             );
           })}
@@ -415,7 +423,7 @@ export function InvoiceForm({
           data={invoicePreviewData({
             invoiceNumber, invoiceDate, dueDate, status, currency, notes,
             poNumber: invoice?.poNumber ?? null,
-            items: items.filter((it) => it.name).map(savedItemFields),
+            items: prepared.sent.map((s) => s.fields),
             totals,
             business: businesses.find((b) => b.id === businessId) ?? null,
             client: clients.find((c) => c.id === clientId) ?? null,
@@ -423,6 +431,7 @@ export function InvoiceForm({
             signatureId, stampId, signatures, stamps, headers, backgrounds,
           })}
           businessMissing={!businessId}
+          problems={prepared.problems}
           saveLabel={saveLabel}
           onClose={closePreview}
         />
