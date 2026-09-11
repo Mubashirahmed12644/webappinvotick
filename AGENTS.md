@@ -496,7 +496,12 @@ name `invoice_shared` on pre-release branches.
    the user brings an idea.
 3. **Log every decision** in `docs/decisions/` the moment it is made — including the options that
    were **rejected**. Most wrong turns come from re-proposing something already rejected.
-4. **Roman Urdu**, short answers, technical terms kept but glossed in quotes.
+4. **Roman Urdu, in plain words, short.** The owner is not a developer — their background is an
+   MBA — and has asked more than once for no technical terms (2026-08-16, and again 2026-09-11:
+   *"mujh sy technical terms main baat nhi kerna… main developer nhi hon"*).
+   - Explain with everyday comparisons.
+   - Words the owner uses themselves are fine: sync, push, queue, server, DB.
+   - Any other technical term only when there is no way around it, explained in the same sentence.
 5. **Do not self-verify** with screenshot/device loops unless asked. Finish, report, user checks.
 6. Prefer Maestro flows + logcat/API traces over tapping coordinates and reading screenshots.
 7. Unexplained state changes on the shared test device are usually the user, not a bug — ask first.
@@ -504,6 +509,14 @@ name `invoice_shared` on pre-release branches.
    (`.claude/agents/user-journey.md`) — *standing instruction from the user, 2026-09-04*. Diagnosing
    the journey, reading or adding any analytics event, the send policy, the panel's funnel pages: the
    agent owns that context. If a session starts on this without it, invoke it first.
+9. **Sync work loops in the `sync` agent, and premium/billing work loops in the `billing` agent**
+   (`.claude/agents/sync.md`, `.claude/agents/billing.md`) — *standing instruction from the user,
+   2026-09-11*, decision [0051](docs/decisions/0051-sync-and-billing-each-have-an-owner-agent.md).
+   - Each file holds its domain's whole policy in one place. When a rule is decided, it is written
+     there first, and other files point to it.
+   - Memory keeps the incidents and the dated state.
+   - When a harness does not list these agents, spawn a general-purpose agent told to read and follow
+     the file, and put only the task itself in the prompt.
 
 ## 8. Where the rest of the knowledge lives
 
