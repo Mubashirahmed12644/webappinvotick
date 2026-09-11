@@ -37,6 +37,8 @@ export interface InvoiceSummary {
   totalAmount: string; // string-encoded decimal
   currency: string;
   status: InvoiceStatus;
+  /** What was paid against this invoice: the sum of its invoice payments (the app's totalPaidAmount). */
+  paidAmount?: number;
   isSynced?: boolean;
   isDeleted?: boolean;
   createdAt?: string;

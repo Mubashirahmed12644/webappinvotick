@@ -4,6 +4,7 @@ import { config } from "./config";
 import { backendFetch } from "./backend";
 import { mockClients, mockInvoices, mockStats } from "./mock";
 import { templateLook } from "./render-look";
+import { localDate, summarizeInvoices } from "./invoice-status";
 import { sortByOrder } from "./givens";
 import type { Client, InvoiceStatus, InvoiceSummary } from "./types";
 
@@ -159,10 +160,20 @@ interface RawEstimate {
   isDeleted?: boolean;
 }
 
+// One payment applied to one invoice (sync `invoicePayments`). An invoice's paid amount is the sum of
+// its rows that are not deleted — the same sum as the app's totalPaidAmount (InvoiceDao).
+interface RawInvoicePayment {
+  id: string;
+  invoiceId: string;
+  amountApplied?: string | null;
+  isDeleted?: boolean;
+}
+
 interface SyncPullData {
   clients?: RawClient[] | null;
   invoices?: RawInvoice[] | null;
   invoiceItems?: RawInvoiceItem[] | null;
+  invoicePayments?: RawInvoicePayment[] | null;
   inventoryItems?: RawProduct[] | null;
   taxes?: RawTax[] | null;
   businesses?: RawBusiness[] | null;
@@ -613,6 +624,13 @@ export const getWorkspace = cache(async (): Promise<WorkspaceData> => {
     country: c.country,
   }));
 
+  // What was paid against each invoice: the sum of its invoice payments that are not deleted.
+  const paidByInvoice = new Map<string, number>();
+  for (const p of data.invoicePayments ?? []) {
+    if (p.isDeleted) continue;
+    paidByInvoice.set(p.invoiceId, (paidByInvoice.get(p.invoiceId) ?? 0) + num(p.amountApplied));
+  }
+
   const invoices: InvoiceSummary[] = rawInvoices
     .map((i) => ({
       id: i.id,
@@ -625,13 +643,13 @@ export const getWorkspace = cache(async (): Promise<WorkspaceData> => {
       totalAmount: i.totalAmount,
       currency: i.currency ?? "USD",
       status: i.status,
+      paidAmount: paidByInvoice.get(i.id) ?? 0,
     }))
     .sort((a, b) => (a.invoiceDate < b.invoiceDate ? 1 : -1));
 
-  const totalRevenue = invoices.reduce((sum, i) => sum + num(i.totalAmount), 0);
-  const paid = invoices
-    .filter((i) => i.status === "PAID")
-    .reduce((sum, i) => sum + num(i.totalAmount), 0);
+  // The app's rule (invoice-status.ts): a DRAFT or a CANCELLED invoice is not money anybody owes.
+  // The server's date decides "overdue" here; nothing reads these stats today.
+  const summary = summarizeInvoices(invoices, localDate());
 
   return {
     clients,
@@ -650,9 +668,9 @@ export const getWorkspace = cache(async (): Promise<WorkspaceData> => {
     backgrounds,
     primaryBusinessId: businesses[0]?.id ?? null,
     stats: {
-      totalRevenue,
-      paid,
-      outstanding: totalRevenue - paid,
+      totalRevenue: summary.revenue,
+      paid: summary.collected,
+      outstanding: summary.outstanding,
       invoiceCount: invoices.length,
       clientCount: clients.length,
     },

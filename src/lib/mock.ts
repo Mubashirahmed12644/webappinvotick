@@ -22,7 +22,7 @@ export const mockClients: Client[] = [
 ];
 
 export const mockInvoices: InvoiceSummary[] = [
-  { id: "i1", clientId: "c1", clientName: "Acme Inc", invoiceNumber: "INV-0001", invoiceDate: "2026-06-01", dueDate: "2026-06-15", totalAmount: "1250.00", currency: "USD", status: "PAID" },
+  { id: "i1", clientId: "c1", clientName: "Acme Inc", invoiceNumber: "INV-0001", invoiceDate: "2026-06-01", dueDate: "2026-06-15", totalAmount: "1250.00", currency: "USD", status: "PAID", paidAmount: 1250 },
   { id: "i2", clientId: "c2", clientName: "Globex Corp", invoiceNumber: "INV-0002", invoiceDate: "2026-06-10", dueDate: "2026-06-24", totalAmount: "3400.50", currency: "USD", status: "SENT" },
   { id: "i3", clientId: "c3", clientName: "Stark Industries", invoiceNumber: "INV-0003", invoiceDate: "2026-06-20", dueDate: "2026-07-04", totalAmount: "820.00", currency: "USD", status: "OVERDUE" },
   { id: "i4", clientId: "c1", clientName: "Acme Inc", invoiceNumber: "INV-0004", invoiceDate: "2026-06-28", dueDate: "2026-07-12", totalAmount: "560.00", currency: "USD", status: "DRAFT" },

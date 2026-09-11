@@ -1,10 +1,14 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { formatMoney, formatDate } from "@/lib/format";
 import { resolveBusinessView, saveBusinessView, useStoredBusinessView } from "@/lib/business-view";
+import { localDate, statusNow, summarizeInvoices, type StatusNow } from "@/lib/invoice-status";
 import type { InvoiceSummary } from "@/lib/types";
+
+// The viewer's date is read, not watched: nothing to subscribe to.
+const noSubscription = () => () => {};
 
 const C = {
   primary: "#0D4DC0",
@@ -62,15 +66,16 @@ const CalIcon = ({ color = C.grey, size = 11 }: { color?: string; size?: number 
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M7 3v3M17 3v3M4 8h16M5 5h14v16H5z" /></svg>
 );
 
+// Paid is what the invoice's payments add up to, as in the app, not a reading of its status.
 function paidUnpaid(inv: InvoiceSummary): { paid: number; unpaid: number; total: number } {
   const total = n(inv.totalAmount);
-  const paid = inv.status.toUpperCase() === "PAID" ? total : 0;
+  const paid = n(inv.paidAmount);
   return { paid, unpaid: total - paid, total };
 }
 
 /* ---------- Card (mobile / tablet grid) ---------- */
-function InvoiceCard({ inv }: { inv: InvoiceSummary }) {
-  const st = statusStyle(inv.status);
+function InvoiceCard({ inv, status }: { inv: InvoiceSummary; status: StatusNow }) {
+  const st = statusStyle(status);
   const { paid, unpaid, total } = paidUnpaid(inv);
   return (
     <Link
@@ -103,8 +108,8 @@ function InvoiceCard({ inv }: { inv: InvoiceSummary }) {
 }
 
 /* ---------- Row (desktop list pane) ---------- */
-function InvoiceRow({ inv, active, onSelect }: { inv: InvoiceSummary; active: boolean; onSelect: () => void }) {
-  const st = statusStyle(inv.status);
+function InvoiceRow({ inv, status, active, onSelect }: { inv: InvoiceSummary; status: StatusNow; active: boolean; onSelect: () => void }) {
+  const st = statusStyle(status);
   return (
     <button
       onClick={onSelect}
@@ -129,15 +134,15 @@ function InvoiceRow({ inv, active, onSelect }: { inv: InvoiceSummary; active: bo
 }
 
 /* ---------- Detail pane (desktop) ---------- */
-function DetailPane({ inv }: { inv: InvoiceSummary | null }) {
-  if (!inv) {
+function DetailPane({ inv, status }: { inv: InvoiceSummary | null; status: StatusNow | null }) {
+  if (!inv || !status) {
     return (
       <div className="flex h-[60vh] items-center justify-center rounded-[20px] bg-white text-sm" style={{ color: C.grey, boxShadow: "0 4px 16px rgba(15,23,42,0.06)" }}>
         Select an invoice to preview.
       </div>
     );
   }
-  const st = statusStyle(inv.status);
+  const st = statusStyle(status);
   const { paid, unpaid, total } = paidUnpaid(inv);
   return (
     <div className="sticky top-3 rounded-[20px] bg-white p-5" style={{ boxShadow: "0 4px 16px rgba(15,23,42,0.06)" }}>
@@ -266,11 +271,14 @@ export function InvoiceHome({
   businesses,
   currency,
   userName,
+  today: serverToday,
 }: {
   invoices: InvoiceSummary[];
   businesses: { id: string; name: string; currencyCode?: string | null }[];
   currency: string;
   userName?: string | null;
+  /** The server's date (YYYY-MM-DD), standing in for the viewer's until the page has hydrated. */
+  today: string;
 }) {
   const [filter, setFilter] = useState<string>("ALL");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -293,32 +301,30 @@ export function InvoiceHome({
     [invoices, businessId]
   );
 
+  // Status and money follow the app's rule (invoice-status.ts): computed from payments and the due
+  // date, and a DRAFT or CANCELLED invoice counts in no figure. Overdue is counted in calendar days,
+  // so the viewer's own date decides; the server's stands in until hydration, so that the server
+  // render and the first client render agree.
+  const today = useSyncExternalStore(noSubscription, localDate, () => serverToday);
+  const statusById = useMemo(
+    () => new Map(businessInvoices.map((i) => [i.id, statusNow(i, today)] as const)),
+    [businessInvoices, today],
+  );
+  const statusOf = (inv: InvoiceSummary): StatusNow => statusById.get(inv.id) ?? statusNow(inv, today);
+
   const totals = useMemo(() => {
-    let revenue = 0;
-    let collected = 0;
-    let overdue = 0;
-    let sent = 0;
-    const counts: Record<string, number> = {};
-    for (const inv of businessInvoices) {
-      const amt = n(inv.totalAmount);
-      const st = (inv.status || "").toUpperCase();
-      revenue += amt;
-      if (st === "PAID") collected += amt;
-      if (st === "OVERDUE") overdue += amt;
-      if (st === "SENT") sent += 1;
-      counts[st] = (counts[st] ?? 0) + 1;
-    }
-    return { revenue, collected, outstanding: revenue - collected, overdue, sent, counts };
-  }, [businessInvoices]);
+    const s = summarizeInvoices(businessInvoices, today);
+    return { ...s, sent: s.counts.SENT ?? 0 };
+  }, [businessInvoices, today]);
 
   const filters = useMemo(() => {
-    const present = new Set(businessInvoices.map((i) => (i.status || "").toUpperCase()));
+    const present = new Set<string>(statusById.values());
     const ordered = FILTER_ORDER.filter((s) => present.has(s));
     for (const s of present) if (!FILTER_ORDER.includes(s)) ordered.push(s);
     return ["ALL", ...ordered];
-  }, [businessInvoices]);
+  }, [statusById]);
 
-  const shown = filter === "ALL" ? businessInvoices : businessInvoices.filter((i) => (i.status || "").toUpperCase() === filter);
+  const shown = filter === "ALL" ? businessInvoices : businessInvoices.filter((i) => statusOf(i) === filter);
   const selected = shown.find((i) => i.id === selectedId) ?? shown[0] ?? null;
 
   // First-time user (no invoices yet) → friendly welcome + onboarding.
@@ -419,17 +425,17 @@ export function InvoiceHome({
           <>
             {/* Mobile / tablet: card grid */}
             <div className="grid gap-2.5 pb-4 md:grid-cols-2 xl:hidden">
-              {shown.map((inv) => <InvoiceCard key={inv.id} inv={inv} />)}
+              {shown.map((inv) => <InvoiceCard key={inv.id} inv={inv} status={statusOf(inv)} />)}
             </div>
 
             {/* Desktop: list + detail */}
             <div className="hidden gap-3 pb-4 xl:grid xl:grid-cols-[360px_1fr] xl:items-start">
               <div className="max-h-[72vh] space-y-2 overflow-auto pr-1">
                 {shown.map((inv) => (
-                  <InvoiceRow key={inv.id} inv={inv} active={selected?.id === inv.id} onSelect={() => setSelectedId(inv.id)} />
+                  <InvoiceRow key={inv.id} inv={inv} status={statusOf(inv)} active={selected?.id === inv.id} onSelect={() => setSelectedId(inv.id)} />
                 ))}
               </div>
-              <DetailPane inv={selected} />
+              <DetailPane inv={selected} status={selected ? statusOf(selected) : null} />
             </div>
           </>
         )}
