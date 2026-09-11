@@ -24,7 +24,7 @@ async function detectPlatform(): Promise<ViewerPlatform> {
 }
 
 // Short, stable content hash of the invoice — changes whenever the invoice changes (total, items,
-// business, …) so the OG card and its blob cache key are versioned per content.
+// business, …) so the OG card's URL, and with it the edge cache's key, is versioned per content.
 function ogVersion(shared: {
   totalAmount?: number | null;
   invoiceNumber?: string | null;
@@ -65,9 +65,9 @@ export async function generateMetadata({
   const description = isEstimate
     ? "View this estimate, download the PDF, and approve it. Made with Invotick."
     : "View this invoice and download the PDF. Made with Invotick.";
-  // OG image = the blob-backed route, versioned by content so an edited invoice (new total, more
-  // items) gets a fresh card instead of the first render forever. `v` changes whenever the invoice
-  // changes → new blob key + a new image URL crawlers re-fetch.
+  // OG image = the on-demand card route (decision 0054), versioned by content so an edited invoice
+  // (new total, more items) gets a fresh card instead of the first render forever. `v` changes
+  // whenever the invoice changes → a new URL, which the edge cache and crawlers treat as a new image.
   const ogImage = { url: `${SITE}/api/og/${token}?v=${ogVersion(shared)}`, width: 1200, height: 630 };
   return {
     title: `${title} | Invotick`,

@@ -26,8 +26,8 @@ function ogCurrency(raw?: string | null): { text: string; pad: boolean } {
 
 /**
  * Render the per-invoice OG card (real invoice summary, not generic). Returns an
- * ImageResponse. Shared by the on-demand route that stores the PNG in Vercel Blob
- * so it's rendered ONCE and then served as a globally-cached static image.
+ * ImageResponse. Served by the on-demand route `/api/og/[token]`, whose response the
+ * edge cache keeps; nothing is stored (decision 0054).
  */
 export async function renderOgCard(token: string): Promise<ImageResponse> {
   const shared = await getSharedInvoice(token);
