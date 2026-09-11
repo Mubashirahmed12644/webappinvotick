@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { formatMoney, formatDate } from "@/lib/format";
+import { resolveBusinessView, saveBusinessView, useStoredBusinessView } from "@/lib/business-view";
 import type { InvoiceSummary } from "@/lib/types";
 
 const C = {
@@ -273,8 +274,11 @@ export function InvoiceHome({
 }) {
   const [filter, setFilter] = useState<string>("ALL");
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  // null = "All Businesses" (combined). Users with several businesses switch here.
-  const [businessId, setBusinessId] = useState<string | null>(null);
+  // null = "All Businesses" (combined). The latest choice — All, or one business — is remembered in
+  // this browser and restored on every open; a business that no longer exists falls back to All
+  // (decision 0052). Read after hydration: the server render and the first client render show All.
+  const storedView = useStoredBusinessView();
+  const businessId = resolveBusinessView(storedView, businesses);
 
   const activeBusiness = businesses.find((b) => b.id === businessId) ?? null;
   const activeName = activeBusiness?.name ?? "All Businesses";
@@ -337,7 +341,7 @@ export function InvoiceHome({
                     <div className="relative inline-flex items-center">
                       <select
                         value={businessId ?? ""}
-                        onChange={(e) => { setBusinessId(e.target.value || null); setSelectedId(null); }}
+                        onChange={(e) => { saveBusinessView(e.target.value || null); setSelectedId(null); }}
                         aria-label="Business"
                         className="max-w-[220px] cursor-pointer truncate rounded-md bg-white/10 py-0.5 pl-2 pr-6 text-[16px] font-bold leading-tight text-white outline-none hover:bg-white/20 [&>option]:text-neutral-900"
                       >
