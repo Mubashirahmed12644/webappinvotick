@@ -93,8 +93,11 @@ delete built on a stale base is refused; an edit built on a stale base loses to 
 
 If both sides changed **the same field**, one value cannot survive in one column. There:
 
-- **the later arrival wins** — arrival order at the server, never a device clock, so a wrong clock
-  still cannot decide anything;
+- ~~**the later arrival wins** — arrival order at the server, never a device clock, so a wrong clock
+  still cannot decide anything;~~ **Amended by [0058](0058-when-two-devices-changed-the-same-field-the-later-edit-wins-by-a-corrected-clock.md)
+  (2026-09-11): the later *edit* wins, by a clock corrected to the server's time, never backwards, never
+  before what the phone had seen, and never in the future.** Arrival order picked the older edit whenever
+  the older phone reconnected last. The version still decides whether an edit may apply at all;
 - **the discarded value is reported**, through the channel device-side sync failures already use
   (analytics event → `DeviceSyncFailureIngest` → `sync_failure` → Health Centre), under its own
   signature.

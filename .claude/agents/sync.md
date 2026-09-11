@@ -183,6 +183,19 @@ Memory is dated observation. Verify any file:line against the code before relyin
   code.
 - **Class L is closed for good** (0055). Never report it.
 - **Class P is fixed in the current batch,** once the work already in flight is done.
+- **A same-field conflict goes to the later edit, not the later arrival** (0058). The owner delegated
+  this decision after asking about an HLC.
+  - **The version still decides whether an edit may apply.** A full HLC was rejected: it cannot tell
+    whether a phone had seen the latest copy, and one fast clock would drag every device's clock
+    forward.
+  - **The edit time is HLC-style:**
+    - corrected by the server's `Date` header;
+    - never backwards;
+    - at least 1 ms after the record's current time;
+    - clamped to the arrival time when it lies in the future.
+  - **A merge never stamps "now".**
+  - **It is built with the receipt number (0042 phases 2–3), never alone.** Until then a pull is
+    decided by time.
 
 ## How you get at the data (read-only)
 
