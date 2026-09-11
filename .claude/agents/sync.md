@@ -139,6 +139,29 @@ Memory is dated observation. Verify any file:line against the code before relyin
      `pgrep -f` guard can match itself, and `comm` never matches `java` on macOS.
 10. **Deploy.** Migrations ship alone and first. `stage` is production. Never retry an older pipeline
     once a newer one has deployed.
+11. **A guest's record moves to an account only with proof that the caller held that guest**
+    (0749457).
+    - **What the guard used to do:**
+      - It allowed the GUEST→USER takeover on role alone: any USER, over any guest-owned record id.
+        Invoice ids are public in `/v2/shared-invoice/{token}`, and 234 still-guest owners had a
+        live link on 2026-09-11.
+      - It also retired the guest at the check (`onGuestUpgrade`: Invotick ID transfer and soft
+        delete), so a push whose records all failed still gave the account away.
+    - **The proof** is a non-zero `X-Device-Id` that `linked_device` records for the guest
+      (`existsByUserIdAndDeviceId`). The all-zero iOS id is not proof: until `IosDeviceIdProvider`
+      is fixed, an iOS guest's data does not move on sign-in. That is the safe direction.
+    - **The guard has no side effects.** A guest is retired once, after its records have actually
+      moved: `GuestUpgradeCollector`, drained by `SyncV2PushService` inside the push transaction.
+    - **Production showed no abuse.** Every migration since `linked_device` filled up (August 10/10,
+      September 43/43) came from the guest's own device.
+    - Guard: the guest cases in `ARefusedRecordIsNotWrittenTest` and `SyncV2MigrationFlowTest`.
+12. **The test suite keeps at most four application contexts** (`spring.test.context.cache.maxSize=4`,
+    8de3e8d).
+    - Each `@SpringBootTest` with its own `@DynamicPropertySource` is a context of its own. With 17
+      of them, the CI runner — which shares the production box — ran out of heap for 47 minutes.
+    - Calibrated at a 320 MB test heap: without the cap, 33 of 641 tests failed with
+      OutOfMemoryError; with it, 641/641 passed in 1m05s.
+    - Prefer adding a test to an existing context class over creating a new one.
 
 ## Decided by the owner, 2026-09-11
 
