@@ -355,6 +355,29 @@ Memory is dated observation. Verify any file:line against the code before relyin
       - the root: 91 of 95 invoices deleted this week left their lines live (0069 Q2, the owner's);
       - the repair of the existing rows (0069 Q1, the owner's);
       - 38 "Template: FOREIGN KEY" reports from vc94–97, which send no ids.
+22. **A refusal a service raises answers the status it carries, never 500** (0071; backend `15c0820`,
+    branch `fix/validation-error-answers-4xx`, not deployed).
+    - `CustomValidationError` carries a status: 400 by default, and 401, 403 or 404 where a service
+      chose one. There are 142 throw sites in 19 services.
+      - `GlobalExceptionHandler` had no handler for it, so every REST refusal answered `500 An
+        unexpected server error occurred`.
+      - It was logged at ERROR, and it counted toward the High 5xx Error Rate alert.
+    - Only the answer changes. The handler runs after the exception has left the controller, so no
+      transaction's outcome moves.
+    - **Never make the class a `ResponseStatusException`:** the JWT filter reads that class as "token
+      invalid".
+    - **Never change a throw site's class:** the v1 sync's `noRollbackFor` would stop matching.
+    - **No sync answer changes.**
+      - The v1 sync answers each refused record FAILED inside its 200.
+      - Nothing in `service/syncv2` throws one.
+      - No build (vc97, vc101, 1.4.6) treats a whole-request 4xx differently from a 5xx; only a 401 has
+        its own path.
+    - Measured 2026-09-13: 0 production 500s from it in 15 days, over 3 requests on these routes. The
+      app never calls these routes.
+    - Guards: `ARefusalAnswersItsOwnStatusTest`, and the v1 case in `SyncServicePushUpdateTest`.
+    - **Unchanged, from the code:** a v1 refusal crossing a `@Transactional` method without the rule
+      rolls its phase back and answers 500. That covers `ClientService`, `BusinessService` and
+      `PaymentService.updatePayment`. No v1 push got past the token in 15 days.
 
 ## Established 2026-09-12, while planning the receipt number
 
