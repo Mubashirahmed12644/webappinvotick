@@ -71,7 +71,12 @@ Memory is dated observation. Verify any file:line against the code before relyin
   - `*SyncV2Services` with `AbstractSyncV2Support` — create through `InsertNew`, update, delete;
   - `SyncConflictPolicy`, and `SyncVersionRuleGate` (off by default);
   - `SyncFailureRecorder`, and `DeviceSyncFailureIngest` (hourly, over a 30-day window);
-  - `SyncFailureCheck`;
+  - `SyncFailureCheck` — the Device sync card.
+    - It is not in `health.alert.emergency-checks`, so a red card pages nobody. On 2026-09-12 it was
+      CRITICAL at 431 devices, for causes other than the one being fixed that day.
+    - The Slack path for sync is Grafana's `invotick-sync-failure` rule
+      (`grafana/provisioning/alerting/rules.yml`). It fires on one ERROR line containing `SYNC` in a
+      minute (`for: 0s`), so a harmless outcome must never be logged at ERROR;
   - `SyncHealthController`, with `/trace/{requestId}` through `LokiClient`;
   - `MdcRequestFilter` — adopts and returns the request id;
   - `promtail-config.yml`.
@@ -162,6 +167,25 @@ Memory is dated observation. Verify any file:line against the code before relyin
     - Calibrated at a 320 MB test heap: without the cap, 33 of 641 tests failed with
       OutOfMemoryError; with it, 641/641 passed in 1m05s.
     - Prefer adding a test to an existing context class over creating a new one.
+13. **A delete of a record the server does not hold is not a sync failure** (0059).
+    - The device is still told `NOT_FOUND`, which every build treats as final.
+    - The server files it as `NOT_FOUND_ON_DELETE` (`SyncFailureKeys.filedErrorType`). The ingest
+      files the device's own report the same way, inside its SQL where the groups form. One
+      refusal, one signature.
+    - The Device sync card never counts it. It shows it as a fact: "Ignored — a delete of a record
+      the server does not hold".
+    - The 18 delete paths that have a catch log it at INFO, never at ERROR. Grafana's
+      `invotick-sync-failure` rule sends a single ERROR line containing `SYNC` to Slack.
+    - An UPDATE answered `NOT_FOUND` is an edit that arrived before its create. It keeps
+      `NOT_FOUND`, it is counted, and it never shares a row with a delete.
+    - It is exact only while nothing removes a synced row:
+      - every delete finds its row by id alone, and no entity has a soft-delete filter;
+      - the only `orphanRemoval` (`Invoice.items`) never fires;
+      - `deleteUnverifiedUsers` has no caller.
+
+      A change that hard-deletes a synced row makes NOT_FOUND ambiguous: amend 0059 first.
+    - Guard: the NOT_FOUND tests in `DeviceSyncFailureIngestDbTest` (one of them captures every ERROR
+      line while all 21 groups delete an absent id) and in `SyncFailureIsAServerRefusalTest`.
 
 ## Decided by the owner, 2026-09-11
 
@@ -215,6 +239,9 @@ Memory is dated observation. Verify any file:line against the code before relyin
 - **Server logs for one request:** `GET /v1/webpanel/sync-health/trace/{requestId}` with the admin
   JWT (memory `admin-api-token.md`). Loki keeps lines reliably only once promtail runs the new label
   config; after a config change, `docker restart promtail` on the VPS — the owner's hands.
+  - **Before trusting an empty answer, read the Health Centre's `log-pipeline` card.** On 2026-09-12
+    Loki held no line after 2026-09-10 23:58 UTC, while promtail reported 423,437 lines sent and 0
+    dropped. Every trace, even a fresh probe's, came back empty (memory `log-pipeline-stream-limit`).
 
 ## How you verify a fix
 
