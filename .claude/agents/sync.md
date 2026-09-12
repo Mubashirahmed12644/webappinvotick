@@ -191,10 +191,13 @@ Memory is dated observation. Verify any file:line against the code before relyin
       A change that hard-deletes a synced row makes NOT_FOUND ambiguous: amend 0059 first.
     - Guard: the NOT_FOUND tests in `DeviceSyncFailureIngestDbTest` (one of them captures every ERROR
       line while all 21 groups delete an absent id) and in `SyncFailureIsAServerRefusalTest`.
-    - **The app half A is built for 1.4.6** (`3cfc2d75`, not merged). On the server's NOT_FOUND to a
-      DELETE, `NonRetryablePass` keeps it TERMINAL, closes the record's open CREATE and UPDATE, and
-      reports nothing. It relies on the server handling a group's creates before its deletes
-      (`SyncV2PushService.toOperations`). Guard: `ADeleteOfAnAbsentRecordTest`. B is not built.
+    - **The server half is on `stage`** (`59fc04f` the filing, `0f04ca9` the INFO logging; `stage` =
+      `587b33d`, recorded live 2026-09-12 16:10 UTC).
+    - **The app half A is merged for 1.4.6** (`3cfc2d75`, in `VC_102_VN_146` @ `f538e08e`, pushed; not
+      released). On the server's NOT_FOUND to a DELETE, `NonRetryablePass` keeps it TERMINAL, closes
+      the record's open CREATE and UPDATE, and reports nothing. It relies on the server handling a
+      group's creates before its deletes (`SyncV2PushService.toOperations`). Guard:
+      `ADeleteOfAnAbsentRecordTest`. B is not built.
 14. **A pull never deletes a row** (0060).
     - A pull finds the local row by its id alone, deleted or not, whoever's: the id is what an insert
       collides with. It changes a row it holds with an UPDATE, and inserts one it does not with ABORT.
@@ -207,9 +210,44 @@ Memory is dated observation. Verify any file:line against the code before relyin
       brings the deleted record back.
     - No Room schema change. A nullable `productId` or a changed foreign key would turn the loud
       failure into silent damage, and rebuild the table that holds guests' only invoice lines.
-    - Built in `ProductSyncHandler` only, for 1.4.6 (`f538e08e`, not merged). The other 20 pull handlers still write with
-      REPLACE and still date a deleted row by `dateUpdated`. Guard: `APulledProductNeverDeletesItsRowTest`
-      (Robolectric, real Room, the schema the phones hold).
+    - Built in `ProductSyncHandler` only, for 1.4.6 (`f538e08e`, merged into `VC_102_VN_146`, pushed;
+      not released). Guard: `APulledProductNeverDeletesItsRowTest` (Robolectric, real Room, the schema
+      the phones hold).
+    - The other 20 pull handlers still write with REPLACE and still date a deleted row by
+      `dateUpdated`. Two hide a deleted row from the pull (`TemplateDao.kt:36-37`,
+      `PaymentInstructionDao.kt:36-37`: `isDeleted = 0`). So a pull of one deleted here REPLACEs it,
+      which clears every invoice's link to it with no error (code, not measured). The order to extend
+      0060 is `docs/SYNC-RECEIPT-NUMBER-PLAN.md`, T4.
+
+## Established 2026-09-12, while planning the receipt number
+
+The plan is `docs/SYNC-RECEIPT-NUMBER-PLAN.md`. Each line says how it is known.
+
+- **An applied UPDATE leaves the row PENDING in 9 of the 21 handlers** (code).
+  - Business, product, merchant, expense, template, header, background, signature and stamp only
+    close the queue row.
+  - The orphan requeuer scans 4 of them (business, products, merchants, expenses) and queues the same
+    copy again before every push. The server applies it and adds 1.
+  - Production fits (read-only). In 7 days, 39 of 1,030 business rows written and 110 of 1,744
+    product rows had reached v ≥ 10.
+  - Business `e7980066`, last edited 09-08, was written again on 09-12 at v111.
+  - A second read 18 minutes later caught business `216182a3` written again with no edit (v44 → v45),
+    from a 1.4.4 phone's background push.
+  - 1.4.5 phones do it too (`8298ede7`).
+  - The fix is T5 in the plan (1.4.6, owner question 1).
+- **The push moves the pull bookmark** (`SyncPushHandler.kt:192-195`), and a push follows every
+  local write (code, not measured).
+  - Another phone's change can therefore be skipped by the next delta pull.
+  - A full pull re-offers live rows, but never deletes.
+  - The plan's phase 2 step 2.7 addresses it.
+- **The built version rule has four gaps, to close before it is switched on** (code):
+  - APPLY is still refused by the clock (`AbstractSyncV2Support.kt:301-302`, then `:232-251`);
+  - an applied write answers no version (`SyncV2PushService.kt:204`);
+  - row 2 ("superseded by self") keeps the older copy after a lost answer and a new edit;
+  - the all-zero iOS id counts as a writer (16 rows in 30 days), and a write with no usable id keeps
+    the previous writer's id.
+- **Who a merge serves** (data): in 30 days, 2 of 1,107 writing accounts had two or more writing
+  phones. The receipt number's wide benefit is ending clock refusals and re-sent copies.
 
 ## Decided by the owner, 2026-09-11
 
@@ -231,7 +269,8 @@ Memory is dated observation. Verify any file:line against the code before relyin
   code.
 - **Class L is closed for good** (0055). Never report it.
 - **Class P is fixed in the current batch,** once the work already in flight is done. Built for 1.4.6
-  as rule 14 (0060), with no schema change; not merged.
+  as rule 14 (0060), with no schema change; merged into `VC_102_VN_146` (`f538e08e`, pushed), not
+  released.
 - **A same-field conflict goes to the later edit, not the later arrival** (0058). The owner delegated
   this decision after asking about an HLC.
   - **The version still decides whether an edit may apply.** A full HLC was rejected: it cannot tell
