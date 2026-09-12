@@ -277,12 +277,25 @@ Memory is dated observation. Verify any file:line against the code before relyin
     - the real `SyncPushHandler` runs over the real handlers;
     - `SyncApi` is scripted.
 
-    **Open (being fixed for 1.4.6 on `feat/146-client-delete-syncs`):**
-    - A client deleted on the phone never reaches the server. `ClientRepositoryImpl.deleteClients`
-      does a hard `DELETE` with no queue row, from all 5 call sites in 3 client lists.
-    - Production agrees: 5 deleted clients ever, and none of them was written by sync.
-    - RESTRICT from `invoices.customerId` should make deleting a client with invoices throw. This is
-      from the code, not measured.
+20. **A client is deleted like every synced record, and a client that a document points at is refused
+    by name** (0068, `dcf97a79`, 1.4.6, merged into `VC_102_VN_146`; not released).
+    - **Until 1.4.5, all five delete paths removed the row outright and queued nothing.** That is why
+      only 5 of 6,027 clients are deleted on the server: all by the web, none by a phone (2026-09-13).
+    - **The fix is a soft delete plus a queued DELETE** under the client's own owner, in one transaction
+      with the in-use check (`ClientDao.softDeleteUnlessInUse`). The lists and the count skip a deleted
+      client; a read by id does not.
+    - **A delete pulled from the server lands SYNCED** (`markDeletedByServer`). Written as
+      PENDING_DELETE, it used to be sent back. Business and template still do that (open).
+    - **A client in use is refused, all or nothing, as `ClientInUseException`.** That means any invoice,
+      estimate or payment points at it, deleted or not. This is exactly where RESTRICT refused the old
+      delete. The rule belongs to the owner (0068, open).
+    - **A live document must never name a client the pull will not send.**
+      - `SyncV2PullService.fullPull` sends only live clients but every live document, so a new phone
+        cannot insert such a document. There are 0 today.
+      - The web's delete checks nothing, and the invoice screen's own client sheet can delete the selected
+        client before Save.
+      - Close this on the server before any rule lets a client with documents be hidden.
+    - Guard: `ADeletedClientReachesTheServerTest`.
 
 ## Established 2026-09-12, while planning the receipt number
 
