@@ -15,22 +15,15 @@ import {
   formRowFromSaved,
   invoicePreviewData,
   keptInvoiceFields,
+  newFormRow,
+  newId,
   prepareInvoice,
-  type FormRow,
+  type FormItem,
   type SavedInvoiceItem,
 } from "@/lib/invoice-preview";
 import { InvoicePreviewDialog } from "./InvoicePreviewDialog";
 import type { Business, Product, Tax, InvoiceDetail, Template, InvoiceAsset } from "@/lib/data";
 import type { Client, InvoiceStatus } from "@/lib/types";
-
-interface FormItem extends FormRow {
-  id: string;
-  inventoryItemId: string;
-  // A saved item's links, sent back as it has them. A new row has none.
-  taxId: string | null;
-  unitTypeId: string | null;
-  itemCategoryId: string | null;
-}
 
 interface Props {
   businesses: Business[];
@@ -53,16 +46,7 @@ interface Props {
 }
 
 const STATUSES: InvoiceStatus[] = ["DRAFT", "SENT", "PAID", "OVERDUE", "CANCELLED"];
-const uuid = () => (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`);
 const today = () => new Date().toISOString().slice(0, 10);
-
-function blankItem(): FormItem {
-  return {
-    id: uuid(), saved: false, inventoryItemId: "", taxId: null, unitTypeId: null, itemCategoryId: null,
-    name: "", description: "", quantity: "1", unitPrice: "", discountValue: "", discountType: "PERCENTAGE",
-    taxValue: "", taxType: "PERCENTAGE",
-  };
-}
 
 export function InvoiceForm({
   businesses,
@@ -122,8 +106,9 @@ export function InvoiceForm({
   const [discountType, setDiscountType] = useState<DiscountType>(discountTypeOf(invoice?.discountType));
   const [taxId, setTaxId] = useState("");
   const [shipping, setShipping] = useState(invoice?.shippingCost && Number(invoice.shippingCost) ? invoice.shippingCost : "");
-  // A saved item starts as the invoice's page shows it, with its own tax and its links.
-  const [items, setItems] = useState<FormItem[]>(() => (savedItems.length ? savedItems.map(formRowFromSaved) : [blankItem()]));
+  // A saved item starts as the invoice's page shows it, with its own tax and its links. Rows are made
+  // here and in Add item only, each with its product id (newFormRow), and kept in state from then on.
+  const [items, setItems] = useState<FormItem[]>(() => (savedItems.length ? savedItems.map(formRowFromSaved) : [newFormRow()]));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Each row's own problem shows beside it once Save has been tried; the Summary never counts it.
@@ -183,10 +168,13 @@ export function InvoiceForm({
       return setError(prepared.problems.join("\n"));
     }
 
-    const invoiceId = invoice?.id ?? uuid();
+    const invoiceId = invoice?.id ?? newId();
     // Exactly the rows prepareInvoice read, each with the fields it computed; the totals are theirs.
     const payloadItems = prepared.sent.map(({ row, fields }) => ({
-      id: row.id, invoiceId, inventoryItemId: row.inventoryItemId || uuid(),
+      id: row.id, invoiceId,
+      // The row's own product id, never one made here: the server makes a product for a typed row's
+      // id, so a retry must send the same id to find it rather than make another (FormItem).
+      inventoryItemId: row.inventoryItemId,
       // A saved item's links go back as it has them: the update copies each, and a null erases it.
       taxId: row.taxId, unitTypeId: row.unitTypeId, itemCategoryId: row.itemCategoryId,
       ...fields,
@@ -329,7 +317,7 @@ export function InvoiceForm({
       <Card className="p-6">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="font-bold text-[var(--color-on-surface)]">Items</h2>
-          <Button type="button" variant="outline" size="sm" onClick={() => setItems((p) => [...p, blankItem()])}>+ Add item</Button>
+          <Button type="button" variant="outline" size="sm" onClick={() => setItems((p) => [...p, newFormRow()])}>+ Add item</Button>
         </div>
         <div className="space-y-3">
           {items.map((it, idx) => {
@@ -339,8 +327,9 @@ export function InvoiceForm({
             return (
               <div key={it.id} className="rounded-[var(--radius-sm)] border border-[var(--color-outline-variant)] p-3">
                 <div className="grid gap-2 sm:grid-cols-12">
+                  {/* A typed row's own product id is in no list, so its picker shows the placeholder. */}
                   {products.length > 0 && (
-                    <select value={it.inventoryItemId} onChange={(e) => pickProduct(it.id, e.target.value)} className={cn(selectCls, "sm:col-span-12 h-9")}>
+                    <select value={products.some((p) => p.id === it.inventoryItemId) ? it.inventoryItemId : ""} onChange={(e) => pickProduct(it.id, e.target.value)} className={cn(selectCls, "sm:col-span-12 h-9")}>
                       <option value="">Pick a product (optional)…</option>
                       {products.map((p) => <option key={p.id} value={p.id}>{p.name} — {formatMoney(p.unitPrice, currency)}</option>)}
                     </select>

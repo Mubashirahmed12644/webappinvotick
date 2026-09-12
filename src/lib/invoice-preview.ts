@@ -341,7 +341,7 @@ export function savedItemsOf(invoiceId: string, items: readonly PulledInvoiceIte
  * links go back as they are: the update copies each of them from the request, and a null would
  * erase it.
  */
-export function formRowFromSaved(it: SavedInvoiceItem) {
+export function formRowFromSaved(it: SavedInvoiceItem): FormItem {
   const plain = (v: string | null) => (v == null || v.trim() === "" ? "" : String(Number(v)));
   const unlessZero = (v: string | null) => (Number(v) ? plain(v) : "");
   const money = {
@@ -364,6 +364,34 @@ export function formRowFromSaved(it: SavedInvoiceItem) {
     quantity: plain(it.quantity),
     ...money,
     kept: Number.isFinite(stored) ? { netPrice: stored, key: moneyKey(money) } : undefined,
+  };
+}
+
+/** A new id: a UUID wherever the browser can make one, which is every secure page. */
+export const newId = () => globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
+
+/** A row of the invoice form: what prepareInvoice reads, with the item's own ids and links. */
+export interface FormItem extends FormRow {
+  id: string;
+  /**
+   * The product behind the row: a picked product, a saved item's own, or the one made with a new row
+   * (newFormRow). The server makes a product with that id for a row typed without picking one, as the
+   * app does, so the id is made once, with the row, and never at Save: a retry sends the same id and
+   * finds the product the first attempt made, where a new id would make another.
+   */
+  inventoryItemId: string;
+  /** A saved item's links, sent back as it has them. A new row has none. */
+  taxId: string | null;
+  unitTypeId: string | null;
+  itemCategoryId: string | null;
+}
+
+/** A new, empty row of the form, with its own id and its own product id. */
+export function newFormRow(): FormItem {
+  return {
+    id: newId(), saved: false, inventoryItemId: newId(), taxId: null, unitTypeId: null, itemCategoryId: null,
+    name: "", description: "", quantity: "1", unitPrice: "", discountValue: "", discountType: "PERCENTAGE",
+    taxValue: "", taxType: "PERCENTAGE",
   };
 }
 
