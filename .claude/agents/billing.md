@@ -119,8 +119,8 @@ Memory is dated observation. Verify any file:line against the code before relyin
 
 ## Known gaps (2026-09-12, found while checking 1.4.5)
 
-1. **1.4.5 can take back a confirmed grant.** **Fixed for 1.4.6** on branch
-   `feat/146-premium-never-taken-back` (0070). Not merged yet.
+1. **1.4.5 can take back a confirmed grant.** **Fixed for 1.4.6** (0070), merged into `VC_102_VN_146`
+   (`b9669f53`, 2026-09-13).
    - On 1.4.5, a restore with no answer marked a purchase unconfirmed even when it had been confirmed
      before (`BillingRepositoryImpl.kt:484-489`).
    - Any later re-register error other than 503 was then read as Google's refusal
@@ -131,14 +131,24 @@ Memory is dated observation. Verify any file:line against the code before relyin
      - only a grant that was never confirmed may be marked unconfirmed (`PremiumGrant`);
      - only a 400 the server names `NOT_VALID` is a refusal.
    - `FirstCustomerStaysPremiumTest` walks his exact path.
-   - **The server half is not built.** `EntitlementController.purchase` must answer a refusal with a
-     `code`: `NOT_VALID` when `e.definitive`, `UNVERIFIED` otherwise.
-     - Same envelope: a `PurchaseRefusal(success = false, message, data = null, code)` body, with
-       return type `ResponseEntity<*>`.
-     - Until it ships, 1.4.6 reads Google's register refusal as "could not ask". A faked purchase then
-       keeps premium on Play's word until the next launch, whose restore says `NOT_VALID`.
+   - **The server half is built** on `invotick-apis` branch `fix/purchase-refusal-names-itself`
+     (`0de08c7`, `26913d8`). It rides the next backend deploy (batch3).
+     - A register refusal answers `PurchaseRefusal`: `success`, `message` and `data` unchanged, plus
+       `code`, which is `NOT_VALID` on the 400 and `UNVERIFIED` on the 503.
+     - The statuses are unchanged.
+     - A restore's second ask, for a purchase new to the server, now answers the named outcome instead
+       of a 500.
+     - Until it is deployed, 1.4.6 reads Google's register refusal as "could not ask". A faked purchase
+       then keeps premium on Play's word until the next launch, whose restore says `NOT_VALID`.
 2. **Lifetime purchases are refused unless `GOOGLE_PLAY_LIFETIME_PRODUCTS` is set.** It defaults to empty.
-   - **Production was EMPTY** (the owner checked it on 2026-09-12). With it empty:
+   - **Production was EMPTY** (the owner checked it on 2026-09-12), **and still is** (2026-09-12 23:10 UTC,
+     after two deploys). The change was never made:
+     - `.env.prod` last changed on 09-04;
+     - there is no 09-12 backup;
+     - the key is absent.
+
+     Compose line 65 reads `${GOOGLE_PLAY_LIFETIME_PRODUCTS:-}`, and CI deploys with
+     `docker compose --env-file .env.prod up -d`. With it empty:
      - the server asks Google's subscription endpoint about `life_time_purchase`;
      - register answers 400 ("Google Play does not recognise this purchase"), and restore answers
        `NOT_VALID`;
@@ -155,8 +165,8 @@ Memory is dated observation. Verify any file:line against the code before relyin
      paid.
 3. **Billing calls send no `X-Device-Id`,** so the device column of each billing row is always empty. 0048
    #6 promises one row per purchase, account and device.
-   - **Fixed for 1.4.6** in `cfac4258`, not merged yet: register, restore and entitlement send it the
-     way sync does.
+   - **Fixed for 1.4.6**, merged into `VC_102_VN_146` (`b9669f53`): register, restore and entitlement
+     send it the way sync does.
    - Builds up to 1.4.5 keep writing an empty device, so the column fills only as 1.4.6 spreads.
 4. **The Health Centre cannot see paying phones.** Reconcile does not run while unsent rows are waiting, so
    all 2,747 premium reports in the last 30 days say false.
@@ -165,8 +175,8 @@ Memory is dated observation. Verify any file:line against the code before relyin
 6. **Two paywall wording gaps.**
    - An intro offer or trial would show the regular price, not the first charge.
    - A 4-week or 2-month period would fall back to a label taken from the plan's name.
-   - **Fixed for 1.4.6** in `a56d8071`, not merged yet: a price Play did not send was printed blank.
-     This hit the Lifetime card whenever Play sent its one-time product with only a list of offers
+   - **Fixed for 1.4.6**, merged into `VC_102_VN_146` (`b9669f53`): a price Play did not send was printed
+     blank. This hit the Lifetime card whenever Play sent its one-time product with only a list of offers
      (Billing 8+).
      - The price now comes from the product's own offer, or else the cheapest listed one, and the
        purchase buys that same offer.
@@ -174,6 +184,9 @@ Memory is dated observation. Verify any file:line against the code before relyin
      - A plan with no offer Play can sell is not launched. A subscription used to go out with an
        empty offer token, which Billing 8+ throws on.
      - This can only be seen on a build installed from Play (rule 7).
+7. **A first restore of a purchase the server has never seen stores no restore answer.** `recordAnswer`
+   runs only for purchases it already knows (`EntitlementService.kt:149`), against 0048 #6. That path
+   also asks Google twice. Found 2026-09-13; not fixed.
 
 ## How you get at the data (read-only)
 

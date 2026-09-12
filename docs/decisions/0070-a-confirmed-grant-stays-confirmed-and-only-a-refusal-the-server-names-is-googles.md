@@ -1,8 +1,8 @@
 # 0070 — A confirmed grant stays confirmed; a refusal counts only when the server names it Google's
 
 **Status:** decided (the owner's go, 2026-09-12: "pending work start kro apni tarteeb sy", on the
-recommended fixes), app half built on `feat/146-premium-never-taken-back` for 1.4.6; server half
-written for the lead, not built · **Date:** 2026-09-13 · **Goals:** G3 (trust), monetisation ·
+recommended fixes). The app half is merged into `VC_102_VN_146` for 1.4.6 (`b9669f53`). The server half is
+built on `invotick-apis` `fix/purchase-refusal-names-itself` (`0de08c7`, `26913d8`), not deployed · **Date:** 2026-09-13 · **Goals:** G3 (trust), monetisation ·
 **Related:** [0047](0047-plays-answer-decides-premium-on-a-device.md),
 [0048](0048-the-paywall-says-what-google-charges.md)
 
@@ -50,7 +50,14 @@ already rejected reading sentences.
 - `NOT_VALID` when `e.definitive`;
 - `UNVERIFIED` otherwise.
 
-These are the words the restore answer already uses. The exact change is in billing.md.
+These are the words the restore answer already uses. Built as `0de08c7` and `26913d8`:
+- **The statuses stay 400 / 503.** Every installed build acts on the status. Turning the 503 into a 400
+  would make 1.4.5 take back grants it holds on Play's word whenever we cannot reach Google.
+- **Old builds are unaffected.** Every build since billing began ignores unknown JSON fields (app
+  `161a9d10`), so the added `code` changes nothing for 1.4.4 or 1.4.5, and the deploy can go in any
+  order.
+- **A restore's second ask no longer escapes as a 500.** This is the ask for a purchase new to the
+  server. It now answers the same named outcome.
 
 Until it ships, 1.4.6 reads Google's register refusal as "could not ask". A faked purchase then holds
 premium on Play's word until the next launch, whose restore says `NOT_VALID` and takes it back.
@@ -67,6 +74,10 @@ premium on Play's word until the next launch, whose restore says `NOT_VALID` and
 - **Asking the restore again after an unclear register 400.** It costs a second round trip, for a case
   the server can simply name.
 - **Hiding a plan Play sent no price for.** That weakens the paywall; a dash is honest.
+- **Changing the statuses** (a new status for our own errors, or 503 → 400). It is a behaviour change for
+  every installed build.
+- **`code` on the backend's shared `ApiResponse`.** That puts it on every endpoint's envelope. A billing-only
+  `PurchaseRefusal` is used instead.
 
 ## Consequences
 
