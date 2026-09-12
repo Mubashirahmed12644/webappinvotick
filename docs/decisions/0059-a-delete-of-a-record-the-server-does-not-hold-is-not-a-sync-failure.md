@@ -7,7 +7,14 @@
   - `3d8d5b1` — the INFO logging.
 
   6 tests failed first; the full suite is 647/647 (baseline 641/641). Not pushed, not deployed.
-- App half for 1.4.6: specified below, not built.
+- App half for 1.4.6: **A built** on app branch `feat/146-sync-0059a-and-p`, `3cfc2d75` (base
+  `VC_102_VN_146` `b210dc35`).
+  - `ADeleteOfAnAbsentRecordTest` failed first: the report was sent, and the create and the update
+    stayed open. It passes now; `:data:testDebugUnitTest` is 130/130 (baseline 127/127).
+  - The server-side precondition is checked: `SyncV2PushService.toOperations` handles a group's
+    creates before its deletes, so a NOT_FOUND on a delete means the same push's create was refused
+    too.
+  - Not merged into `VC_102_VN_146`, not released. **B is not built.**
 
 **Date:** 2026-09-12 · **Goal:** G3. A card that is red for a harmless reason cannot say when something
 real breaks.

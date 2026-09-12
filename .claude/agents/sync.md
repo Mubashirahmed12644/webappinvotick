@@ -137,6 +137,11 @@ Memory is dated observation. Verify any file:line against the code before relyin
    every 6 h.
 9. **Tests.**
    - App data tests are `:data:testDebugUnitTest`, never `jvmTest`.
+   - A test that must run on the real schema uses Robolectric in data's `androidUnitTest` (added
+     2026-09-12, the 4.11.1 that feature/expense declares). Room runs there on a real SQLite, and the
+     schema is the one Room generates from the entities. A fake DAO cannot run a foreign key.
+   - The Room migration tests are `androidInstrumentedTest` and need a device or an emulator. None was
+     attached to this Mac on 2026-09-12, and it has no emulator installed.
    - The backend full suite needs `invotick-test-mysql` on port 13306, and the test pool is 5
      connections.
    - Before a full run this must print nothing:
@@ -186,6 +191,25 @@ Memory is dated observation. Verify any file:line against the code before relyin
       A change that hard-deletes a synced row makes NOT_FOUND ambiguous: amend 0059 first.
     - Guard: the NOT_FOUND tests in `DeviceSyncFailureIngestDbTest` (one of them captures every ERROR
       line while all 21 groups delete an absent id) and in `SyncFailureIsAServerRefusalTest`.
+    - **The app half A is built for 1.4.6** (`3cfc2d75`, not merged). On the server's NOT_FOUND to a
+      DELETE, `NonRetryablePass` keeps it TERMINAL, closes the record's open CREATE and UPDATE, and
+      reports nothing. It relies on the server handling a group's creates before its deletes
+      (`SyncV2PushService.toOperations`). Guard: `ADeleteOfAnAbsentRecordTest`. B is not built.
+14. **A pull never deletes a row** (0060).
+    - A pull finds the local row by its id alone, deleted or not, whoever's: the id is what an insert
+      collides with. It changes a row it holds with an UPDATE, and inserts one it does not with ABORT.
+    - REPLACE deletes the row it collides with, and the delete fires the children's foreign keys.
+      - `SET NULL` on a NOT NULL `productId` failed every pull of that product. That was class P: 466
+        reports from 2 phones on 1.4.2.
+      - `CASCADE` on an invoice would delete all its lines, with no error at all.
+    - A delete made on the phone is the row's latest change: its time is the later of `dateUpdated`
+      and `dateDeleted` (contract L7). Without it, the server's copy from before the delete ties and
+      brings the deleted record back.
+    - No Room schema change. A nullable `productId` or a changed foreign key would turn the loud
+      failure into silent damage, and rebuild the table that holds guests' only invoice lines.
+    - Built in `ProductSyncHandler` only, for 1.4.6 (`f538e08e`, not merged). The other 20 pull handlers still write with
+      REPLACE and still date a deleted row by `dateUpdated`. Guard: `APulledProductNeverDeletesItsRowTest`
+      (Robolectric, real Room, the schema the phones hold).
 
 ## Decided by the owner, 2026-09-11
 
@@ -206,7 +230,8 @@ Memory is dated observation. Verify any file:line against the code before relyin
 - **An estimate's date is stored as a calendar date** (0056). The migration ships first, then the
   code.
 - **Class L is closed for good** (0055). Never report it.
-- **Class P is fixed in the current batch,** once the work already in flight is done.
+- **Class P is fixed in the current batch,** once the work already in flight is done. Built for 1.4.6
+  as rule 14 (0060), with no schema change; not merged.
 - **A same-field conflict goes to the later edit, not the later arrival** (0058). The owner delegated
   this decision after asking about an HLC.
   - **The version still decides whether an edit may apply.** A full HLC was rejected: it cannot tell
@@ -236,6 +261,16 @@ Memory is dated observation. Verify any file:line against the code before relyin
   value is a string, so CAST before comparing. `app_instance_id` is the device id that sync uses.
 - **Who stamped a stored row:** the server clock writes microsecond precision; a device time is
   millisecond (`MICROSECOND(updated_at) % 1000`). Entity ids are `binary(16)`.
+- **Who wrote it:** `last_modify_by` is the writing phone's `X-Device-Id`. `BIN_TO_UUID(last_modify_by)`
+  equals `analytics_events.app_instance_id` and `linked_device.device_id`, which gives that phone's
+  build.
+- **A climbing version is not a loop until the rows say so.**
+  - The server adds 1 to `version` on every applied write, identical or not.
+  - When `updated_at` (the phone's time) has not moved while `version` climbs, a phone is re-sending
+    the same copy.
+  - Before calling it endless, check `last_synced_at` against the phone's active hours.
+  - On 2026-09-12 an estimate at v706 and an invoice at v374 were both finite drains of duplicate
+    creates on 1.4.2 and 1.4.4 phones.
 - **Server logs for one request:** `GET /v1/webpanel/sync-health/trace/{requestId}` with the admin
   JWT (memory `admin-api-token.md`). Loki keeps lines reliably only once promtail runs the new label
   config; after a config change, `docker restart promtail` on the VPS — the owner's hands.
