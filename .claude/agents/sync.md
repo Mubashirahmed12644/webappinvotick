@@ -378,6 +378,19 @@ Memory is dated observation. Verify any file:line against the code before relyin
     - **Unchanged, from the code:** a v1 refusal crossing a `@Transactional` method without the rule
       rolls its phase back and answers 500. That covers `ClientService`, `BusinessService` and
       `PaymentService.updatePayment`. No v1 push got past the token in 15 days.
+    - **Every 5xx the handlers answer names its exception class on `http_server_requests`** (`96eb0d8`,
+      not deployed).
+      - `GlobalExceptionHandler.nameTheCause` sets the observation's error for:
+        - the catch-all;
+        - `DataAccessException`;
+        - a `ResponseStatusException` or `CustomValidationError` whose status is a 5xx.
+      - A 4xx keeps `exception="none"`. Until it is live, every handled 5xx reads `exception="none"`.
+      - Not covered: the JWT filter's 503s and the Loki 503 on `/trace`.
+      - Guard: `AServerErrorNamesItsCauseTest`.
+      - To read it: `sum by (uri, exception) (increase(http_server_requests_seconds_count{status=~"5.."}[24h]))`.
+        Read a raw `max_over_time` alongside, because `increase()` misses a series born at 1.
+      - The sync `_request` row is not built. Revisit it only if one class on `/v2/sync/push` hides two
+        causes.
 
 ## Established 2026-09-12, while planning the receipt number
 

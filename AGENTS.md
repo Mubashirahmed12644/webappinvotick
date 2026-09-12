@@ -260,8 +260,12 @@ Two that bite most often:
 - ⚠️ **Auth is opt-in, not default.** `AuthorizationInterceptor` returns `true` when a handler has no
   `@RequireRole` — no annotation means *any authenticated caller*, guests included. A new admin or
   webpanel controller is open until you annotate it. `/v2/admin/**` was additionally listed in
-  `security.public-paths` and answered with no token at all until 2026-07-28. Details + what is still
-  open before payment-gateway work: `memory/admin-panel-security-audit.md`.
+  `security.public-paths` and answered with no token at all until 2026-07-28. **So was `/v1/ip/**`,
+  closed 2026-09-13** in `fba532c` (batch3; decision
+  [0072](docs/decisions/0072-the-ip-routes-answer-admins-only.md)). Until then anybody could list IP
+  records with their locations, delete them, and spend the paid lookup quota. Every entry on that list
+  reaches its controller with no token at all; `/v1/lookup/phone` is still on it and unchecked.
+  Details + what is still open before payment-gateway work: `memory/admin-panel-security-audit.md`.
 - Read-mostly by rule; never recompute money client-side — show what the backend computed.
 
 ## 5a. Reading rules — a page costs what it shows *(decision [0034](docs/decisions/0034-a-page-costs-what-it-shows.md))*
