@@ -370,6 +370,10 @@ the list is wrong, not the app.**
   auto-captured, so the **send policy** decides whether they ship; do not add a channel that bypasses it.
 - **Auth:** `login_success`, `register_success`, `guest_login_success`, **`guest_login_failed`**,
   `otp_verify_success`, `guest_merge_notice_dismissed`
+  `guest_login_failed` is the **offline-first** guest creation (splash, login screen) and calls no
+  server, so it can never carry a request id or a status. A failed **server** guest sign-in is
+  `sync_failed` with `stage=guest_auth` (decision
+  [0065](docs/decisions/0065-a-failed-guest-sign-in-carries-its-calls-evidence.md)).
 - **Growth (G2), receiver side — in the app:** `shared_invoice_opened`,
   `shared_invoice_opened_by_owner`, `shared_invoice_create_own_click`, `shared_invoice_approved`,
   `shared_invoice_rejected`, `shared_invoice_open_failed`, `shared_invoice_decision_failed`,
@@ -378,6 +382,11 @@ the list is wrong, not the app.**
   `shared_invoice_opened` **70**, and `shared_invoice_approved` has fired **zero times ever**
   (`shared_invoice_rejected`: one, on 2026-08-09). Not evidence the approval loop is unused —
   evidence that the surface most receivers use had never been instrumented.
+  From 1.4.6 neither `shared_invoice_open_failed` nor `shared_invoice_decision_failed` reports a
+  cancelled request: a screen that closed mid-load is not a failed open (decision
+  [0062](docs/decisions/0062-a-request-whose-screen-closed-is-not-a-failed-open.md)). Builds up to
+  1.4.5 still send `reason=exception_CancellationException`; exclude it, or split by version, in any
+  ratio that spans builds.
 - **Growth (G2), receiver side — on the web** *(`Webinvotick`, decision
   [0045](docs/decisions/0045-the-share-link-page-reports-its-own-journey.md); **built, not
   deployed**).* The `/i/{token}` page is the first non-app client in this pipeline. It posts to the
@@ -406,6 +415,12 @@ the list is wrong, not the app.**
   **`ad_impression_value`** (3,112 firings / 582 devices — what an impression actually paid, from
   the network, so the ad trade has a revenue side at all) and **`app_open_decision`** (324 / 28
   devices, 1.4.3+ — how one foreground's app-open ad ended, one row per `(foreground_id, path)`).
+  From 1.4.6 a failed show — `outcome=show_failed` (resume, landing) or `ad_show_failed` (splash, the
+  same outcome under its older spelling) — carries **`reason`** and **`refused_by`**: `guard` with
+  `already_showing|no_activity|activity_finishing|no_cached_ad|host_not_resumed` (our own check in
+  `AppOpenAdManager.show()`), or `sdk` with the SDK's show-table word, identical to
+  `ad_show_failed.reason` (decision
+  [0061](docs/decisions/0061-a-failed-app-open-show-says-who-refused-and-in-what-words.md)).
   ⚠️ **`app_open_ad_loaded` is gone from the app** — 4 firings on 1 device, and `ad_loaded` carries
   everything it did plus `type`, `ad_request_id` and `ad_source`. Old rows keep the name; nothing
   new arrives under it, so a query that still reads it is measuring history only.
@@ -465,6 +480,17 @@ the list is wrong, not the app.**
   carries which parameter is 0050's table, enforced in `SyncFailureEvidence.STAGE_PARAMS`; an absent
   parameter means not applicable at that stage. Network failures and cancellations are no longer
   reported (0029). Builds up to 1.4.4 send only the first three.
+  From 1.4.6 `stage=guest_auth` carries `request_id` (always), `http_status` (when an answer arrived)
+  and `exception_class`: the class of what the sign-in call threw, never our wrapper, and absent when
+  the server answered and nothing threw (decision
+  [0065](docs/decisions/0065-a-failed-guest-sign-in-carries-its-calls-evidence.md)). Until then its
+  `exception_class` read `Exception` on every row.
+- **Shipped images, from 1.4.6:** **`bundled_image_unavailable`** — an image a row names (a seeded
+  header, template or background) that this build cannot produce. `image` (our asset name),
+  `stored_ext` (`png` on rows written up to 1.4.4, `webp` after), `failure`
+  (`not_in_build|read_failed`), `exception_class` on `read_failed`. Once per image per process; the
+  gateway's `screen` says where it was needed. Coded, because nothing is pressed (decision
+  [0064](docs/decisions/0064-a-shipped-image-the-build-cannot-produce-reports-itself.md)).
 - **Lifecycle:** `app_cold_start`, `app_foreground`, `app_resumed`, `app_paused`, `app_background`,
   `app_heartbeat`, `session_break`, `screen_view`, `network_changed`, `app_exit_dialog_shown`
 

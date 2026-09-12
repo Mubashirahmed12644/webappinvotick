@@ -421,6 +421,14 @@ separates them is `path` — `splash|resume|landing|preload` — and without it 
 requests were fired by background process wakes, for nobody" was true for months and invisible.
 Before splitting anything by a parameter, check how many distinct values it actually has.
 
+Second corollary *(2026-09-12)*: **when an outcome can be caused by our own code or by the vendor, the
+event says which.** `app_open_decision` reported `show_failed` for five different refusals, and only
+the SDK's sent anything of its own: 10 of 12 failed shows on 1.4.5 had no explanation, because our four
+guards in `AppOpenAdManager.show()` refused in silence. The fix names the refusal (`reason`) and its
+source (`refused_by=guard|sdk`), because `host_not_resumed` (ours) and `app_not_foreground` (the
+SDK's) are nearly one fact seen by two observers, and a reader must not have to know which list a word
+came from. Decision [0061](docs/decisions/0061-a-failed-app-open-show-says-who-refused-and-in-what-words.md).
+
 ### 1.16 Attribution matches whole, or it does not match. *(decided 2026-09-08)*
 
 A campaign tag is matched by **equality on every value at once** — never a substring, a prefix, a
@@ -520,6 +528,20 @@ every iOS batch. iOS sends its build number (15) as `appVersionCode`, which is b
 testers read as zero while every batch was answered 200. The floor is now Android's: Web and iOS are
 exempt.
 
+### 1.19 A cancellation is not a failure, on any event. *(decided 2026-09-12)*
+
+Kotlin's `CancellationException` is an `Exception`, so every `catch (e: Exception)` that feeds a
+failure event catches the user leaving and reports it as the app failing. Sync learned this first
+(decision 0029: 155 devices reported a stopped sync as a failure). The shared-invoice receiver learned
+it again: on 1.4.5, 2 of the first 3 `shared_invoice_open_failed` reasons were
+`exception_CancellationException`, each a screen the dashboard replaced 225 and 316 ms after it opened,
+reported as a failed open once it was gone.
+
+The rule: a catch that feeds a failure event rethrows `CancellationException` first — at the place
+that turns the exception into a result, not at the screen that reads the result. A `reason=cancelled`
+value exists only where a decision chose to count it (`invoice_share_link_fallback`), never as the
+default. Decision [0062](docs/decisions/0062-a-request-whose-screen-closed-is-not-a-failed-open.md).
+
 ### 1.10 Layers
 
 `intent.screen` · `intent.action` · `response.outcome` · `response.gate` · `response.interruption` ·
@@ -583,6 +605,17 @@ dialogs' close buttons took the dialog title.
 It was reverted whole rather than patched, and the three sites it was written for were done by hand.
 When a heuristic walks outside the node it is describing, it will read a neighbour eventually — and
 the output is plausible, which is what makes it dangerous.
+
+### 2.8 A parameter belongs to the event whose path can see it. *(2026-09-12)*
+
+Before putting evidence on an event, check that the code that sends it can observe the fact. The
+request "`guest_login_failed` should carry the request id and HTTP status" named an event sent only by
+the **offline-first** guest creation, which calls no server: those parameters would have been absent
+on every row, and a dashboard would have read that as "no status" rather than "wrong event". The text
+the request described ("An unexpected error occurred") arrives on `sync_failed` with
+`stage=guest_auth`, the one path that calls the server: 0 `guest_login_failed` rows on vc97 or vc101 in
+30 days, 4 `guest_auth` rows on vc101. Count rows under the name first (§2.1), then read the path that
+emits it. Decision [0065](docs/decisions/0065-a-failed-guest-sign-in-carries-its-calls-evidence.md).
 
 ---
 
@@ -807,6 +840,8 @@ list containing none of the devices being tested on.
 **Adding**
 - [ ] What decision does this number change? If there is no answer, stop.
 - [ ] Is an existing event this thing with a different parameter? Add the parameter instead (§1.1).
+- [ ] Can the code that sends that event observe the value at all? A request id exists only where a
+      request is made (§2.8).
 - [ ] Auto or coded, and is that the right channel (§1.5)?
 - [ ] Is the id unique across the whole app (§1.4)?
 - [ ] Does it need `screen`, and does anything already stamp it?
