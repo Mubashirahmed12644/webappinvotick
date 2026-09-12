@@ -352,16 +352,13 @@ export function InvoiceForm({
                   {/* Sent as the item's own tax (taxRate, taxType, taxAmount), a saved item's as well. */}
                   <input placeholder="Item tax %" inputMode="decimal" value={it.taxValue} onChange={(e) => updateItem(it.id, { taxValue: e.target.value })} className={cn(selectCls, "sm:col-span-2 h-9")} />
                   <div className="flex items-center sm:col-span-6 sm:justify-end">
-                    {/* A saved item cannot be taken off from here: the update only adds and changes items,
-                        so the server would keep it on the invoice while the total dropped it. */}
-                    {items.length > 1 &&
-                      (it.saved ? (
-                        <span className="text-xs text-[var(--color-on-surface-variant)]">Saved items can&apos;t be removed on the web yet.</span>
-                      ) : (
-                        <button type="button" onClick={() => setItems((p) => p.filter((x) => x.id !== it.id))} className="text-sm font-semibold text-[var(--color-error)] hover:underline">
-                          Remove item {idx + 1}
-                        </button>
-                      ))}
+                    {/* A saved item too: an edit sends the whole list with replaceItems, so the server
+                        removes the item the list no longer carries. */}
+                    {items.length > 1 && (
+                      <button type="button" onClick={() => setItems((p) => p.filter((x) => x.id !== it.id))} className="text-sm font-semibold text-[var(--color-error)] hover:underline">
+                        Remove item {idx + 1}
+                      </button>
+                    )}
                   </div>
                 </div>
                 {problem && <p className="mt-2 text-xs font-medium text-[var(--color-error)]">{problem}</p>}

@@ -259,8 +259,9 @@ function rowProblem(row: FormRow, n: number): string | null | typeof SKIP {
   if (!row.name.trim()) {
     const empty = [row.description, row.unitPrice, row.discountValue, row.taxValue].every((v) => !v.trim());
     if (empty && !row.saved) return SKIP;
+    // A saved row is taken off with Remove only: left out of the list, the server would delete it.
     return row.saved
-      ? `Item ${n} has no name. Give it its name back: a saved item can't be removed on the web yet.`
+      ? `Item ${n} has no name. Give it its name back, or remove the item.`
       : `Item ${n} has no name. Give it one, or remove the row.`;
   }
   const q = row.quantity.trim();
