@@ -231,7 +231,12 @@ Memory is dated observation. Verify any file:line against the code before relyin
         hold (T4c).
 15. **An applied write says its number, and a copy that changes nothing keeps it** (0067, the receipt
     number's phase 1b; backend branch `feat/sync-phase-1b` @ `9cb19f8`, with the shared test context
-    `e139741`; not deployed). It changes no decision.
+    `e139741`; **LIVE 2026-09-12 19:13 UTC**, stage `ecf5bb9`, pipeline 2843480249). It changes no
+    decision.
+    - Measure 6 h and 24 h after the deploy (plan Appendix A):
+      - STALE_CONFLICT devices per active device must stay unchanged;
+      - rows sent again should stop climbing;
+      - read the counters with `increase()`, because they reset at every deploy.
     - Every applied write answers `data: {version, updatedAt}` beside SUCCESS. Every live build reads
       `data` only after a refusal (`PushSyncResponse.data: JsonElement?`, since `161a9d10`).
     - **A copy that changes nothing keeps its number.** The number, the writer and `last_synced_at` stay,
