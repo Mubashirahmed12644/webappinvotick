@@ -1,6 +1,13 @@
 # The receipt number — implementation plan
 
-**Status:** plan, 2026-09-12. **Phase 1b is built** on backend branch `feat/sync-phase-1b`
+**Status, 2026-09-13:**
+- **The 1.4.6 app subset is built and merged into `VC_102_VN_146` @ `d8282c14`.** Not released.
+  - The items: T5 `c1f65a4e`, T2 `7a3570ef`, T3 `d500f0d7`, T4a `0fa7e977`, T4b `d8282c14`.
+  - Data tests went from 152 to 174.
+- **Phase 1b was pushed to stage as `ecf5bb9`** on 2026-09-12 at 23:51 PKT.
+- With phase 1b live, read the 1.4.6 re-send rate from `changed="false"`, not from climbing versions.
+
+**Earlier status:** plan, 2026-09-12. **Phase 1b is built** on backend branch `feat/sync-phase-1b`
 (decision [0067](decisions/0067-an-applied-write-says-its-number-and-a-copy-that-changes-nothing-keeps-it.md)),
 not deployed. Building it corrected two things here:
 - T1 is judged by Hibernate's own state, not by the pull projection;

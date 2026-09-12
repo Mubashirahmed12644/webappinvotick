@@ -2,9 +2,12 @@
 
 **Status:** decided by the sync owner, under the owner's word that class P is fixed in this batch
 (2026-09-11) and "pending work start kro apni tarteeb sy" (2026-09-12).
-- Built for 1.4.6 on app branch `feat/146-sync-0059a-and-p`, commit `f538e08e`, base
-  `VC_102_VN_146` `b210dc35`. `:data:testDebugUnitTest` is 138/138.
-- Not merged, not released.
+- Built for 1.4.6 (`f538e08e`) and merged into `VC_102_VN_146`. Not released yet.
+- Extended 2026-09-13, also merged into `VC_102_VN_146`:
+  - templates and payment methods (T4a, `0fa7e977`);
+  - L7 in all 21 pull handlers (T4b, `d8282c14`).
+
+  The other 18 handlers still insert with REPLACE rather than ABORT; that remains T4c.
 
 **Date:** 2026-09-12 · **Goal:** G3 · **Related:** [0042](0042-the-server-owns-the-version-and-the-device-merges.md),
 [0059](0059-a-delete-of-a-record-the-server-does-not-hold-is-not-a-sync-failure.md), contract

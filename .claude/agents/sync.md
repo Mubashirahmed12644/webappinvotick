@@ -221,11 +221,14 @@ Memory is dated observation. Verify any file:line against the code before relyin
     - Built in `ProductSyncHandler` only, for 1.4.6 (`f538e08e`, merged into `VC_102_VN_146`, pushed;
       not released). Guard: `APulledProductNeverDeletesItsRowTest` (Robolectric, real Room, the schema
       the phones hold).
-    - The other 20 pull handlers still write with REPLACE and still date a deleted row by
-      `dateUpdated`. Two hide a deleted row from the pull (`TemplateDao.kt:36-37`,
-      `PaymentInstructionDao.kt:36-37`: `isDeleted = 0`). So a pull of one deleted here REPLACEs it,
-      which clears every invoice's link to it with no error (code, not measured). The order to extend
-      0060 is `docs/SYNC-RECEIPT-NUMBER-PLAN.md`, T4.
+    - **Extended for 1.4.6:** on `VC_102_VN_146`, merged 2026-09-13 (`d8282c14`), not released.
+      - **Templates and payment methods** now look up by id and insert with ABORT (T4a, `0fa7e977`).
+        Before, a pull of one deleted here set `invoices.templateId`, `estimates.templateId`,
+        `invoices/estimates.paymentMethodId` and `payments.paymentInstructionId` to NULL with no error.
+        This was reproduced on real SQLite.
+      - **L7 is in all 21 pull handlers** (T4b, `d8282c14`).
+      - **The other 18 still insert with REPLACE,** which is reachable only for an id the phone does not
+        hold (T4c).
 15. **An applied write says its number, and a copy that changes nothing keeps it** (0067, the receipt
     number's phase 1b; backend branch `feat/sync-phase-1b` @ `9cb19f8`, with the shared test context
     `e139741`; not deployed). It changes no decision.
@@ -250,6 +253,31 @@ Memory is dated observation. Verify any file:line against the code before relyin
       rule 12's cap holds.
     - On this Mac the raw DATETIME column holds every instant five hours early (the JVM runs at UTC+5).
       Read a time back through JDBC's timestamp, never with `DATE_FORMAT`.
+16. **An applied write marks its row SYNCED only while the row still holds the copy the push sent,
+    and no other write of it waits in the queue** (T5, `c1f65a4e`, 1.4.6).
+    - A soft delete moves no edit time, so the queue is the only sign of a delete made during a push.
+    - Guard: `AnAppliedWriteIsSyncedTest`.
+17. **Several queued copies of one write go out as one, before every push** (T2, `7a3570ef`, 1.4.6).
+    - The earliest copy stays, and takes its copies' lowest priority and earliest due time.
+    - An UPDATE behind a CREATE goes.
+    - A DELETE collapses only with another DELETE.
+    - FAILED, TERMINAL and COMPLETED rows are never touched.
+    - It is not reported (0029). Guard: `APushCarriesOneCopyOfARecordTest`.
+18. **The edit screen writes only what changed since its last write** (T3, `EditedLines`,
+    `d500f0d7`, 1.4.6).
+    - Its actions are never reset, so an edit made during a write stays in the next one.
+    - Guard: `EditedLinesTest`.
+19. **Tests that must run the real push or pull SQL use `SyncRoomFixture`** (data `androidUnitTest`):
+    - all 21 tables are seeded;
+    - the real `SyncPushHandler` runs over the real handlers;
+    - `SyncApi` is scripted.
+
+    **Open (being fixed for 1.4.6 on `feat/146-client-delete-syncs`):**
+    - A client deleted on the phone never reaches the server. `ClientRepositoryImpl.deleteClients`
+      does a hard `DELETE` with no queue row, from all 5 call sites in 3 client lists.
+    - Production agrees: 5 deleted clients ever, and none of them was written by sync.
+    - RESTRICT from `invoices.customerId` should make deleting a client with invoices throw. This is
+      from the code, not measured.
 
 ## Established 2026-09-12, while planning the receipt number
 
@@ -266,7 +294,11 @@ The plan is `docs/SYNC-RECEIPT-NUMBER-PLAN.md`. Each line says how it is known.
   - A second read 18 minutes later caught business `216182a3` written again with no edit (v44 → v45),
     from a 1.4.4 phone's background push.
   - 1.4.5 phones do it too (`8298ede7`).
-  - The fix is T5 in the plan (1.4.6, owner question 1).
+  - **Built for 1.4.6 (T5, `c1f65a4e`),** merged into `VC_102_VN_146` @ `d8282c14`; not released.
+    - An applied CREATE or UPDATE marks its row SYNCED only while two things hold: the row still has the
+      copy the push sent (`SentCopies`), and no other write of it waits in the queue.
+    - An applied DELETE settles its row the same way.
+    - Headers, backgrounds, signatures, stamps and templates join the orphan scan.
 - **The push moves the pull bookmark** (`SyncPushHandler.kt:192-195`), and a push follows every
   local write (code, not measured).
   - Another phone's change can therefore be skipped by the next delta pull.
