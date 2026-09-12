@@ -112,13 +112,37 @@ Memory is dated observation. Verify any file:line against the code before relyin
 8. **Release builds and store uploads happen only on the owner's word.** The version name is the live
    release + 1.
 
+## Known gaps (2026-09-12, found while checking 1.4.5)
+
+1. **1.4.5 can take back a confirmed grant.** To be fixed in 1.4.6, once the owner approves.
+   - A restore with no answer marks a purchase unconfirmed even when it was confirmed before
+     (`BillingRepositoryImpl.kt:484-489`).
+   - Any later re-register error other than 503 is then read as Google's refusal
+     (`ServerPurchaseVerification.kt:28-39`). A 401, a 400 from the error handler and a 500 all count.
+   - Premium stays off until a later re-register succeeds. This breaks rule 3 and 0048 #4.
+   - The fix: only a never-confirmed grant may be marked unconfirmed, and only a 400 is a refusal.
+2. **Lifetime purchases are refused unless `GOOGLE_PLAY_LIFETIME_PRODUCTS` is set.** It defaults to empty.
+   The production value has not been read. If it is empty, every lifetime buyer is refused, and no row is
+   left behind.
+3. **Billing calls send no `X-Device-Id`,** so the device column of each billing row is always empty. 0048
+   #6 promises one row per purchase, account and device.
+4. **The Health Centre cannot see paying phones.** Reconcile does not run while unsent rows are waiting, so
+   all 2,747 premium reports in the last 30 days say false.
+5. **Interstitial and banner ads send no event when Play has not answered,** only a log line. So their
+   cost under 0047 is not measured.
+6. **Two paywall wording gaps.**
+   - An intro offer or trial would show the regular price, not the first charge.
+   - A 4-week or 2-month period would fall back to a label taken from the plan's name.
+
 ## How you get at the data (read-only)
 
 - Production SQL:
   `ssh -i ~/.ssh/invotick_ro -o BatchMode=yes root@82.112.253.168 'mysql -uroot invotick_prod'` —
   one-shot, always with a date range. Look at:
   - `entitlement`, `purchase_identity`, `purchase_restore_answer`;
-  - the app's `ad_*`, `app_open_decision` and `premium_click` events in `analytics_events`.
+  - the app's `ad_*`, `app_open_decision` and `ad_dailog_premium_click` events in `analytics_events`.
+    `premium_click` is gone from the app; it was last seen 2026-08-21. A paywall view is a `screen_view` of
+    `premium_scr`.
 - `GET /v1/webpanel/billing-health/summary` and the Health Centre (`billing-integrity`,
   `retired-plan-renewals`), with the admin JWT from memory.
 - Google only through our own endpoints, starting with the defer endpoint's dry run. Never with a

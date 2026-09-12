@@ -319,8 +319,9 @@ The floor is **Android's**. `Platform.Web` is exempt (decision 0045), and so is 
 200 and stored nowhere (`AGENTS-EVENTS.md` §1.18).
 
 Explicitly coded event vocabulary today — **as the shipped build sends it** (`origin/VC_96_VN_144`,
-live as **1.4.4 / versionCode 97**; the ads section re-read against `analytics_events` on
-2026-09-07. This line said 1.4.2 / versionCode 94 until then, two releases after it stopped being
+live as **1.4.5 / versionCode 101 at 100% in Pakistan only since 2026-09-11 19:41 UTC — the owner's
+deliberate choice, to compare; everyone else is still on 1.4.4 / versionCode 97**; the ads section
+re-read against `analytics_events` on 2026-09-07. This line said 1.4.2 / versionCode 94 until then, two releases after it stopped being
 true — a stale build stamp makes every count under it read as the current app). **Grep note:**
 `trackClick(` is often a multi-line call, so a single-line grep silently misses events — always grep
 with trailing context. **A name in this list is a claim about the app; when it stops matching rows,
@@ -398,7 +399,9 @@ the list is wrong, not the app.**
   ⚠️ **Backend deploys first.** `AnalyticsVersionGate` refused any batch with a null
   `appVersionCode`, which is every web batch — 200 OK, zero stored. It now exempts `Platform.Web`.
   Ship the web against the old gate and the funnel reads as a step nobody reached.
-- **Money/ads:** `premium_click`, `watch_ad_click`, `ad_request`, `ad_loaded`, `ad_shown`,
+- **Money/ads:** `watch_ad_click`, `ad_request`, `ad_loaded`, `ad_shown`,
+  *(`premium_click` is gone from the app, last seen 2026-08-21. The premium tap is `ad_dailog_premium_click`
+  (sic), and a paywall view is `screen_view` for `premium_scr`. Found by the billing agent, 2026-09-12.)*
   `ad_dismissed`, `ad_load_failed`, `ad_show_failed`, `ad_load_crashed`, `ad_dialog_dismissed`,
   **`ad_impression_value`** (3,112 firings / 582 devices — what an impression actually paid, from
   the network, so the ad trade has a revenue side at all) and **`app_open_decision`** (324 / 28
@@ -425,7 +428,8 @@ the list is wrong, not the app.**
   level of `cause_reason` + `cause_domain`, all of which the SDK was giving us and we dropped.
   `ad_show_failed` gains `ad_request_id` (the one event in the chain that could not be joined back
   to its request) and `elapsed_ms`. `ad_loaded` and `ad_load_failed` also gain **`since_request_ms`**
-  — how long the request itself took. Nothing measured that before: `elapsed_ms` is time since
+  — how long the request itself took. *(As built, this is on app-open events only: 0 of 13 interstitial
+  events carry it. Measured on 1.4.5, 2026-09-12.)* Nothing measured that before: `elapsed_ms` is time since
   **launch**, and so is the `ms_since_start` the gateway stamps on every event, so the number the
   splash's 6,000 ms gate is actually tuned against had to be reconstructed by pairing rows on
   timestamps. `elapsed_ms` stays where it already was — it has history (§1.8) and answers a different

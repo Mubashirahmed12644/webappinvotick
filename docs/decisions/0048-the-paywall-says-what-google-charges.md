@@ -41,6 +41,9 @@
    purchase while our server cannot be reached. A confirmed grant is never taken back by a refusal.
 5. **A restore with no answer is not registered.** Whose the purchase is was the unanswered question.
 6. **The server keeps the token and every restore answer** — one row per purchase, account and device.
+   *(2026-09-12: the app sends no `X-Device-Id` on billing calls, so today the device column is always
+   empty; see billing.md "Known gaps" #3. The same check found that 1.4.5 breaks #4 in one path; see
+   Known gaps #1, due to be fixed in 1.4.6.)*
    - The Health Centre shows "premium through another account's purchase" and "purchases used by more
      than 5 accounts" (a warning, never enforced).
    - "Enabled without payment" no longer counts the former.
