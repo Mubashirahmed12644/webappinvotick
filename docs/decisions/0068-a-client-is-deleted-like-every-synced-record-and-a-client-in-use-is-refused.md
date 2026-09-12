@@ -86,8 +86,8 @@ belongs to the owner and is still open (see "Open" below).
   309 live rows share the shape. Rejected: sending the other account's parent (a leak), and relaxing the
   reference check (it moves the document and leaves its signature behind). The repair is the owner's; the
   fix is 0053.
-- **Still open, the same family:** lines of a deleted invoice (2,814), invoice-payment links of a deleted
-  invoice (81), lines of a deleted estimate (32), and invoices naming deleted terms (28).
+- **The same family is decided in 0069:** lines of deleted invoices, their payment links, lines of deleted
+  estimates, and deleted terms that a live invoice names.
 - **Measure after 1.4.6** (vc ≥ 102):
   - deleted clients whose `last_modify_by` is a vc ≥ 102 phone, against confirmed delete taps (before:
     23 of 2,122 active devices);

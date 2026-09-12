@@ -282,6 +282,8 @@ Memory is dated observation. Verify any file:line against the code before relyin
     - `SyncRoomFixture.pull(answer)` runs the real `SyncPullHandler` over the 21 handlers, answered
       with a scripted `PullSyncResponse`, for a restored guest session of its own. The push keeps its
       unrestored session.
+    - `SyncRoomFixture.pullAsTheAppDoes(full, delta)` pulls as the foreground does. The phone's
+      bookkeeping lives in one shared `StoredSyncMetadata`, and `now` is the repair's clock.
 
 20. **A client is deleted like every synced record, and a client that a document points at is refused
     by name** (0068, `dcf97a79`, 1.4.6, merged into `VC_102_VN_146`; not released).
@@ -323,15 +325,36 @@ Memory is dated observation. Verify any file:line against the code before relyin
 
         Since `0749457`, 3 of 15 sign-ups left a document behind. The repair is the owner's (Tier 1);
         the fix is 0053.
-      - **Still open, the same family:** lines of a deleted invoice (2,814, in 249 accounts),
-        invoice-payment links of a deleted invoice (81), lines of a deleted estimate (32), and invoices
-        naming deleted terms (28). One phone looped on it: each failure forces a full pull that fails
-        the same way.
+      - **The same family is rule 21** (0069): lines of deleted invoices, their payment links, lines of
+        deleted estimates, and deleted terms that a live invoice names.
       - Guards: `AClientInUseIsNotDeletedByTheWebTest`,
         `AFullPullSendsTheDeletedClientsItsDocumentsNameTest`,
         `AFullPullSendsTheDeletedParentsItsRowsNameTest`, `APulledRecordIsNotSentBackTest`,
         `ADeletedParentThisPhoneNeverHeldArrivesTest`.
     - Guard: `ADeletedClientReachesTheServerTest`.
+21. **A full pull sends a child only with its parents, and a record no pull can store costs a bounded
+    number of full pulls** (0069; backend `d916a6d`, app `62c06408` for 1.4.6).
+    - An invoice line is sent only with its invoice, an estimate line only with its estimate, and an
+      invoice-payment link only with its invoice and its payment.
+      - A phone deletes a parent alone, so its children stay live: 2,833 lines of 716 deleted invoices
+        (2026-09-13).
+      - Builds up to 1.4.5 never keep a deleted parent, so for them not sending the child is the only
+        fix.
+    - The account's deleted terms that a live document names are sent as deleted rows. 1.4.6 keeps them
+      (`TermsSyncHandler.applyServerDelete`); up to 1.4.5, `sanitizeEntity` clears the link. The delta
+      is unchanged.
+    - On the phone (`PullRepair`), only a delta's miss asks for a full pull.
+      - A repair waits 0, 1 h, 6 h and 24 h after full pulls that still fail.
+      - It is kept apart from the app-update flag, so an update's full pull is never held back.
+    - A full pull reports each miss once, with `attempts`; a delta's miss is not reported.
+    - Before: one guest's only phone (`8298ede7`, vc101) asked for 4 full pulls in 15 minutes (236
+      reports). Accounts that would trap a new phone: 262 → 8 (6 name another account's product, 0053).
+    - Guards: `AFullPullSendsNoChildWithoutItsParentTest`, `AFullPullIsNotAskedForAgainAndAgainTest`, and
+      the terms case in `ADeletedParentThisPhoneNeverHeldArrivesTest`.
+    - Open:
+      - the root: 91 of 95 invoices deleted this week left their lines live (0069 Q2, the owner's);
+      - the repair of the existing rows (0069 Q1, the owner's);
+      - 38 "Template: FOREIGN KEY" reports from vc94–97, which send no ids.
 
 ## Established 2026-09-12, while planning the receipt number
 
