@@ -2,19 +2,18 @@
 
 **Status:** decided by the owner, 2026-09-11 list, sync decision 1 (recommended "yes"; "haan", and on
 2026-09-12 "pending work start kro apni tarteeb sy").
-- Server half built on backend branch `fix/benign-delete-not-found`:
-  - `cc4ee5e` — the filing and the card;
-  - `3d8d5b1` — the INFO logging.
-
-  6 tests failed first; the full suite is 647/647 (baseline 641/641). Not pushed, not deployed.
-- App half for 1.4.6: **A built** on app branch `feat/146-sync-0059a-and-p`, `3cfc2d75` (base
-  `VC_102_VN_146` `b210dc35`).
+- **Server half: live since 2026-09-12 16:10 UTC**, in `stage` @ `587b33d`. It carries `59fc04f` (the
+  filing and the card) and `0f04ca9` (the INFO logging), which are `cc4ee5e` and `3d8d5b1` of branch
+  `fix/benign-delete-not-found` as they landed on `stage`. 6 tests failed first; the full suite was
+  647/647 (baseline 641/641).
+- **App half A: in 1.4.6** as `3cfc2d75`, merged into `VC_102_VN_146` (@ `f538e08e`, pushed). Not
+  released.
   - `ADeleteOfAnAbsentRecordTest` failed first: the report was sent, and the create and the update
-    stayed open. It passes now; `:data:testDebugUnitTest` is 130/130 (baseline 127/127).
+    stayed open. It passes now; `:data:testDebugUnitTest` was 130/130 (baseline 127/127).
   - The server-side precondition is checked: `SyncV2PushService.toOperations` handles a group's
     creates before its deletes, so a NOT_FOUND on a delete means the same push's create was refused
     too.
-  - Not merged into `VC_102_VN_146`, not released. **B is not built.**
+  - **B is not built.**
 
 **Date:** 2026-09-12 · **Goal:** G3. A card that is red for a harmless reason cannot say when something
 real breaks.

@@ -1,6 +1,12 @@
 # The receipt number — implementation plan
 
-**Status:** plan only, 2026-09-12. No code, no build, no commit in the app or backend repos.
+**Status:** plan, 2026-09-12. **Phase 1b is built** on backend branch `feat/sync-phase-1b`
+(decision [0067](decisions/0067-an-applied-write-says-its-number-and-a-copy-that-changes-nothing-keeps-it.md)),
+not deployed. Building it corrected two things here:
+- T1 is judged by Hibernate's own state, not by the pull projection;
+- a copy that changes nothing still stores its time (§10).
+
+Everything else is still plan only.
 **Owner's word:** the order of the structural fixes (2026-09-11, receipt number first), and "pending
 work start kro apni tarteeb sy" (2026-09-12), which approved the three items of 2026-09-12 listed in §4.
 **Covers:**
@@ -731,8 +737,10 @@ Each of these is to be logged as one decision entry, with what was rejected, onc
 - `version` = the server's number or 0; the one-time reset (§3.1).
 - The base snapshot table and its ten-row lifetime (§3.2).
 - "Changes nothing" means the content and the deleted flag. The edit time alone is not content, so an
-  identical copy with a new time is also no change, and the stored time stays at the last real change
-  (T1).
+  identical copy with a new time is also no change, and keeps its number (T1).
+  - ~~and the stored time stays at the last real change~~ **Corrected by 0067:** its time is still
+    stored, as before. The clock judges every later copy against the stored time, so holding it back
+    changed later answers: `AnUpdateKeepsTheDeviceTimeTest` caught an older copy being accepted.
 - The clock offset from `syncTimestamp`, with the `Date` header as a fallback (§3.5).
 - The clamp's report threshold of 2 s (§3.7).
 - The bound of 2 merges per cycle, plus a lifetime guard of 10 (§3.3).

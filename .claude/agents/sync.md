@@ -41,7 +41,13 @@ the owner's decisions → code. Log every decision in `docs/decisions/`, includi
    - 0029 — a reported failure is an attempt the server refused;
    - 0036 — a delete must say what it is deleting (decided, not built);
    - 0042 — the server owns the version and the device merges (it extends 0036);
-   - 0050 — the evidence net: its parameter table and contract.
+   - 0050 — the evidence net: its parameter table and contract;
+   - 0065 — a failed guest sign-in carries its call's evidence: from 1.4.6 (vc ≥ 102),
+     `sync_failed stage=guest_auth` carries `request_id`, `http_status` and the thrown
+     `exception_class` (it amends 0050's table). Sync Health then files it as `guest_auth / HTTP_<n>`,
+     and `last_trace_id` holds the request id, so the drill-down's Server-log button finds the call;
+   - 0067 — the receipt number's server half: an applied write says its number, a copy that changes
+     nothing keeps it (rule 15).
 
    The conflict contract itself is `docs/SYNC-CONFLICT-CONTRACT.md`.
 3. Memory (`~/.claude/projects/-Users-ahmedmubashir-Documents-Webinvotick/memory/`):
@@ -70,6 +76,8 @@ Memory is dated observation. Verify any file:line against the code before relyin
   - `SyncV2PushService` — **one transaction per push**;
   - `*SyncV2Services` with `AbstractSyncV2Support` — create through `InsertNew`, update, delete;
   - `SyncConflictPolicy`, and `SyncVersionRuleGate` (off by default);
+  - `SyncV2PushMetrics` — the receipt counters (0067), and `AbstractSyncV2Support.CopyCheck`, which
+    tells whether a copy changed its row;
   - `SyncFailureRecorder`, and `DeviceSyncFailureIngest` (hourly, over a 30-day window);
   - `SyncFailureCheck` — the Device sync card.
     - It is not in `health.alert.emergency-checks`, so a red card pages nobody. On 2026-09-12 it was
@@ -218,6 +226,30 @@ Memory is dated observation. Verify any file:line against the code before relyin
       `PaymentInstructionDao.kt:36-37`: `isDeleted = 0`). So a pull of one deleted here REPLACEs it,
       which clears every invoice's link to it with no error (code, not measured). The order to extend
       0060 is `docs/SYNC-RECEIPT-NUMBER-PLAN.md`, T4.
+15. **An applied write says its number, and a copy that changes nothing keeps it** (0067, the receipt
+    number's phase 1b; backend branch `feat/sync-phase-1b` @ `9cb19f8`, with the shared test context
+    `e139741`; not deployed). It changes no decision.
+    - Every applied write answers `data: {version, updatedAt}` beside SUCCESS. Every live build reads
+      `data` only after a refusal (`PushSyncResponse.data: JsonElement?`, since `161a9d10`).
+    - **A copy that changes nothing keeps its number.** The number, the writer and `last_synced_at` stay,
+      so no phone pulls it again.
+      - Its time is still stored, as before: the clock judges every later copy against it. Holding the
+        time back changed later answers, and the rule-3 guards caught it.
+      - "Nothing" is Hibernate's own state comparison, per operation (`CopyCheck`), never a field list.
+        When the state cannot be read, the write goes ahead with a new number and is counted
+        `changed="unchecked"`.
+    - A delete may carry `{id, version}`. It is evidence (`last_local_version`) until phase 3.
+    - The all-zero device id, or none, is nobody: it stores no writer, and never keeps the one before.
+    - A delete stamps the server's time in the service, so its answer says the stored time exactly.
+    - Guards:
+      - `ACopyThatChangesNothingKeepsItsNumberTest`: for every field of all 21 groups, the number moves
+        exactly when the row changes;
+      - `AnAppliedWriteSaysItsNumberTest`, `ADeleteMaySayWhichVersionTest`, `AnUnknownWriterIsNobodyTest`;
+      - `EachReceiptCounterMovesOnItsShapeTest`, `SyncVersionShadowTest`, `SyncCopyComparisonTest`.
+    - They share one Spring context with `ARefusedRecordIsNotWrittenTest` (`SyncPushOnARealDatabase`), so
+      rule 12's cap holds.
+    - On this Mac the raw DATETIME column holds every instant five hours early (the JVM runs at UTC+5).
+      Read a time back through JDBC's timestamp, never with `DATE_FORMAT`.
 
 ## Established 2026-09-12, while planning the receipt number
 
@@ -242,10 +274,11 @@ The plan is `docs/SYNC-RECEIPT-NUMBER-PLAN.md`. Each line says how it is known.
   - The plan's phase 2 step 2.7 addresses it.
 - **The built version rule has four gaps, to close before it is switched on** (code):
   - APPLY is still refused by the clock (`AbstractSyncV2Support.kt:301-302`, then `:232-251`);
-  - an applied write answers no version (`SyncV2PushService.kt:204`);
+  - ~~an applied write answers no version (`SyncV2PushService.kt:204`)~~ — closed by 0067 on
+    `feat/sync-phase-1b`, not deployed;
   - row 2 ("superseded by self") keeps the older copy after a lost answer and a new edit;
-  - the all-zero iOS id counts as a writer (16 rows in 30 days), and a write with no usable id keeps
-    the previous writer's id.
+  - ~~the all-zero iOS id counts as a writer (16 rows in 30 days), and a write with no usable id keeps
+    the previous writer's id~~ — closed by 0067 on `feat/sync-phase-1b`, not deployed.
 - **Who a merge serves** (data): in 30 days, 2 of 1,107 writing accounts had two or more writing
   phones. The receipt number's wide benefit is ending clock refusals and re-sent copies.
 
@@ -310,6 +343,11 @@ The plan is `docs/SYNC-RECEIPT-NUMBER-PLAN.md`. Each line says how it is known.
   - Before calling it endless, check `last_synced_at` against the phone's active hours.
   - On 2026-09-12 an estimate at v706 and an invoice at v374 were both finite drains of duplicate
     creates on 1.4.2 and 1.4.4 phones.
+- **The receipt counters (0067), once deployed:** Grafana → Explore → the Prometheus data source.
+  They reset at every deploy, so read `increase(...[6h])`, never the raw total. For example, the
+  re-send rate is
+  `sum by (group, build) (increase(sync_push_applied_total{changed="false"}[6h])) / sum by (group, build) (increase(sync_push_applied_total[6h]))`.
+  `/actuator/prometheus` is denied at nginx and cannot be read from outside.
 - **Server logs for one request:** `GET /v1/webpanel/sync-health/trace/{requestId}` with the admin
   JWT (memory `admin-api-token.md`). Loki keeps lines reliably only once promtail runs the new label
   config; after a config change, `docker restart promtail` on the VPS — the owner's hands.
