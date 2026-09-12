@@ -236,7 +236,10 @@ Memory is dated observation. Verify any file:line against the code before relyin
     - Measure 6 h and 24 h after the deploy (plan Appendix A):
       - STALE_CONFLICT devices per active device must stay unchanged;
       - rows sent again should stop climbing;
-      - read the counters with `increase()`, because they reset at every deploy.
+      - read the counters with `increase()`, because they reset at every deploy. `increase()` misses a
+        series' first increment: a counter born at 1 reads 0. So read a rare series raw as well, e.g.
+        `sum(sync_push_applied_total{changed="unchecked"})`; any series there means at least 1.
+        Prometheus answers at `127.0.0.1:9090` on the VPS, through the read-only key.
     - Every applied write answers `data: {version, updatedAt}` beside SUCCESS. Every live build reads
       `data` only after a refusal (`PushSyncResponse.data: JsonElement?`, since `161a9d10`).
     - **A copy that changes nothing keeps its number.** The number, the writer and `last_synced_at` stay,
