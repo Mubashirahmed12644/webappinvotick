@@ -95,9 +95,14 @@ Memory is dated observation. Verify any file:line against the code before relyin
 2. **The paywall prints Google's price, period and saving, taken from the offer actually bought** —
    never from a product id. The "Yearly" product was a monthly base plan for four months. The first
    customer paid for a year, and Google set the renewal a month out.
-3. **A refusal is final only when Google gives it** (400/404/410).
-   - "Could not ask" is 503 / `UNVERIFIED`.
-   - A final refusal takes back only a grant that was never confirmed.
+3. **A refusal is final only when Google gives it** (Google's 400/404/410, 0048).
+   - The app counts a register refusal as Google's only when the server names it: a 400 carrying
+     `code: "NOT_VALID"` (0070, app 1.4.6). A restore's `NOT_VALID` is the same word, and the app acts
+     on it without registering.
+   - "Could not ask" is everything else: 503 / `UNVERIFIED`, a 401, the error handler's 400, a 500, a
+     body that does not parse. Premium then stands on Play's word.
+   - A final refusal takes back only a grant that was never confirmed, and a confirmed grant is never
+     marked unconfirmed again (0070).
 4. **Never register a restore that got no answer** — doing so moves the entitlement to whoever sent
    it. Store every restore answer.
 5. **A renewal changes the order id** (`…..0`, `…..1`). Key a purchase by `baseOrderId` and the
@@ -114,13 +119,24 @@ Memory is dated observation. Verify any file:line against the code before relyin
 
 ## Known gaps (2026-09-12, found while checking 1.4.5)
 
-1. **1.4.5 can take back a confirmed grant.** To be fixed in 1.4.6, once the owner approves.
-   - A restore with no answer marks a purchase unconfirmed even when it was confirmed before
-     (`BillingRepositoryImpl.kt:484-489`).
-   - Any later re-register error other than 503 is then read as Google's refusal
-     (`ServerPurchaseVerification.kt:28-39`). A 401, a 400 from the error handler and a 500 all count.
-   - Premium stays off until a later re-register succeeds. This breaks rule 3 and 0048 #4.
-   - The fix: only a never-confirmed grant may be marked unconfirmed, and only a 400 is a refusal.
+1. **1.4.5 can take back a confirmed grant.** **Fixed for 1.4.6** on branch
+   `feat/146-premium-never-taken-back` (0070). Not merged yet.
+   - On 1.4.5, a restore with no answer marked a purchase unconfirmed even when it had been confirmed
+     before (`BillingRepositoryImpl.kt:484-489`).
+   - Any later re-register error other than 503 was then read as Google's refusal
+     (`ServerPurchaseVerification.kt:28-39`). A 401, a 400 from the error handler and a 500 all
+     counted.
+   - Premium stayed off until a later re-register succeeded. This broke rule 3 and 0048 #4.
+   - The fix:
+     - only a grant that was never confirmed may be marked unconfirmed (`PremiumGrant`);
+     - only a 400 the server names `NOT_VALID` is a refusal.
+   - `FirstCustomerStaysPremiumTest` walks his exact path.
+   - **The server half is not built.** `EntitlementController.purchase` must answer a refusal with a
+     `code`: `NOT_VALID` when `e.definitive`, `UNVERIFIED` otherwise.
+     - Same envelope: a `PurchaseRefusal(success = false, message, data = null, code)` body, with
+       return type `ResponseEntity<*>`.
+     - Until it ships, 1.4.6 reads Google's register refusal as "could not ask". A faked purchase then
+       keeps premium on Play's word until the next launch, whose restore says `NOT_VALID`.
 2. **Lifetime purchases are refused unless `GOOGLE_PLAY_LIFETIME_PRODUCTS` is set.** It defaults to empty.
    - **Production was EMPTY** (the owner checked it on 2026-09-12). With it empty:
      - the server asks Google's subscription endpoint about `life_time_purchase`;
@@ -139,6 +155,9 @@ Memory is dated observation. Verify any file:line against the code before relyin
      paid.
 3. **Billing calls send no `X-Device-Id`,** so the device column of each billing row is always empty. 0048
    #6 promises one row per purchase, account and device.
+   - **Fixed for 1.4.6** in `cfac4258`, not merged yet: register, restore and entitlement send it the
+     way sync does.
+   - Builds up to 1.4.5 keep writing an empty device, so the column fills only as 1.4.6 spreads.
 4. **The Health Centre cannot see paying phones.** Reconcile does not run while unsent rows are waiting, so
    all 2,747 premium reports in the last 30 days say false.
 5. **Interstitial and banner ads send no event when Play has not answered,** only a log line. So their
@@ -146,6 +165,15 @@ Memory is dated observation. Verify any file:line against the code before relyin
 6. **Two paywall wording gaps.**
    - An intro offer or trial would show the regular price, not the first charge.
    - A 4-week or 2-month period would fall back to a label taken from the plan's name.
+   - **Fixed for 1.4.6** in `a56d8071`, not merged yet: a price Play did not send was printed blank.
+     This hit the Lifetime card whenever Play sent its one-time product with only a list of offers
+     (Billing 8+).
+     - The price now comes from the product's own offer, or else the cheapest listed one, and the
+       purchase buys that same offer.
+     - The card shows a dash when there is no price.
+     - A plan with no offer Play can sell is not launched. A subscription used to go out with an
+       empty offer token, which Billing 8+ throws on.
+     - This can only be seen on a build installed from Play (rule 7).
 
 ## How you get at the data (read-only)
 
