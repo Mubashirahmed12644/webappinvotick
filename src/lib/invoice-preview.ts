@@ -184,9 +184,12 @@ const SKIP = Symbol("skip");
  * - A row left completely empty is the one the form offers, and is not sent. A row with anything in it
  *   and no name is a problem, so a typed price cannot vanish from the invoice.
  * - A saved row is always sent (FormRow.saved).
- * - A number the server would store as a different one is refused rather than sent: a quantity below
- *   1 (InvoiceItem.normalizeMoney raises it to 1), more than 2 decimals (it keeps 2), and a discount
- *   past the price or past the subtotal (it stores the negative amount as 0.00).
+ * - A quantity is any number above 0 with at most 2 decimals, and it is sent exactly as typed: the
+ *   server stores it as sent, 0.5 included. Until fix/rest-invoice-items-and-quantity (7dd2aec) it
+ *   raised anything below 1 to 1, so the form refused those.
+ * - A number the server would store as a different one is refused rather than sent: more than 2
+ *   decimals (it keeps 2), and a discount past the price or past the subtotal (it stores the negative
+ *   amount as 0.00).
  */
 export function prepareInvoice<R extends FormRow>(input: {
   rows: R[];
@@ -239,7 +242,7 @@ function rowProblem(row: FormRow, n: number): string | null | typeof SKIP {
   if (!q) return `Item ${n}: enter a quantity.`;
   const quantity = typedNumber(q);
   if (Number.isNaN(quantity)) return `Item ${n}: "${q}" is not a quantity. Use a number such as 2 or 1.5.`;
-  if (quantity < 1) return `Item ${n}: the quantity must be at least 1. A smaller quantity would be saved as 1.`;
+  if (quantity <= 0) return `Item ${n}: the quantity must be more than 0.`;
   if (decimalsOf(q) > 2) return `Item ${n}: the quantity can have at most 2 decimal places.`;
   const typed = [
     ["price", row.unitPrice],

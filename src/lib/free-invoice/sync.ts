@@ -79,7 +79,9 @@ export async function backupLocalInvoices(): Promise<SyncResult> {
             itemCategoryId: null,
             name: it.description || "Item",
             description: null,
-            quantity: Number(it.quantity) || 1,
+            // The quantity the free tool's totals counted, as it is: the server stores it as sent, so
+            // 0.5 stays 0.5 and a 0 stays 0, and the rows add up to the subtotal sent with them.
+            quantity: c.quantity,
             unitPrice: Number(it.rate) || 0,
             netPrice: c.netPrice,
             discount: null,
