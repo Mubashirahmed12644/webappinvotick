@@ -7,6 +7,7 @@ import {
   computeInvoiceTotals,
   computeLineItem,
   discountTypeOf,
+  typeWord,
   type DiscountType,
   type InvoiceTotals,
   type LineItemInput,
@@ -151,7 +152,8 @@ export function savedItemFields(it: FormItemValues) {
     unitPrice: typedNumber(it.unitPrice),
     netPrice: c.netPrice,
     discount: discount ? discount : null,
-    discountType: discount ? it.discountType : null,
+    // The word the app reads (typeWord): a fixed amount is FLAT, never FIXED.
+    discountType: discount ? typeWord(it.discountType) : null,
   };
 }
 

@@ -8,7 +8,7 @@
 // Uses the app's existing create endpoints (same payloads the authenticated
 // invoice/client forms use), so no backend change is required.
 import { apiSend } from "@/lib/client-api";
-import { computeLineItem } from "@/lib/invoice-calc";
+import { computeLineItem, typeWord } from "@/lib/invoice-calc";
 import { getAllInvoices, putInvoice } from "./store";
 import { totalsFor, uuid } from "./adapter";
 
@@ -100,7 +100,9 @@ export async function backupLocalInvoices(): Promise<SyncResult> {
         shippingCost: totals.shippingCost,
         totalAmount: totals.total,
         status: "DRAFT",
-        discountType: inv.discountValue ? inv.discountType : null,
+        // The free tool calls a fixed discount FIXED, and the app reads that word as a percentage: a
+        // fixed 50 would open as 50%. The account gets FLAT (typeWord).
+        discountType: inv.discountValue ? typeWord(inv.discountType) : null,
         discountValue: inv.discountValue ? Number(inv.discountValue) : null,
         taxId: null,
         termsId: null,

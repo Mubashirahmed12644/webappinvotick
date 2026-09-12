@@ -7,8 +7,8 @@
  *
  * FLAT is the fixed amount's name in the app and in the database, and the only name the app reads as
  * fixed: its `toDiscountType` and `toTaxType` read every other word, FIXED included, as a percentage.
- * So the invoice form saves FLAT. FIXED stays for the free tool, which saves nothing. The math below
- * treats everything other than PERCENTAGE as a fixed amount.
+ * FIXED stays as the free tool's own name, and nothing is sent with it: every type the web sends goes
+ * through typeWord. The math below treats everything other than PERCENTAGE as a fixed amount.
  */
 export type DiscountType = "PERCENTAGE" | "FLAT" | "FIXED";
 
@@ -18,6 +18,15 @@ export type DiscountType = "PERCENTAGE" | "FLAT" | "FIXED";
  */
 export function discountTypeOf(stored: string | null | undefined): DiscountType {
   return stored?.trim().toLowerCase() === "flat" ? "FLAT" : "PERCENTAGE";
+}
+
+/**
+ * The word a discount or tax type is sent as, the reverse of discountTypeOf: PERCENTAGE, or FLAT for
+ * any fixed amount. FIXED never leaves the web. The app would read it as a percentage, so a fixed 50
+ * would open as 50%, and the server refuses it as an item's tax type.
+ */
+export function typeWord(type: DiscountType): "PERCENTAGE" | "FLAT" {
+  return type === "PERCENTAGE" ? "PERCENTAGE" : "FLAT";
 }
 
 function round2(n: number): number {

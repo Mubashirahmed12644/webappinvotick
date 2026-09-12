@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { TextField } from "@/components/ui/TextField";
 import { cn } from "@/lib/cn";
 import { formatMoney } from "@/lib/format";
-import { discountTypeOf, type DiscountType } from "@/lib/invoice-calc";
+import { discountTypeOf, typeWord, type DiscountType } from "@/lib/invoice-calc";
 import { nextBusinessInvoiceNumber } from "@/lib/invoice-number";
 import {
   editBlocker,
@@ -196,8 +196,9 @@ export function InvoiceForm({
       id: invoiceId, businessId, clientId, invoiceNumber, invoiceDate, dueDate,
       subtotal: totals.subtotal, discountAmount: totals.discountAmount, taxAmount: totals.taxAmount,
       shippingCost: totals.shippingCost, totalAmount: totals.total, status,
-      // Sent even when cleared: the update keeps the old discount when it is sent null.
-      discountType, discountValue: prepared.discountValue,
+      // Sent even when cleared: the update keeps the old discount when it is sent null. The type goes
+      // as the word the app reads (typeWord), never FIXED.
+      discountType: typeWord(discountType), discountValue: prepared.discountValue,
       taxId: taxId || null, notes: notes || null,
       templateId: templateId || null, signatureId: signatureId || null, stampId: stampId || null, currency,
       // What the form does not show goes back as the invoice has it: the update would erase a null.
