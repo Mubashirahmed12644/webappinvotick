@@ -275,7 +275,10 @@ Memory is dated observation. Verify any file:line against the code before relyin
 19. **Tests that must run the real push or pull SQL use `SyncRoomFixture`** (data `androidUnitTest`):
     - all 21 tables are seeded;
     - the real `SyncPushHandler` runs over the real handlers;
-    - `SyncApi` is scripted.
+    - `SyncApi` is scripted;
+    - `SyncRoomFixture.pull(answer)` runs the real `SyncPullHandler` over the 21 handlers, answered
+      with a scripted `PullSyncResponse`, for a restored guest session of its own. The push keeps its
+      unrestored session.
 
 20. **A client is deleted like every synced record, and a client that a document points at is refused
     by name** (0068, `dcf97a79`, 1.4.6, merged into `VC_102_VN_146`; not released).
@@ -284,17 +287,34 @@ Memory is dated observation. Verify any file:line against the code before relyin
     - **The fix is a soft delete plus a queued DELETE** under the client's own owner, in one transaction
       with the in-use check (`ClientDao.softDeleteUnlessInUse`). The lists and the count skip a deleted
       client; a read by id does not.
-    - **A delete pulled from the server lands SYNCED** (`markDeletedByServer`). Written as
-      PENDING_DELETE, it used to be sent back. Business and template still do that (open).
+    - **Whatever a pull writes lands SYNCED, so the phone never sends it back** (`54631ac9`, 1.4.6).
+      - A pulled delete of a business, client or template uses `markDeletedByServer`. The other 18 soft
+        deletes set no state, and a pulled delete applies only to a SYNCED row.
+      - A client pulled new: `ClientDto.toEntity` was the one mapper of 21 that set no state, so the
+        orphan scan sent every newly pulled client back as a CREATE.
+      - Guard: `APulledRecordIsNotSentBackTest` (all 21 groups, through the real pull).
     - **A client in use is refused, all or nothing, as `ClientInUseException`.** That means any invoice,
       estimate or payment points at it, deleted or not. This is exactly where RESTRICT refused the old
       delete. The rule belongs to the owner (0068, open).
     - **A live document must never name a client the pull will not send.**
-      - `SyncV2PullService.fullPull` sends only live clients but every live document, so a new phone
-        cannot insert such a document. There are 0 today.
-      - The web's delete checks nothing, and the invoice screen's own client sheet can delete the selected
-        client before Save.
-      - Close this on the server before any rule lets a client with documents be hidden.
+      - The web's delete refuses a client in use, and nothing is written (`d586606`,
+        `ClientService.deleteClientUnlessInUse`). It answers 409: "This client has invoices, estimates or
+        payments, so it cannot be deleted."
+      - The v1 sync's `softDeleteClient` is unchanged: a throw inside its one transaction would roll
+        back the whole push.
+      - The full pull also sends each deleted client that a live document of the account names, as a
+        deleted row (`798843e`). The delta pull is unchanged.
+      - A 1.4.6 phone stores a pulled deleted client it does not hold, as deleted and SYNCED
+        (`ba8c5be6`). Up to 1.4.5 phones drop it, so those builds still cannot store such a document.
+      - **Still open:**
+        - live documents naming another account's client (5). Never send another account's client:
+          investigate how the reference arose;
+        - live clients of a deleted business (5, with 3 live invoices);
+        - live invoice lines of a deleted product (3).
+
+        The full pull sends none of those parents.
+      - Guards: `AClientInUseIsNotDeletedByTheWebTest`,
+        `AFullPullSendsTheDeletedClientsItsDocumentsNameTest`, `APulledRecordIsNotSentBackTest`.
     - Guard: `ADeletedClientReachesTheServerTest`.
 
 ## Established 2026-09-12, while planning the receipt number

@@ -52,6 +52,10 @@ belongs to the owner and is still open (see "Open" below).
 - **Putting the refusal in the three view-models.** That is three copies of one rule.
 - **A Room change to `customerId`.** It would rebuild the tables that hold guests' only copy of their
   invoices. 0060 rejected the same change.
+- **Sending the deleted clients from the server alone.** Every build drops a deleted client it does not
+  hold, so it would change nothing on any phone.
+- **Sending them as live rows.** Old phones would list a client the user deleted, and a later edit of it
+  could bring it back on the server.
 
 ## Consequences
 
@@ -62,8 +66,17 @@ belongs to the owner and is still open (see "Open" below).
   - the invoice screen's own client sheet, which can delete the selected client before Save.
 
   Close the gap on the server before any rule lets a client with documents be hidden.
-- **Business and template still send a pulled delete back once.** It is the same shape as the client
-  echo fixed here, and it is open.
+- **The pull gap closes for 1.4.6 phones once the backend deploys** (2026-09-13). Three pieces:
+  - the web's delete refuses a client in use (`d586606`);
+  - the full pull sends each deleted client that a live document names (`798843e`);
+  - a 1.4.6 phone keeps such a client, marked deleted (`ba8c5be6`).
+
+  Up to 1.4.5 a phone still drops it, so rule B (hide) can be built for 1.4.6 and later only.
+- **A pulled business or template delete is no longer sent back** (`54631ac9`). Neither is a client pulled
+  new, which used to go back as a CREATE.
+- **Still open, the same shape:** live documents naming another account's client (5), live clients of a
+  deleted business (5, with 3 live invoices), and live invoice lines of a deleted product (3). The full pull
+  sends none of those parents.
 - **Measure after 1.4.6** (vc ≥ 102):
   - deleted clients whose `last_modify_by` is a vc ≥ 102 phone, against confirmed delete taps (before:
     23 of 2,122 active devices);
