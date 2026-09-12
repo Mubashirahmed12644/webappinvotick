@@ -3,6 +3,8 @@
 - **Date:** 2026-09-12
 - **Status:** decided (owner, 2026-09-12, on the user-journey agent's recommendation); built on
   `invotick-apis` `feat/journey-left-on-item-form`, not pushed. Query-time: no app release.
+- **Amended by [0066](0066-leaving-from-the-invoice-screen-with-no-tap-recorded-is-a-named-stop-on-rung-3.md) (2026-09-12):** rung 3's invoice-screen case, left to the owner below, is now named
+  `left_on_invoice_screen`. Panel labels for both keys: admin-panel `4e7a4ae`.
 - **Decision:** The first-invoice journey's signals query gains `lastLeaveScreen`: the screen stamped on
   the device's last `app_paused` / `app_background` in the range, ordered by `event_timestamp`. Rung 7
   gains the stop reason **`left_on_item_form`**, when that screen is `item_form_scr` and no action rule
