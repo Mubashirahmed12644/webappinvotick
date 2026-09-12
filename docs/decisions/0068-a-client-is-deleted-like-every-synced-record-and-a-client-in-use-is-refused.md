@@ -74,11 +74,24 @@ belongs to the owner and is still open (see "Open" below).
   Up to 1.4.5 a phone still drops it, so rule B (hide) can be built for 1.4.6 and later only.
 - **A pulled business or template delete is no longer sent back** (`54631ac9`). Neither is a client pulled
   new, which used to go back as a CREATE.
-- **Still open, the same shape:** live documents naming another account's client (5), live clients of a
-  deleted business (5, with 3 live invoices), and live invoice lines of a deleted product (3). The full pull
-  sends none of those parents.
+- **Deleted businesses and products (2026-09-13).** The full pull also sends each deleted business and
+  product of the account that a row it sends names (`f8a6722`). A 1.4.6 phone keeps one it does not hold,
+  deleted (`aaf50279`).
+- **Another account's parent is never sent.** The 5 documents naming another account's client were left by
+  guest sign-ups:
+  - 3 in September: the document was refused because its signature or stamp was still the guest's, while
+    its client moved;
+  - 2 in May: the old role-only takeover moved the invoice, not its guest's business and client.
+
+  309 live rows share the shape. Rejected: sending the other account's parent (a leak), and relaxing the
+  reference check (it moves the document and leaves its signature behind). The repair is the owner's; the
+  fix is 0053.
+- **Still open, the same family:** lines of a deleted invoice (2,814), invoice-payment links of a deleted
+  invoice (81), lines of a deleted estimate (32), and invoices naming deleted terms (28).
 - **Measure after 1.4.6** (vc ≥ 102):
   - deleted clients whose `last_modify_by` is a vc ≥ 102 phone, against confirmed delete taps (before:
     23 of 2,122 active devices);
   - `sync_failure` client DELETEs stay at 0, apart from `NOT_FOUND_ON_DELETE`;
-  - `pull_apply` failures naming `customerId` stay at 0.
+  - `pull_apply` failures naming `customerId` stay at 0;
+  - `pull_apply` failures naming a Client, Stamp, Template or Invoice foreign key, or a line naming a
+    product deleted on the server, stay at 0.

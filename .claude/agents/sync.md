@@ -306,15 +306,28 @@ Memory is dated observation. Verify any file:line against the code before relyin
         deleted row (`798843e`). The delta pull is unchanged.
       - A 1.4.6 phone stores a pulled deleted client it does not hold, as deleted and SYNCED
         (`ba8c5be6`). Up to 1.4.5 phones drop it, so those builds still cannot store such a document.
-      - **Still open:**
-        - live documents naming another account's client (5). Never send another account's client:
-          investigate how the reference arose;
-        - live clients of a deleted business (5, with 3 live invoices);
-        - live invoice lines of a deleted product (3).
+      - **The full pull also sends each deleted business and product of the account that a row it
+        sends names**, as deleted rows, read from the rows being sent (`f8a6722`). A 1.4.6 phone keeps
+        a pulled deleted business or product it does not hold, deleted and SYNCED (`aaf50279`,
+        `applyServerDelete`). Before: 36 live rows named one of 5 deleted businesses, and 3 live invoice
+        lines named one of 2 deleted products.
+      - **Another account's parent is never sent.** 309 live rows name one (2026-09-13). Nearly all were
+        left by a sign-up that moved part of a guest's family:
+        - a record moves only with proof (`assertOwnershipWithMigration`);
+        - a reference the same guest still owns is refused (`ensureReferenceAccessible`,
+          `resolveOwnedBusiness`);
+        - the guest is retired by whatever did move.
 
-        The full pull sends none of those parents.
+        Since `0749457`, 3 of 15 sign-ups left a document behind. The repair is the owner's (Tier 1);
+        the fix is 0053.
+      - **Still open, the same family:** lines of a deleted invoice (2,814, in 249 accounts),
+        invoice-payment links of a deleted invoice (81), lines of a deleted estimate (32), and invoices
+        naming deleted terms (28). One phone looped on it: each failure forces a full pull that fails
+        the same way.
       - Guards: `AClientInUseIsNotDeletedByTheWebTest`,
-        `AFullPullSendsTheDeletedClientsItsDocumentsNameTest`, `APulledRecordIsNotSentBackTest`.
+        `AFullPullSendsTheDeletedClientsItsDocumentsNameTest`,
+        `AFullPullSendsTheDeletedParentsItsRowsNameTest`, `APulledRecordIsNotSentBackTest`,
+        `ADeletedParentThisPhoneNeverHeldArrivesTest`.
     - Guard: `ADeletedClientReachesTheServerTest`.
 
 ## Established 2026-09-12, while planning the receipt number
