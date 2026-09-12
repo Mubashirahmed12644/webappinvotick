@@ -97,8 +97,9 @@ export interface FormItemValues {
 /** A form row as prepareInvoice reads it. */
 export interface FormRow extends FormItemValues {
   /**
-   * On the saved invoice already. The update only adds and changes items, so an item it is not sent
-   * stays on the invoice: a saved row is always sent.
+   * On the saved invoice already. An edit sends the whole list (replaceItems), and the server removes
+   * a saved item the list leaves out, so a saved row is never left out quietly: emptied, it is a
+   * problem to fix, not a row to skip.
    */
   saved?: boolean;
 }
@@ -207,7 +208,7 @@ const SKIP = Symbol("skip");
  *
  * - A row left completely empty is the one the form offers, and is not sent. A row with anything in it
  *   and no name is a problem, so a typed price cannot vanish from the invoice.
- * - A saved row is always sent (FormRow.saved).
+ * - A saved row is always sent, or Save stops (FormRow.saved): the server removes one left out.
  * - A quantity is any number above 0 with at most 2 decimals, and it is sent exactly as typed: the
  *   server stores it as sent, 0.5 included. Until fix/rest-invoice-items-and-quantity (7dd2aec) it
  *   raised anything below 1 to 1, so the form refused those.

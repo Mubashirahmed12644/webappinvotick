@@ -192,6 +192,10 @@ export function InvoiceForm({
       // What the form does not show goes back as the invoice has it: the update would erase a null.
       ...keptInvoiceFields(invoice),
       items: payloadItems,
+      // The items are the invoice's whole list, so an edit asks the server to remove a saved item the
+      // list leaves out: without it the update only adds and changes items, and Remove would take an
+      // item off the totals while the server kept it. Create ignores it.
+      replaceItems: isEdit,
     };
 
     setSaving(true);
