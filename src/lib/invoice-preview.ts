@@ -60,6 +60,19 @@ export function editBlocker(invoice?: { taxAmount?: string | number | null } | n
     : null;
 }
 
+/**
+ * An item's own tax as the request carries it: InvoiceItemRequest's taxRate, taxType and taxAmount
+ * (fix/rest-invoice-items-and-quantity, 8f693e2), stored in the columns the app's sync writes.
+ */
+export interface ItemTax {
+  /** 15 is 15%, or 15 a unit for FLAT. Sent null, the server keeps the item's stored tax. */
+  taxRate: number | null;
+  /** The word the app reads (typeWord). A saved item left alone may go back with none, as stored. */
+  taxType: "PERCENTAGE" | "FLAT" | null;
+  /** The tax on one unit, as computeLineItem computes it. */
+  taxAmount: number | null;
+}
+
 export interface FormItemValues {
   name: string;
   description: string;
@@ -71,13 +84,14 @@ export interface FormItemValues {
   /** How the item's own tax is measured. A saved item keeps its own; a new row's is a percentage. */
   taxType?: DiscountType;
   /**
-   * A saved item's own net price, with the price, discount and tax it was saved with (moneyKey).
-   * While those are unchanged the item goes back at that net price, to the cent. Some live items
-   * do not come out at their stored net price when recomputed from what the form shows: a price the
-   * server clamped to 0.00, a tax inside the price with no rate recorded, a cent the app rounded
-   * its own way. Recomputing an item the user did not touch would change its price.
+   * A saved item's own net price and tax, with the price, discount and tax it was saved with
+   * (moneyKey). While those are unchanged the item goes back at that net price, to the cent, and with
+   * that tax. Some live items do not come out at their stored net price when recomputed from what the
+   * form shows: a price the server clamped to 0.00, a tax inside the price with no rate recorded, a
+   * cent the app rounded its own way. Recomputing an item the user did not touch would change its
+   * price, and its tax.
    */
-  kept?: { netPrice: number; key: string };
+  kept?: { netPrice: number; tax: ItemTax; key: string };
 }
 
 /** A form row as prepareInvoice reads it. */
@@ -114,6 +128,11 @@ export function moneyKey(it: Pick<FormItemValues, "unitPrice" | "discountValue" 
   return [it.unitPrice.trim(), it.discountValue.trim(), it.discountType, it.taxValue.trim(), it.taxType ?? "PERCENTAGE"].join("|");
 }
 
+/** A saved item's stored net price and tax while its price, discount and tax are as saved; undefined once one changes. */
+function keptOf(it: FormItemValues) {
+  return it.kept && it.kept.key === moneyKey(it) ? it.kept : undefined;
+}
+
 /**
  * A row as the calculator reads it: every number through typedNumber, and a saved item that has not
  * been changed at its own net price.
@@ -126,7 +145,7 @@ export function lineInput(it: FormItemValues): LineItemInput {
     discountType: it.discountType,
     taxValue: typedNumber(it.taxValue),
     taxType: it.taxType,
-    netPrice: it.kept && it.kept.key === moneyKey(it) ? it.kept.netPrice : undefined,
+    netPrice: keptOf(it)?.netPrice,
   };
 }
 
@@ -137,14 +156,18 @@ export function lineInput(it: FormItemValues): LineItemInput {
  * Every number is the one typed (typedNumber), with no fallback: prepareInvoice sends only rows whose
  * numbers it could read. The form used to send a quantity it could not read, or a 0, as 1.
  *
- * There is no tax rate here because the request has no field for one (`InvoiceItemRequest`): an
- * item's own tax reaches the server only inside `netPrice`. A new item therefore shows 0.00% in the
- * item Tax column while its Amount includes the tax, and so does the preview. A saved item keeps the
- * rate it has, because the update does not touch that column.
+ * The item's own tax goes as the request now takes it (ItemTax): the rate typed, its type, and the
+ * tax on one unit. Until the server took them, an item's tax reached it only inside `netPrice`, and
+ * the Tax column kept whatever rate the item had before. A saved item left alone goes back with the
+ * tax it was loaded with, as it goes back at its own net price.
  */
 export function savedItemFields(it: FormItemValues) {
+  const kept = keptOf(it);
   const c = computeLineItem(lineInput(it));
   const discount = typedNumber(it.discountValue);
+  const tax: ItemTax = kept
+    ? kept.tax
+    : { taxRate: typedNumber(it.taxValue), taxType: typeWord(it.taxType ?? "PERCENTAGE"), taxAmount: c.taxAmount };
   return {
     name: it.name,
     description: it.description || null,
@@ -154,6 +177,7 @@ export function savedItemFields(it: FormItemValues) {
     discount: discount ? discount : null,
     // The word the app reads (typeWord): a fixed amount is FLAT, never FIXED.
     discountType: discount ? typeWord(it.discountType) : null,
+    ...tax,
   };
 }
 
@@ -290,6 +314,8 @@ export interface SavedInvoiceItem {
   discountType: string | null;
   taxRate: string | null;
   taxType: string | null;
+  /** The tax on one unit, as stored. It goes back unchanged while the item is left alone. */
+  taxAmount: string | null;
 }
 
 /** The fields of a sync pull item row that the edit form reads. */
@@ -305,6 +331,7 @@ export interface PulledInvoiceItem {
   discountType?: string | null;
   taxRate?: string | null;
   taxType?: string | null;
+  taxAmount?: string | null;
   taxId?: string | null;
   inventoryItemId?: string | null;
   unitTypeId?: string | null;
@@ -331,15 +358,16 @@ export function savedItemsOf(invoiceId: string, items: readonly PulledInvoiceIte
     discountType: it.discountType ?? null,
     taxRate: it.taxRate ?? null,
     taxType: it.taxType ?? null,
+    taxAmount: it.taxAmount ?? null,
   }));
 }
 
 /**
  * A saved item as a form row. Every number is as the invoice has it, the item's own tax included,
- * and the item keeps its own net price until its price, discount or tax is changed
- * (FormItemValues.kept), so an edit that changes nothing sends the same prices back. The item's
- * links go back as they are: the update copies each of them from the request, and a null would
- * erase it.
+ * and the item keeps its own net price and tax until its price, discount or tax is changed
+ * (FormItemValues.kept), so an edit that changes nothing sends the same prices and taxes back. The
+ * item's links go back as they are: the update copies each of them from the request, and a null
+ * would erase it.
  */
 export function formRowFromSaved(it: SavedInvoiceItem): FormItem {
   const plain = (v: string | null) => (v == null || v.trim() === "" ? "" : String(Number(v)));
@@ -352,6 +380,14 @@ export function formRowFromSaved(it: SavedInvoiceItem): FormItem {
     taxType: discountTypeOf(it.taxType),
   };
   const stored = Number(it.netPrice);
+  // The item's tax as loaded, sent back while it is left alone. A null type stays null, and a type the
+  // app would read as a percentage goes as PERCENTAGE, a word the server takes.
+  const orNull = (v: string | null | undefined) => (v == null || v.trim() === "" || !Number.isFinite(Number(v)) ? null : Number(v));
+  const tax: ItemTax = {
+    taxRate: orNull(it.taxRate),
+    taxType: it.taxType == null ? null : typeWord(discountTypeOf(it.taxType)),
+    taxAmount: orNull(it.taxAmount),
+  };
   return {
     id: it.id,
     saved: true,
@@ -363,7 +399,7 @@ export function formRowFromSaved(it: SavedInvoiceItem): FormItem {
     description: it.description ?? "",
     quantity: plain(it.quantity),
     ...money,
-    kept: Number.isFinite(stored) ? { netPrice: stored, key: moneyKey(money) } : undefined,
+    kept: Number.isFinite(stored) ? { netPrice: stored, tax, key: moneyKey(money) } : undefined,
   };
 }
 
@@ -442,7 +478,8 @@ export function invoicePreviewData(p: InvoicePreviewInput): InvoiceRenderData {
     unitPrice: it.unitPrice,
     discountValue: it.discount ?? 0,
     discountType: it.discountType ?? "PERCENTAGE",
-    taxRate: 0,
+    // The rate the item is sent with, which the saved invoice's page shows (num(it.taxRate)).
+    taxRate: it.taxRate ?? 0,
     amount: it.netPrice * it.quantity,
   }));
   const c = p.client;
