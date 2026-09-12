@@ -122,8 +122,21 @@ Memory is dated observation. Verify any file:line against the code before relyin
    - Premium stays off until a later re-register succeeds. This breaks rule 3 and 0048 #4.
    - The fix: only a never-confirmed grant may be marked unconfirmed, and only a 400 is a refusal.
 2. **Lifetime purchases are refused unless `GOOGLE_PLAY_LIFETIME_PRODUCTS` is set.** It defaults to empty.
-   The production value has not been read. If it is empty, every lifetime buyer is refused, and no row is
-   left behind.
+   - **Production was EMPTY** (the owner checked it on 2026-09-12). With it empty:
+     - the server asks Google's subscription endpoint about `life_time_purchase`;
+     - register answers 400 ("Google Play does not recognise this purchase"), and restore answers
+       `NOT_VALID`;
+     - the app has already acknowledged the purchase, so Google keeps the money and the buyer never gets
+       premium;
+     - 1.4.5 is worse than 1.4.4 here: it even takes back an offline grant;
+     - there is no DB row, only 3 server warning lines per attempt containing `product=life_time_purchase`.
+   - **The fix:** set `GOOGLE_PLAY_LIFETIME_PRODUCTS=life_time_purchase` in `.env.prod`
+     (`/home/invotick-stage/htdocs/stage.invotick.com`) and recreate the `app` service. The deploy's
+     `restore_configs` never touches `.env.prod`, so the change survives deploys.
+   - Past buyers self-heal on their next launch (restore, then register).
+   - **The one possible victim:** device `6af51ecf`, Sierra Leone, vc94, pressed buy on Lifetime on 2026-09-05
+     at 15:05:26 UTC. Play Console → Order management, filtered to `life_time_purchase`, says whether they
+     paid.
 3. **Billing calls send no `X-Device-Id`,** so the device column of each billing row is always empty. 0048
    #6 promises one row per purchase, account and device.
 4. **The Health Centre cannot see paying phones.** Reconcile does not run while unsent rows are waiting, so
