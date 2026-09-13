@@ -1,6 +1,9 @@
 # 0056 — An estimate's date is stored as a calendar date, not a moment in time
 
-**Status:** decided (the owner, 2026-09-11, item 12: agree, and fix it right away).
+**Status:** decided (the owner, 2026-09-11, item 12: agree, and fix it right away). **The owner said go live on
+2026-09-14** ("Haan, live karo"), covering the migration, the switch (`true`, `93`) and the expiry date.
+- It is being rebased onto `1d432e6a`.
+- The migration ships first, in a migration-only deploy together with the long-names one. The code follows.
 **Date:** 2026-09-11.
 **Related:** the sync audit's class E (fixed in `660168d9`), memory `invoice-date-shifts-a-day`.
 
