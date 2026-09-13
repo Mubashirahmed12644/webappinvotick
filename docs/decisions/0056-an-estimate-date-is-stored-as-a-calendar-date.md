@@ -2,8 +2,13 @@
 
 **Status:** decided (the owner, 2026-09-11, item 12: agree, and fix it right away). **The owner said go live on
 2026-09-14** ("Haan, live karo"), covering the migration, the switch (`true`, `93`) and the expiry date.
-- It is being rebased onto `1d432e6a`.
-- The migration ships first, in a migration-only deploy together with the long-names one. The code follows.
+- **LIVE.**
+  - The migration, renumbered `V20260914_02`, went in batch10 (`cd35e52`, 2026-09-13 23:02 UTC), together with the two
+    name migrations.
+  - The code and the switch went in batch11 (`751d17b`, 23:29 UTC).
+  - The startup line reads `EstimateDayGate … enabled=true | minAppVersionCode=93`.
+  - 0 live estimates are left without a day.
+  - The three examples, `5c49a465`, `0fb91664` and `50f133ab`, read 2026-08-11.
 **Date:** 2026-09-11.
 **Related:** the sync audit's class E (fixed in `660168d9`), memory `invoice-date-shifts-a-day`.
 

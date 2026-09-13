@@ -103,6 +103,10 @@ are owed.
   - It lets the fourth phone's refused client arrive.
   - Production on 2026-09-13: 6,232 clients, the longest name 208 characters.
 - **Unchanged:** every other typed name still holds 255. A longer one is still refused alone and stays on its phone.
+- **Live:**
+  - batch10 (`cd35e52`, 2026-09-13 23:02 UTC) holds `V20260914_01` and `_03`. All four name columns read
+    varchar(1000).
+  - The entities' `length = 1000` followed in batch11 (`751d17b`, 23:29 UTC).
 - **Measure after the migrations, at 6 h and 24 h:**
   - the three phones' products are stored;
   - their latest `last_synced_at` moves past 07-01 / 09-11;
