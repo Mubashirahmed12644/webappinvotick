@@ -75,7 +75,8 @@ Memory is dated observation. Verify any file:line against the code before relyin
 - **Backend** (`~/Documents/invotick-apis`, `dev.backend.infotick`):
   - `PlayPurchaseVerifier` — `baseOrderId`; 400/404/410 means Google refused, anything else is not
     definitive;
-  - `EntitlementService` — register, and restore into `purchase_restore_answer`;
+  - `EntitlementService` — register, and restore into `purchase_restore_answer` (every restore, a
+    purchase's first included, from one Google answer);
   - `PlaySubscriptionAdmin` — `orders.get`, `subscriptionsv2`, defer;
   - `BillingAdminController` — `POST /v2/admin/billing/subscriptions/defer`, ADMIN only;
   - `PlayNotificationController` — real-time notifications;
@@ -184,9 +185,14 @@ Memory is dated observation. Verify any file:line against the code before relyin
      - A plan with no offer Play can sell is not launched. A subscription used to go out with an
        empty offer token, which Billing 8+ throws on.
      - This can only be seen on a build installed from Play (rule 7).
-7. **A first restore of a purchase the server has never seen stores no restore answer.** `recordAnswer`
-   runs only for purchases it already knows (`EntitlementService.kt:149`), against 0048 #6. That path
-   also asks Google twice. Found 2026-09-13; not fixed.
+7. **A first restore of a purchase the server has never seen stored no restore answer, and asked
+   Google twice.** **Fixed** on `invotick-apis` branch `fix/first-restore-keeps-its-answer`
+   (`432ff39`), not deployed.
+   - The restore records the purchase from the answer Google has just given (`keepIdentity`, shared
+     with `registerPurchase`).
+   - It binds the purchase with reason `PURCHASE`, as before.
+   - It stores its answer like every other restore (`RESTORED`, no owner).
+   - What the apps receive is unchanged.
 
 ## How you get at the data (read-only)
 

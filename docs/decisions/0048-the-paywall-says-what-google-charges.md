@@ -44,6 +44,9 @@
    *(2026-09-12: the app sends no `X-Device-Id` on billing calls, so today the device column is always
    empty; see billing.md "Known gaps" #3. The same check found that 1.4.5 breaks #4 in one path; see
    Known gaps #1, due to be fixed in 1.4.6.)*
+   *(2026-09-13: gaps #1 and #3 are fixed for 1.4.6, merged into `VC_102_VN_146` (0070). A first
+   restore of a purchase the server had never seen kept no answer and asked Google twice; fixed in
+   `432ff39`, not deployed. See billing.md "Known gaps" #7.)*
    - The Health Centre shows "premium through another account's purchase" and "purchases used by more
      than 5 accounts" (a warning, never enforced).
    - "Enabled without payment" no longer counts the former.
