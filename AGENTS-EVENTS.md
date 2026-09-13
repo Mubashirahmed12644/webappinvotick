@@ -518,6 +518,12 @@ A client joins the pipeline only when something on that platform empties its que
 and the platform decides only when it runs. Decision
 [0083](docs/decisions/0083-ios-sends-its-analytics-through-the-one-shared-drain.md).
 
+**An update is not a first open** *(2026-09-14)*. A counter can meet an install that ran before the counter existed.
+It then starts at 2, as a minimum, never at 1. The proof of an earlier run must be something only an earlier run could
+have created, such as the analytics database already on disk before the process writes anything. It must never be
+something the app's own startup can create first. Decision
+[0085](docs/decisions/0085-one-lifecycle-for-both-platforms-an-update-is-not-a-first-open.md).
+
 ### 1.18 An id on an event is a join key, not a dimension. *(decided 2026-09-11)*
 
 `request_id` and `record_id` on `sync_failed` (decision 0050) exist to find one failure: in the

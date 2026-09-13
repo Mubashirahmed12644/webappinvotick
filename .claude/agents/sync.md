@@ -117,8 +117,8 @@ Memory is dated observation. Verify any file:line against the code before relyin
    record.
    - A refusal of one record does not roll the push back. A DB error at commit discards the whole
      batch, and the device resends it (class S1); it is still answered 400.
-     - **Built, not deployed: 0080, a record the database refuses is refused alone.** Backend
-       `fix/one-bad-push-is-not-a-500-forever` @ `f0156c1`, 814/814. It waits for the owner's word.
+     - **0080, a record the database refuses is refused alone. LIVE 2026-09-13 20:26:05 UTC** (batch9, stage
+       `1d432e6a`, pipeline 2845034501; built as `fix/one-bad-push-is-not-a-500-forever` @ `f0156c1`, 814/814).
        - A push that cannot commit runs again, and every run after the first writes each record in its own operation.
        - The refused record is pinned that way, then left out in every copy and answered `FAILED UNEXPECTED_ERROR`
          with `data.field`, a name every build already retries.
@@ -128,6 +128,18 @@ Memory is dated observation. Verify any file:line against the code before relyin
          three guest phones for good: `46e70cdc` since 2026-09-11 15:09 UTC, `2173bc74` and `93c0aa01` since
          2026-07-01.
        - Guards: `ARecordTheDatabaseRefusesIsRefusedAloneTest`, `AFailureOutlivesItsPushTest`.
+       - **Seen working 3 minutes after the deploy, on a fourth guest phone** (account `f1b05cfd`, 1.4.5). Every push
+         had been answered 400 since its first, at 16:53 UTC, on a client name over 255 (`clients.name`, 1406). At
+         20:29:39 the push ran again, the client was refused alone, and its product was stored. The three known phones
+         had not pushed again by 21:14 UTC.
+       - **A product's name holds 1,000 characters on the server, and the app caps it at 255** (the owner,
+         2026-09-14, "Dono").
+         - `V20260914_01` widens `inventory_items.name` and the lines' copies, `invoice_items.name` and
+           `estimate_items.name`. It is done in place: no table is copied (checked on MySQL 8.0.46, production's
+           version). It ships alone and first; the entities' `length = 1000` ships later, with code.
+         - Every other name stays at 255, and a longer name is still refused alone.
+         - Built on `fix/long-product-names-fit`: `202cc38` the migration, `f550f65` the code; suite 818/818. Not
+           deployed. Guards: `AProductsNameHoldsAThousandCharactersTest`, `ALongProductNameArrivesWholeTest`.
        - **First seen in Loki is not first happened.** Loki was dark 09-12 01–16 UTC, and the
          `http_server_requests{exception}` tag exists only since `5fc7e5a`. Read the account's latest
          `last_synced_at` instead.
@@ -462,11 +474,22 @@ Memory is dated observation. Verify any file:line against the code before relyin
       until stored. A 404 falls back to 1.4.5's re-queue. `transferGuestData` is removed.
     - **iOS** sends one id per install (`NSUserDefaults`, seeded from `identifierForVendor`), never the zeros.
     - **Evidence:** `sync_failed stage=guest_claim` (`request_id`, `http_status`, `error_type`,
-      `exception_class`); counter `guest_work_claims_total{path, outcome, dry_run}`. It counts after the commit from `f0156c1` (built with
-      0080, not deployed). Until then, a push that runs again counts an old build's sign-up more than once.
+      `exception_class`); counter `guest_work_claims_total{path, outcome, dry_run}`. It counts after the commit since
+      batch9 (`1d432e6a`, LIVE 2026-09-13 20:26 UTC, with 0080). Before that, a push that ran again counted an old
+      build's sign-up more than once.
     - **The repair (R1):** `POST /v1/webpanel/guest-work/repair` (ADMIN), a dry run unless `"dryRun": false`,
       per guest and per table, one transaction per guest, proof = a phone linked to both. Never against
       production without the owner's go on the exact counts.
+      - **Ran for real 2026-09-13 21:05 UTC** (the lead, on batch9 `1d432e6a`): 50 guests moved, 216 rows. Stamps 80,
+        `shared_invoice` 40, invoice lines 28, signatures 15, invoices 13, invoice-payment links 8, payment
+        instructions 6, templates 6, products 5, estimate lines 5, clients 4, terms 2, and one each of estimates,
+        headers, taxes and unit types.
+      - 1 refused `NOT_AN_ACCOUNT`: guest `cd153624`, retired into `c8024a8c`, which is itself a guest, not retired.
+      - A dry run straight after answered `NOTHING_TO_MOVE` for all 50, with 0 rows. The lead's read-only recount of
+        proven guests still owning rows found 1: `cd153624`.
+      - 9 of the 50 guests (19 rows) went to `edd209ed`, our QA account (Invotick ID 477546626).
+      - Checked by the sync agent: the two reports (per-guest rows sum to 216 and match the per-table totals; the same
+        51 guests in both), and `users` for the three ids above.
     - **Measured 2026-09-13 (read-only):** sign-ups w35 6, w36 18, w37 39 (w37: 35 on 1.4.4); 6 of the 39
       left real work behind, 3 a document. Sign-ins to an existing account: 3, 4, 2. R1's dry run: 49 of 77
       proven retired guests own 202 rows (191 live; 38 share links); 3 live documents.
@@ -571,6 +594,14 @@ The plan is `docs/SYNC-RECEIPT-NUMBER-PLAN.md`. Each line says how it is known.
   device changed the record since.
 - **An estimate's date is stored as a calendar date** (0056). The migration ships first, then the
   code.
+  - **Approved to go live 2026-09-14** ("Haan, live karo"): the switch on with `true` and `93`, the expiry included.
+    The gate hands both dates as days, so the expiry needs no code of its own.
+  - Rebased onto `1d432e6a` as `fix/estimate-day-live`, in deploy order:
+    - `202cc38` V20260914_01 (long names), then `269beeb` V20260914_02 (renumbered from V20260911_05): **batch10**,
+      migrations only; proof 14/14 at `269beeb`;
+    - `99d2881` (long-names entities), `c637203` (0056 code), `eb03477` (the switch in
+      `application-prod.properties`): **batch11**.
+  - Suite 834/834 at `eb03477`. Not deployed.
 - **Class L is closed for good** (0055). Never report it.
 - **Class P is fixed in the current batch,** once the work already in flight is done. Built for 1.4.6
   as rule 14 (0060), with no schema change; merged into `VC_102_VN_146` (`f538e08e`, pushed), not

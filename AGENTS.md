@@ -521,6 +521,10 @@ the list is wrong, not the app.**
   [0064](docs/decisions/0064-a-shipped-image-the-build-cannot-produce-reports-itself.md)).
 - **Lifecycle:** `app_cold_start`, `app_foreground`, `app_resumed`, `app_paused`, `app_background`,
   `app_heartbeat`, `session_break`, `screen_view`, `network_changed`, `app_exit_dialog_shown`
+  - **iOS sends these from the build after 17** (`0234aa09`, decision 0085).
+    - The exception is `network_changed`, which stays off until the iOS network monitor reports correctly.
+    - An iPhone that updated from a build without the counter reports `is_first_open=false`, and its `open_count`
+      counts from 2.
 
 ⚠️ The names this section carried until 2026-09-04 (`invoice_created`, `Business_added`,
 `business_form_text_add`, `Client_added`) return **zero rows** on the live build; a funnel built on

@@ -71,3 +71,32 @@ are owed.
   - their latest `last_synced_at` moves past 07-01 / 09-11;
   - `sync_failure` rows appear whose reason starts "The database refused";
   - push 400/500 per hour.
+
+## Amendment 2026-09-14: first check, and long product names fit
+
+- **Live** 2026-09-13 20:26:05 UTC (batch9, stage `1d432e6a`, pipeline 2845034501).
+- **First check, to 21:54 UTC.**
+  - Push 400s and 500s fell from 27 and 96 in the 6 h before, to 0 and 0 in the 48 min after.
+  - The three known phones had not pushed again, so that is not yet proof for them.
+  - A fourth guest phone (`f1b05cfd`, 1.4.5) did recover.
+    - Its pushes had been refused 400 from its first one, at 16:53, because of a client name over 255.
+    - From 20:29:39 its pushes ran again and were answered 200, 4 of 4.
+    - The client was refused alone, and the rest was stored.
+- **The owner's answer, 2026-09-14: "Dono".**
+  - **The server takes a product's name up to 1,000 characters.**
+    - `V20260914_01` widens `inventory_items.name` and the lines' copies, `invoice_items.name` and
+      `estimate_items.name`.
+    - It changes them in place: on MySQL 8.0.46 no table was copied.
+    - It ships alone and first. The entities' `length = 1000` follows with code.
+    - Branch `fix/long-product-names-fit` at `202cc38` and `f550f65`; 818/818.
+  - **The app caps a product's name at 255 characters** and shows a counter (1.4.6).
+- **Rejected:**
+  - widening `inventory_items.name` alone. A line takes its product's name, so the line would be refused next.
+  - TEXT instead of varchar(1000). The mapped type changes, so code would have to ship with the migration.
+  - naming `ALGORITHM=INPLACE` in the SQL. MySQL picks it anyway, and a surprise would become a failed migration that
+    no image can start past.
+- **Unchanged:** every other name still holds 255. A longer one is still refused alone and stays on its phone.
+- **Measure after `V20260914_01`, at 6 h and 24 h:**
+  - the three phones' products are stored;
+  - their latest `last_synced_at` moves past 07-01 / 09-11;
+  - "The database refused" rows for `inventoryItems name` stop.
