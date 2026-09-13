@@ -1,8 +1,15 @@
 # 0084 — Revenue counts real invoices only, and overdue comes from the due date, on every screen
 
-**Status:** decided by the owner on 2026-09-14 ("Haan, har jagah"). Being built:
-- the app, for 1.4.6;
-- the web, on its own branch, going live on the owner's word.
+**Status:** decided by the owner on 2026-09-14 ("Haan, har jagah").
+- **The web is LIVE:** `acc666c`, pushed on 2026-09-14 (PKT) to `main` on ghdev and gitlab, on the owner's "Haan, live
+  karo".
+  - The rule check failed 14 of 18 on the old code and passes 19/19 on the new.
+  - tsc and the build are clean.
+- The app half is being built for 1.4.6.
+- **The Invoices count card counts real invoices only.** The owner decided this on 2026-09-14 ("Sirf asal invoices"),
+  so Paid + Unpaid + Overdue always add up to it, in the app and on the web.
+- **Recent Activity labels a draft or cancelled invoice as "Draft" or "Cancelled",** never "Income", and never counts
+  it as money. The owner decided this on 2026-09-14 ("Apna nishan do"), for the app and the web.
 
 **Related:**
 - 0081 and 0082, one currency on the money screens. This was found while building them.
