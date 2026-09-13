@@ -352,8 +352,11 @@ Memory is dated observation. Verify any file:line against the code before relyin
     - Guards: `AFullPullSendsNoChildWithoutItsParentTest`, `AFullPullIsNotAskedForAgainAndAgainTest`, and
       the terms case in `ADeletedParentThisPhoneNeverHeldArrivesTest`.
     - Open:
-      - the root: 91 of 95 invoices deleted this week left their lines live (0069 Q2, the owner's);
-      - the repair of the existing rows (0069 Q1, the owner's);
+      - the root: 91 of 95 invoices deleted this week left their lines live. **Decided 2026-09-13 (0069 Q2):
+        a 1.4.6 phone soft-deletes the lines with the invoice or estimate**, in one transaction with their queued
+        DELETEs (being built). The server cascade waits for the version rule;
+      - the repair of the existing rows: **decided 2026-09-13 (0069 Q1), once, after 1.4.6 is on most phones.**
+        It is a standing reminder; the owner gives the go on the exact counts before anything is written;
       - 38 "Template: FOREIGN KEY" reports from vc94–97, which send no ids.
 22. **A refusal a service raises answers the status it carries, never 500** (0071; backend `15c0820`,
     branch `fix/validation-error-answers-4xx`, not deployed).

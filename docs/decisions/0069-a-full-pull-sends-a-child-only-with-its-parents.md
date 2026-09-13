@@ -67,12 +67,20 @@ apni tarteeb sy" (2026-09-12). The data repair and the root fix are the owner's 
      its lines would show missing there.
    - The loop already stops with the server fix.
    - Recommended: not now. Do it once, after Q2 closes the source; otherwise about 90 more arrive every week.
+   - **Decided by the owner on 2026-09-13:** clean it once, after 1.4.6 is on most phones, so the source is closed
+     first. The owner asked that it be remembered, so it is a standing reminder in
+     `memory/reminder-clean-orphan-lines-after-146.md`.
 2. **Q2: the root, a deleted invoice leaves its lines live.**
    - (a) The server deletes the lines with their invoice. This works on every build. It is unsafe until 0042's
      version rule ("a delete is the latest change"), because a resurrected invoice would come back without its
      lines.
    - (b) A 1.4.6+ phone deletes the lines with the invoice.
    - Recommended: (b) now, (a) after the version rule.
+   - **Decided by the owner on 2026-09-13: (b).** In the owner's words, the app already has a soft-delete policy, so
+     a deleted invoice's lines should not stay live.
+     - A 1.4.6 phone soft-deletes an invoice's lines, and an estimate's, together with the parent. It queues their
+       DELETEs in the same transaction. This is being built on `feat/146-delete-cascades-to-lines`.
+     - (a) waits for the version rule.
 
 **Also open (not a decision):** 38 "Template: FOREIGN KEY" reports from vc94–97. Those builds send no ids, and the
 data rules out a deleted parent, another account's parent and a missing parent. It needs the record id, which
