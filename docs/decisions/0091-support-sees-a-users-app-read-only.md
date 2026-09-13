@@ -1,7 +1,8 @@
 # 0091 — Support sees a user's app read-only, with contacts masked and every look recorded
 
 **Status:** decided by the owner on 2026-09-14, and built. Not deployed yet.
-- The table, `V20260914_04`, is deploying alone as batch12.
+- **The table is LIVE:** `V20260914_04` went alone as batch12 (`8dfb5fa`, 2026-09-13 23:54 UTC). The migration
+  applied, and `support_view_log` exists.
 - The code and the panel follow.
 - How long the record is kept (365 days, the agent's default) waits for the owner's word.
 
