@@ -1,9 +1,11 @@
 # 0080 — A record the database refuses is refused alone, and the rest of its push is written
 
-**Status:** proposed by the sync agent on 2026-09-13, and built. **Not deployed; it waits for the owner's word.**
-Questions are paused.
+**Status:** proposed by the sync agent on 2026-09-13 and built. The owner said deploy on 2026-09-14 ("Haan, abhi live
+karo"). **LIVE 2026-09-13 20:26 UTC** as batch9 `1d432e6a` (pipeline 2845034501, test 916 s). The 6 h and 24 h checks
+are owed.
 - Backend `fix/one-bad-push-is-not-a-500-forever` @ `f0156c1`, from stage `66ba2fc7`. Full suite 814/814.
-- The deploy script is ready (batch9).
+- **The owner, 2026-09-14, on the long name ("Dono"):** the server accepts product names up to 1,000 characters (a
+  migration, shipped alone and first), and the app caps the name at 255 with a counter (1.4.6). Being built.
 
 **Related:**
 - `.claude/agents/sync.md` rule 5 (a refusal of one record) and rule 24 (the claim counter);

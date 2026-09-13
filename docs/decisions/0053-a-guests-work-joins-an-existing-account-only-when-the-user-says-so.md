@@ -128,6 +128,11 @@ run's exact counts.
 - **The repair (R1):** `POST /v1/webpanel/guest-work/repair`, admins only, a dry run unless the body says
   `"dryRun": false`, per guest and per table, one transaction per guest, proof = a phone linked to both.
   Never run against production without the owner's go on the dry run's exact counts.
+  - **Ran 2026-09-13 21:05 UTC,** on the owner's go after the dry run of ~20:08 UTC gave the same counts:
+    - 50 guests moved, 216 rows;
+    - 1 refused `NOT_AN_ACCOUNT` (`cd153624`, which had been retired into a guest).
+  - A second dry run straight after found nothing left to move.
+  - A read-only SQL recount agrees: 1 guest with proof still owns rows, and it is the refused one.
 
 ### Rejected while building
 

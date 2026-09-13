@@ -329,6 +329,17 @@ The floor is **Android's**. `Platform.Web` is exempt (decision 0045), and so is 
 2026-09-11: iOS sends its build number (15) as `appVersionCode`, so every TestFlight batch was answered
 200 and stored nowhere (`AGENTS-EVENTS.md` §1.18).
 
+**iOS sends its queue from 1.4.6 build 17** (`63f7174b`, `24134092`; decision
+[0083](docs/decisions/0083-ios-sends-its-analytics-through-the-one-shared-drain.md)).
+- Until then no iOS build had ever sent an event: up to 2026-09-13 20:34 UTC there were 0 rows with
+  `app_version_code < 50`, ever.
+- The upload is the shared `AnalyticsFlusher`. iOS sends at launch, 2 s after events, every 15 min on screen, on
+  entering the background, and in the background sync pass.
+- Each iPhone's first drain sends its whole old queue, with no session, under the all-zero device id and the build
+  number each event was recorded on (`AGENTS-EVENTS.md` §1.20).
+- iOS sends no lifecycle events, so **no iPhone appears in the G1 journey yet**.
+- The first iOS rows came from this Mac's Simulator (`edc7136c`, `build_type=debug`).
+
 Explicitly coded event vocabulary today — **as the shipped build sends it** (`origin/VC_96_VN_144`,
 live as **1.4.5 / versionCode 101 at 100% in Pakistan only since 2026-09-11 19:41 UTC — the owner's
 deliberate choice, to compare; everyone else is still on 1.4.4 / versionCode 97**; the ads section

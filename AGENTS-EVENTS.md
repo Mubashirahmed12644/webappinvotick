@@ -512,6 +512,12 @@ read as *a step nobody reached*. `AnalyticsVersionGate` now exempts `Platform.We
 was never about age; it is about one body of event work on one client. **Before adding a client,
 walk the ingestion path and ask what silently drops it** — the answer is not in the client's code.
 
+**Walk the delivery path on the client too** *(2026-09-14)*. iOS got past the version floor on 09-11 and still
+stored nothing. Its scheduler was a `println`: the drain lived in androidMain, and nothing on iOS could call it.
+A client joins the pipeline only when something on that platform empties its queue. There is one shared drain,
+and the platform decides only when it runs. Decision
+[0083](docs/decisions/0083-ios-sends-its-analytics-through-the-one-shared-drain.md).
+
 ### 1.18 An id on an event is a join key, not a dimension. *(decided 2026-09-11)*
 
 `request_id` and `record_id` on `sync_failed` (decision 0050) exist to find one failure: in the
@@ -541,6 +547,16 @@ The rule: a catch that feeds a failure event rethrows `CancellationException` fi
 that turns the exception into a result, not at the screen that reads the result. A `reason=cancelled`
 value exists only where a decision chose to count it (`invoice_share_link_fallback`), never as the
 default. Decision [0062](docs/decisions/0062-a-request-whose-screen-closed-is-not-a-failed-open.md).
+
+### 1.20 A queued event keeps the identity it was recorded with. *(decided 2026-09-14)*
+
+An event's device id, build number and session are fixed when it is queued. When a delivery bug is fixed, the backlog
+arrives with those old values. On the Simulator, 284 rows arrived under the all-zero device id within 90 s, from builds
+4, 9 and 11, with event times going back to 08-24. Build 17 will do the same on every real iPhone.
+
+So read a burst like that by `event_timestamp`, and never count it as new users. Never rewrite a queued event to make
+it look current: a rewritten id is a guess stored as a fact (§1.7). Decision
+[0083](docs/decisions/0083-ios-sends-its-analytics-through-the-one-shared-drain.md).
 
 ### 1.10 Layers
 
