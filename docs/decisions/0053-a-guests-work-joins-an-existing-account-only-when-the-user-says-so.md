@@ -3,9 +3,8 @@
 **Status:** decided. The owner, 2026-09-11: sign-up moves the guest's work as before, and sign-in to
 an existing account asks once — *"(a) ek dafa poocha jaye"*, *"agree poochna chahye"*.
 **Date:** 2026-09-11.
-**Building from 2026-09-13, into 1.4.6.** The owner: every change goes into 1.4.6 until they say release. The sync
-agent is building it on `feat/guest-work-moves-in-one-step` (backend) and `feat/146-guest-work-moves-in-one-step`
-(app).
+**Backend live 2026-09-13 15:23 UTC** (batch7 `5e6a46e7`). The app half is in 1.4.6 on `VC_102_VN_146`, not
+released. The owner: every change goes into 1.4.6 until they say release.
 **The rows already left behind** (32 guests with proof, 3 documents and 185 rows) move through this same one-step
 path once it exists, after the owner sees the exact counts (the owner, 2026-09-13).
 **Related:** 0028 (the Invotick ID is part of the account), 0051 (the sync agent owns this), the sync
@@ -61,7 +60,7 @@ audit's class O.
   transaction. The guard's migration branch goes.
 - The 90-day purge of declined guest work needs a job and a Health Centre line.
 
-## Built, 2026-09-13 (not pushed, not deployed, not released)
+## Built, 2026-09-13 (backend deployed 15:23 UTC as `5e6a46e7`; the app is in 1.4.6, not released)
 
 Backend `feat/guest-work-moves-in-one-step` (`25a172a` → `6ee2b09`, on stage `42faec8`; suite 773/773). App
 `feat/146-guest-work-moves-in-one-step` (`b76b733f`, `3b281f89`, on `VC_102_VN_146` `b9669f53`;
