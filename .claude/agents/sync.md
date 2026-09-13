@@ -80,6 +80,9 @@ Memory is dated observation. Verify any file:line against the code before relyin
     tells whether a copy changed its row;
   - `SyncFailureRecorder`, and `DeviceSyncFailureIngest` (hourly, over a 30-day window);
   - `SyncFailureCheck` — the Device sync card.
+    - It counts from build 94 on Android, and every iOS build. iOS sends its build number (4 to 16) in the same
+      field, so the floor used to set every iPhone aside. A row that names no platform keeps the floor (backend
+      `a6d1036` on `fix/sync-failure-platform`, not deployed).
     - It is not in `health.alert.emergency-checks`, so a red card pages nobody. On 2026-09-12 it was
       CRITICAL at 431 devices, for causes other than the one being fixed that day.
     - The Slack path for sync is Grafana's `invotick-sync-failure` rule
@@ -641,7 +644,9 @@ The plan is `docs/SYNC-RECEIPT-NUMBER-PLAN.md`. Each line says how it is known.
   - `occurrence_count`, `first_seen_at`, `last_seen_at`, `resolved`;
   - `last_trace_id`, `last_http_status`, `last_exception`, `last_local_version`,
     `last_server_version`, `app_stage`;
-  - `device_id`, `app_version_code`.
+  - `device_id`, `app_version_code`, `platform` (`Android` / `iOS` / `Web`). It comes from `X-Platform` when a call
+    sends one (the web), else from what the device last declared in `analytics_sessions_v2`. Backend `1ae38a6`,
+    not deployed: until then it is empty on every row.
 - `analytics_events` with `event_name='sync_failed'`: the per-event evidence is in `params`, and every
   value is a string, so CAST before comparing. `app_instance_id` is the device id that sync uses.
 - **Who stamped a stored row:** the server clock writes microsecond precision; a device time is
