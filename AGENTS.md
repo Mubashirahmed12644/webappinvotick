@@ -525,6 +525,13 @@ the list is wrong, not the app.**
     - The exception is `network_changed`, which stays off until the iOS network monitor reports correctly.
     - An iPhone that updated from a build without the counter reports `is_first_open=false`, and its `open_count`
       counts from 2.
+  - **`screen_view.prev_screen` + `prev_screen_ms`, from 1.4.6, both platforms.** They give the screen the user came
+    from and how long it held them. The shared gateway reads them before the journey moves on.
+    - No row up to 1.4.5 has them: 0 of 5,458 screen views in the 24 h to 2026-09-14. Both managers read the journey
+      after it had already moved.
+    - Absent means either the first screen of the process or the same screen announced twice (§1.7).
+    - They are stored only in `params`. The server's `previous_screen` column reads a key the app never sends
+      (AGENTS-EVENTS §3.6). A one-line server fix ships with 0088's code.
 
 ⚠️ The names this section carried until 2026-09-04 (`invoice_created`, `Business_added`,
 `business_form_text_add`, `Client_added`) return **zero rows** on the live build; a funnel built on
