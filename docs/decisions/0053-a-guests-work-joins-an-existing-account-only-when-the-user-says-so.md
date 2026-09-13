@@ -3,6 +3,11 @@
 **Status:** decided. The owner, 2026-09-11: sign-up moves the guest's work as before, and sign-in to
 an existing account asks once — *"(a) ek dafa poocha jaye"*, *"agree poochna chahye"*.
 **Date:** 2026-09-11.
+**Building from 2026-09-13, into 1.4.6.** The owner: every change goes into 1.4.6 until they say release. The sync
+agent is building it on `feat/guest-work-moves-in-one-step` (backend) and `feat/146-guest-work-moves-in-one-step`
+(app).
+**The rows already left behind** (32 guests with proof, 3 documents and 185 rows) move through this same one-step
+path once it exists, after the owner sees the exact counts (the owner, 2026-09-13).
 **Related:** 0028 (the Invotick ID is part of the account), 0051 (the sync agent owns this), the sync
 audit's class O.
 

@@ -394,6 +394,29 @@ Memory is dated observation. Verify any file:line against the code before relyin
         Read a raw `max_over_time` alongside, because `increase()` misses a series born at 1.
       - The sync `_request` row is not built. Revisit it only if one class on `/v2/sync/push` hides two
         causes.
+23. **A document deleted on the phone takes its live lines with it, in one transaction** (0069 Q2, the
+    owner's option b; app `5576454f`, merged into `VC_102_VN_146` for 1.4.6).
+    - All seven delete paths reach `InvoiceRepositoryImpl.deleteInvoice` or
+      `EstimateRepositoryImpl.deleteEstimate`.
+      - `softDeleteWithLines` (`@Transaction`) soft-deletes every live line and the document at one time.
+      - It queues each DELETE inside the same transaction, under each row's own owner. A line with no owner
+        goes under its document's owner.
+    - **Unlike 0068, the queue rows are inside the transaction.** These soft deletes set no state, so the
+      orphan scan cannot recover a lost queue row.
+    - A line deleted before keeps its delete. A document already deleted, or not on the phone, changes
+      nothing.
+    - **Payments are on hold** (2026-09-13). The owner chose B, and then held it:
+      - the Payments screen splits one receipt across invoices, so B would silently erase a share of a real
+        receipt;
+      - every Payments-screen issue now waits for a full review of that form
+        (`memory/payment-form-review-postponed.md`).
+
+      Until then, the cascade touches no payment or payment link.
+    - **Pulled and web deletes are not touched.** That is open, and the owner's.
+    - **Until 0042 phase 3,** a second phone's later edit revives the invoice without its lines
+      (`FinancialSyncV2Services.kt:308`). This reaches only accounts with 2 or more writing phones (2 of
+      1,107).
+    - Guard: `ADeletedDocumentTakesItsLinesTest`.
 
 ## Established 2026-09-12, while planning the receipt number
 

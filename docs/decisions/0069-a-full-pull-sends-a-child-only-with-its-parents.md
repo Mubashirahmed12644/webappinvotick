@@ -81,6 +81,26 @@ apni tarteeb sy" (2026-09-12). The data repair and the root fix are the owner's 
      - A 1.4.6 phone soft-deletes an invoice's lines, and an estimate's, together with the parent. It queues their
        DELETEs in the same transaction. This is being built on `feat/146-delete-cascades-to-lines`.
      - (a) waits for the version rule.
+     - **Built 2026-09-13:** `5576454f`, merged into `VC_102_VN_146`.
+       - All 7 user delete paths (4 for invoices, 3 for estimates) reach 2 repositories.
+       - `softDeleteWithLines` is one `@Transaction` and queues the DELETEs inside it.
+       - Tests: 10 new ones, 8 of which failed first; 6 faults calibrated; suite 219 → 229.
+       - Rejected: queueing after the transaction, as 0068 does. A lost queue row there cannot be recovered, and
+         calibrated, it leaves a half state.
+       - Found: the web's delete also leaves lines.
+     - **Payments, decided by the owner on 2026-09-13 (option B):** an invoice deleted on the phone also soft-deletes
+       its payment links, and each payment that pays only that invoice.
+       - A payment that pays another invoice too keeps living (0 of 733 today).
+       - Before, 83 live payments sat on deleted invoices, in 47 accounts, and showed without an invoice in the
+         client's ledger.
+       - Rejected: (A) keep the payment, drop only the link, which leaves it floating in the ledger; (C) refuse to
+         delete an invoice that has a payment, one more step for the user.
+       - **ON HOLD, the same day.** The Payments screen splits one client receipt into one payment per unpaid
+         invoice, so B would silently erase a share of a real receipt. There are 22 such receipts, and 17 shares
+         already sit on deleted invoices.
+         - The owner then postponed every issue tied to Payments-screen payments until a full review of that form
+           (UX and business logic). Only a user-harming emergency is fixed before it.
+         - Nothing about payments is built. The findings are in `memory/payment-form-review-postponed.md`.
 
 **Also open (not a decision):** 38 "Template: FOREIGN KEY" reports from vc94–97. Those builds send no ids, and the
 data rules out a deleted parent, another account's parent and a missing parent. It needs the record id, which
