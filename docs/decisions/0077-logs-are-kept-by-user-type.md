@@ -5,9 +5,13 @@
 - **Loki's running config** holds `retention_stream` guest 15d, registered 30d, premium 90d.
 - **Labels are on the lines.** In the 30 minutes to about 16:00 UTC, the lines of signed-in users were: guest 13,039,
   registered 9,419, and 30 unlabelled.
-- **The data backup** taken before the change (`/root/retention-backup-2026-09-13/loki-data.tar`) still holds old
-  lines with values. It goes once the first compactor pass has been checked, and only on the owner's word, since
-  deleting it is final.
+- **The first compactor pass ran at 15:58 UTC.**
+  - It marked 216,250 chunks for deletion across 23 day-tables, from 2026-05-19 to 2026-08-06.
+  - The tables from 08-15 on have none, which is the 30-day default for unlabelled lines at work.
+  - The sweeper then deleted them: 216,240 removed and 10 already gone, with 0 marker files left (18:10 UTC).
+  - The store went from 3.3 GB to 2.4 GB (chunks 3.1 → 2.2 GB), even with a day of new lines added.
+- **The data backup** taken before the change (`/root/retention-backup-2026-09-13/loki-data.tar`, 1.79 GB) still holds
+  old lines with values. Deleting it is final, so it is the owner's own step.
 **Related:** 0050, 0076 (logs carry ids and codes, never values), `memory/log-pipeline-stream-limit.md`,
 `memory/storage-not-ram.md`.
 
