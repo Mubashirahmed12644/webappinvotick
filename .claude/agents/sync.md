@@ -117,6 +117,20 @@ Memory is dated observation. Verify any file:line against the code before relyin
    record.
    - A refusal of one record does not roll the push back. A DB error at commit discards the whole
      batch, and the device resends it (class S1); it is still answered 400.
+     - **Built, not deployed: 0080, a record the database refuses is refused alone.** Backend
+       `fix/one-bad-push-is-not-a-500-forever` @ `f0156c1`, 814/814. It waits for the owner's word.
+       - A push that cannot commit runs again, and every run after the first writes each record in its own operation.
+       - The refused record is pinned that way, then left out in every copy and answered `FAILED UNEXPECTED_ERROR`
+         with `data.field`, a name every build already retries.
+       - At most 10 such records; after that the push fails as before.
+       - Each refusal is recorded once, from the run that answered the phone.
+       - Found 2026-09-13: one product name over 255 characters (`inventory_items.name`, MySQL 1406) had stopped
+         three guest phones for good: `46e70cdc` since 2026-09-11 15:09 UTC, `2173bc74` and `93c0aa01` since
+         2026-07-01.
+       - Guards: `ARecordTheDatabaseRefusesIsRefusedAloneTest`, `AFailureOutlivesItsPushTest`.
+       - **First seen in Loki is not first happened.** Loki was dark 09-12 01–16 UTC, and the
+         `http_server_requests{exception}` tag exists only since `5fc7e5a`. Read the account's latest
+         `last_synced_at` instead.
    - **A record is refused before it is touched** (83e31ba).
      - Every update resolves everything that can refuse it into locals, and only then assigns: the
        ownership check, a guest takeover, the timestamp, the conflict rule and every reference. Each
@@ -448,7 +462,8 @@ Memory is dated observation. Verify any file:line against the code before relyin
       until stored. A 404 falls back to 1.4.5's re-queue. `transferGuestData` is removed.
     - **iOS** sends one id per install (`NSUserDefaults`, seeded from `identifierForVendor`), never the zeros.
     - **Evidence:** `sync_failed stage=guest_claim` (`request_id`, `http_status`, `error_type`,
-      `exception_class`); counter `guest_work_claims_total{path, outcome, dry_run}`.
+      `exception_class`); counter `guest_work_claims_total{path, outcome, dry_run}`. It counts after the commit from `f0156c1` (built with
+      0080, not deployed). Until then, a push that runs again counts an old build's sign-up more than once.
     - **The repair (R1):** `POST /v1/webpanel/guest-work/repair` (ADMIN), a dry run unless `"dryRun": false`,
       per guest and per table, one transaction per guest, proof = a phone linked to both. Never against
       production without the owner's go on the exact counts.
