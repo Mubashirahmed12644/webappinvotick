@@ -71,6 +71,10 @@ Memory is dated observation. Verify any file:line against the code before relyin
   - `SyncFailureEvidence` — the per-stage parameter table, enforced by a test against 0050;
   - `SyncEntityNames` — the app's names mapped to the server's group names;
   - `data/remote/api/SyncApi.kt` — the headers, including `X-Request-Id`.
+  - `composeApp/src/iosMain/.../IosBackgroundSync.kt` — iOS's background pass (`BGAppRefreshTask`
+    `invotick.invoicemaker.sync`). It reads its kill switch first: `ios_background_sync_enabled`, on unless
+    Remote Config says `false`, read from the saved copy, and absent or unreadable counts as on. App `bb2d52a3`
+    on `feat/146-ios-network-and-bg-switch`, not merged.
 - **Backend** — `~/Documents/invotick-apis`, package `dev.backend.infotick`:
   - `SyncV2Controller`;
   - `SyncV2PushService` — **one transaction per push**;
