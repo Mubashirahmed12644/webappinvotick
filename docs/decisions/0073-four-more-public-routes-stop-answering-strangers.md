@@ -3,8 +3,8 @@
 **Status:** decided by the lead on 2026-09-13 for items 1–4, under the owner's standing rule: backend changes that
 are not schema, secrets or Play uploads go without asking. Item 5 waits for the owner's yes. Nothing is deployed.
 **Built** in worktree `invotick-apis-public`:
-- `fix/public-routes-tightened`: `d5ff958`, `2f31ca3`, `b6e0faf`, `ef07c3f`; 739/739;
-- `fix/delete-admin-login-as-user`: `22f608a`; 740/740.
+- `fix/public-routes-tightened`: `d5ff958`, `2f31ca3`, `b6e0faf`, `ef07c3f`, then `7dd87b4` (docs); 739/739;
+- `fix/delete-admin-login-as-user`: `801841c`, on top of branch 1; 740/740.
 
 **Related:** 0072, `memory/admin-panel-security-audit.md` (the 2026-09-13 review of every public route).
 
