@@ -158,7 +158,7 @@ Memory is dated observation. Verify any file:line against the code before relyin
 10. **Deploy.** Migrations ship alone and first. `stage` is production. Never retry an older pipeline
     once a newer one has deployed.
 11. **A guest's record moves to an account only with proof that the caller held that guest**
-    (0749457). **Since 0053 it moves only as the whole guest, in one step — rule 23.** The proof below is
+    (0749457). **Since 0053 it moves only as the whole guest, in one step — rule 24.** The proof below is
     unchanged; the record-by-record move it once allowed is gone (built 2026-09-13, not deployed).
     - **What the guard used to do:**
       - It allowed the GUEST→USER takeover on role alone: any USER, over any guest-owned record id.
@@ -324,8 +324,8 @@ Memory is dated observation. Verify any file:line against the code before relyin
           `resolveOwnedBusiness`);
         - the guest is retired by whatever did move.
 
-        Since `0749457`, 3 of 15 sign-ups left a document behind. The fix is 0053 (rule 23). The repair
-        is decided (R1, 2026-09-13): through rule 23's repair endpoint, after the owner's go on the dry
+        Since `0749457`, 3 of 15 sign-ups left a document behind. The fix is 0053 (rule 24). The repair
+        is decided (R1, 2026-09-13): through rule 24's repair endpoint, after the owner's go on the dry
         run's exact counts.
       - **The same family is rule 21** (0069): lines of deleted invoices, their payment links, lines of
         deleted estimates, and deleted terms that a live invoice names.
@@ -420,7 +420,7 @@ Memory is dated observation. Verify any file:line against the code before relyin
       1,107).
     - Guard: `ADeletedDocumentTakesItsLinesTest`.
 
-23. **A guest's work joins an account in one step, all or nothing, with proof, and a sign-in asks once**
+24. **A guest's work joins an account in one step, all or nothing, with proof, and a sign-in asks once**
     (0053; backend `feat/guest-work-moves-in-one-step` @ `6ee2b09` on stage `42faec8`; app
     `feat/146-guest-work-moves-in-one-step` @ `3b281f89` on `VC_102_VN_146` `b9669f53`; nothing pushed,
     deployed or released). Suites: backend 773/773 at `4aa7ac9`; app `:data:testDebugUnitTest` 243/243.
@@ -508,7 +508,7 @@ The plan is `docs/SYNC-RECEIPT-NUMBER-PLAN.md`. Each line says how it is known.
 
   The real-time "bell" to other devices comes after the pull cursor.
 - **A guest's records move to an account only as one claimed, proven step** (0053). **Built 2026-09-13 as
-  rule 23; not pushed, not deployed, not released.**
+  rule 24; not pushed, not deployed, not released.**
   - Sign-up moves them silently. Sign-in asks once, when there is real work.
   - The guard's record-by-record migration goes.
   - Declined work stays on the server for 90 days.
