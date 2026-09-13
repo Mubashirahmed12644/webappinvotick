@@ -491,9 +491,10 @@ iOS build, an email pixel. Decision
    receiver at all. Reusing the name would have put two populations under one id (§1.4) and quietly
    raised the app's own count. `shared_invoice_page_view` is the twin, not the same event.
 
-3. **The surface must be stamped ON the event.** `analytics_events` has no platform column —
-   platform lives on `analytics_sessions_v2`, and §1.12 and §3.8 are both about why that join cannot
-   carry a dimension. So every web event carries `surface`. **The gap this leaves is real and is
+3. **The surface must be stamped ON the event.** `analytics_events` had no platform column —
+   platform lived on `analytics_sessions_v2`, and §1.12 and §3.8 are both about why that join cannot
+   carry a dimension. *(From 2026-09-14, 0088 adds `analytics_events.platform`. `surface` still names the
+   page within `Web`.)* So every web event carries `surface`. **The gap this leaves is real and is
    named rather than papered over:** the app does not send `surface`, so the facet reads
    `web_share_link` against **NULL**, and NULL means unknown, not app (§1.7).
 
@@ -709,6 +710,19 @@ Full detail in `memory/mysql-binary-uuid-and-test-clock.md`. In native queries:
    (`app_version`, `app_version_code`, `country`), with an index each. Cost matters too: a funnel is
    several passes over the busiest table in the product, and a join per pass multiplies the
    bottleneck.
+
+   **Platform too, from decision [0088](docs/decisions/0088-every-analytics-event-carries-its-platform.md)**
+   *(2026-09-14)*.
+   - `analytics_events.platform` holds `Android`, `iOS` or `Web`, and NULL means unknown. It is copied from the batch
+     at ingestion, like version and country.
+   - Rows older than that deploy were filled only where it could be proven:
+     - a row that arrived before 2026-09-13 20:34:49 UTC, the first iOS row ever, is Android, or Web when
+       `surface=web_share_link`;
+     - a later row takes its session's platform.
+   - The 416 session-less rows of the iOS backlog stay NULL. The version floor proves they are not Android, and
+     nothing proves they are iOS.
+   - Filter and label by `e.platform`, never through `analytics_sessions_v2`.
+   - It has no index on purpose, because every platform-filtered query already reads the event row.
 
 9. **Compare builds with `app_version_code`, never `app_version`.** `"1.4.10"` sorts BELOW `"1.4.9"`
    as a string, so a release comparison built on the name is correct for nine releases and then
