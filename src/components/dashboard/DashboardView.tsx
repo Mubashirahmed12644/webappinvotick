@@ -1,5 +1,10 @@
+"use client";
+
 import Link from "next/link";
 import { formatMoney, formatDate } from "@/lib/format";
+import { dashboardMetrics, invoiceBadge } from "@/lib/dashboard-figures";
+import { statusNow } from "@/lib/invoice-status";
+import { useViewerToday } from "@/lib/viewer-today";
 import type { DashboardModel, DashboardActivity, MonthlyPoint } from "@/lib/dashboard";
 
 // Exact palette from the mobile app (DashboardColors).
@@ -208,6 +213,7 @@ function statusChip(status: string) {
   const map: Record<string, { color: string; light: string }> = {
     Paid: { color: C.success, light: C.successLight },
     Pending: { color: C.warning, light: C.warningLight },
+    Partial: { color: C.warning, light: C.warningLight },
     Overdue: { color: C.error, light: C.errorLight },
   };
   return map[status] ?? { color: C.grey, light: C.greyLight };
@@ -374,7 +380,21 @@ function IncomeExpenseCard({ monthly, currency }: { monthly: MonthlyPoint[]; cur
 
 /* ============================ Root ============================ */
 
+// The server worked the figures out on its own date. When the viewer's calendar is on another day,
+// the ones that depend on the date are worked out again here, by the same functions: Overdue, the
+// Unpaid and Overdue counts, and an invoice's badge. So the dashboard says what the invoice list
+// says (decision 0084).
+function onViewersDay(model: DashboardModel, today: string): Pick<DashboardModel, "metrics" | "activities"> {
+  if (today === model.today) return model;
+  return {
+    metrics: dashboardMetrics(model.invoices, today, model.metrics.totalExpenses),
+    activities: model.activities.map((a) => (a.invoice ? { ...a, status: invoiceBadge(statusNow(a.invoice, today)) } : a)),
+  };
+}
+
 export function DashboardView({ model }: { model: DashboardModel }) {
+  const today = useViewerToday(model.today);
+  const { metrics, activities } = onViewersDay(model, today);
   return (
     <div className="-mx-4 -my-6 px-3 py-3 sm:-mx-6 sm:-my-8 lg:-mx-8" style={{ background: C.background }}>
       <div className="mx-auto max-w-6xl space-y-2.5">
@@ -386,17 +406,17 @@ export function DashboardView({ model }: { model: DashboardModel }) {
             <DateRangePill />
           </div>
         </div>
-        <KeyMetrics m={model.metrics} currency={model.currency} />
+        <KeyMetrics m={metrics} currency={model.currency} />
         <div className="grid gap-2.5 md:grid-cols-2">
           <RevenueTrendCard monthly={model.monthly} currency={model.currency} />
           <IncomeExpenseCard monthly={model.monthly} currency={model.currency} />
         </div>
         <div className="grid gap-2.5 md:grid-cols-2 md:items-start">
           <div className="space-y-2.5">
-            <InvoiceStatus m={model.metrics} />
+            <InvoiceStatus m={metrics} />
             <TopCustomers customers={model.topCustomers} currency={model.currency} />
           </div>
-          <RecentActivity activities={model.activities} currency={model.currency} />
+          <RecentActivity activities={activities} currency={model.currency} />
         </div>
       </div>
     </div>

@@ -1,6 +1,10 @@
 import "server-only";
 import type { WorkspaceData } from "./data";
-import type { InvoiceStatus } from "./types";
+import type { InvoiceSummary } from "./types";
+import { countsAsMoney, statusNow, type MoneyRow } from "./invoice-status";
+import { dashboardMetrics, invoiceBadge, type DashboardMetrics } from "./dashboard-figures";
+
+export type { DashboardMetrics };
 
 // Mirrors the mobile app's dashboard model (feature/dashboard DashboardUiState).
 export type DashboardActivityType = "INVOICE_CREATED" | "PAYMENT_RECEIVED" | "EXPENSE_ADDED";
@@ -13,6 +17,8 @@ export interface DashboardActivity {
   amount: number;
   date: string;
   status: string | null;
+  /** For an invoice: its row as the rule reads it, so the page can work the badge out again on the viewer's date. */
+  invoice?: MoneyRow;
 }
 
 export interface DashboardTopCustomer {
@@ -20,18 +26,6 @@ export interface DashboardTopCustomer {
   name: string;
   totalRevenue: number;
   invoiceCount: number;
-}
-
-export interface DashboardMetrics {
-  totalRevenue: number;
-  outstanding: number;
-  totalInvoices: number;
-  overdueAmount: number;
-  paidInvoices: number;
-  unpaidInvoices: number;
-  overdueInvoices: number;
-  totalExpenses: number;
-  netIncome: number;
 }
 
 export interface MonthlyPoint {
@@ -44,10 +38,14 @@ export interface MonthlyPoint {
 export interface DashboardModel {
   currency: string;
   businessName: string | null;
+  /** The date (YYYY-MM-DD) the figures below were worked out on: the server's. */
+  today: string;
   metrics: DashboardMetrics;
   topCustomers: DashboardTopCustomer[];
   activities: DashboardActivity[];
   monthly: MonthlyPoint[];
+  /** Every invoice as the rule reads it, so the page can work the figures out again on the viewer's own date. */
+  invoices: MoneyRow[];
 }
 
 const n = (v: string | number | null | undefined): number => {
@@ -55,35 +53,34 @@ const n = (v: string | number | null | undefined): number => {
   return Number.isFinite(x) ? (x as number) : 0;
 };
 
-function statusLabel(s: InvoiceStatus): string | null {
-  switch (s) {
-    case "PAID":
-      return "Paid";
-    case "OVERDUE":
-      return "Overdue";
-    case "SENT":
-      return "Pending";
-    default:
-      return null; // DRAFT / CANCELLED → no badge (mirrors mobile)
-  }
-}
+// Only what the rule reads, so the model stays small on its way to the browser.
+const moneyRow = (i: InvoiceSummary): MoneyRow => ({
+  status: i.status,
+  totalAmount: i.totalAmount,
+  paidAmount: i.paidAmount ?? 0,
+  dueDate: i.dueDate ?? null,
+});
 
 // Pure, server-side derivation of the mobile dashboard metrics from the sync
 // workspace. No fabrication — every number comes from synced invoices,
 // payments, expenses and clients.
-export function buildDashboard(ws: WorkspaceData): DashboardModel {
+//
+// Money follows the invoice list's rule (invoice-status.ts, decision 0084):
+// - A DRAFT or a CANCELLED invoice counts in no figure: not Revenue, Outstanding or Overdue, not a top
+//   customer's total, and not a month of the trend.
+// - A status comes from the invoice's payments and its due date on `today`, never from the row. So a
+//   draft is never overdue, and an invoice marked OVERDUE by hand but paid in full counts as paid.
+// - `today` is the server's date. The page works the figures that depend on it out again on the
+//   viewer's own date (DashboardView), as the invoice list does.
+export function buildDashboard(ws: WorkspaceData, today: string): DashboardModel {
   const invoices = ws.invoices;
-
-  const totalRevenue = invoices.reduce((s, i) => s + n(i.totalAmount), 0);
-  const paidList = invoices.filter((i) => i.status === "PAID");
-  const overdueList = invoices.filter((i) => i.status === "OVERDUE");
-  const paid = paidList.reduce((s, i) => s + n(i.totalAmount), 0);
-  const overdueAmount = overdueList.reduce((s, i) => s + n(i.totalAmount), 0);
+  const real = invoices.filter(countsAsMoney);
+  const rows = invoices.map(moneyRow);
   const totalExpenses = ws.expenses.reduce((s, e) => s + n(e.total), 0);
 
-  // Top customers: group invoices by client, sum revenue.
+  // Top customers: group real invoices by client, sum revenue.
   const byClient = new Map<string, { name: string; total: number; count: number }>();
-  for (const inv of invoices) {
+  for (const inv of real) {
     if (!inv.clientId) continue;
     const cur = byClient.get(inv.clientId) ?? { name: inv.clientName || "—", total: 0, count: 0 };
     cur.total += n(inv.totalAmount);
@@ -107,7 +104,8 @@ export function buildDashboard(ws: WorkspaceData): DashboardModel {
       subtitle: inv.clientName || "—",
       amount: n(inv.totalAmount),
       date: inv.invoiceDate,
-      status: statusLabel(inv.status),
+      status: invoiceBadge(statusNow(inv, today)),
+      invoice: moneyRow(inv),
     });
   }
   for (const p of ws.payments) {
@@ -142,7 +140,7 @@ export function buildDashboard(ws: WorkspaceData): DashboardModel {
   const mkey = (d: string) => (d || "").slice(0, 7);
   const revByMonth: Record<string, number> = {};
   const expByMonth: Record<string, number> = {};
-  for (const inv of invoices) {
+  for (const inv of real) {
     const k = mkey(inv.invoiceDate);
     if (k) revByMonth[k] = (revByMonth[k] ?? 0) + n(inv.totalAmount);
   }
@@ -168,19 +166,11 @@ export function buildDashboard(ws: WorkspaceData): DashboardModel {
   return {
     currency: invoices[0]?.currency || ws.businesses[0]?.currencyCode || "USD",
     businessName: ws.businesses[0]?.name ?? null,
+    today,
     monthly,
-    metrics: {
-      totalRevenue,
-      outstanding: totalRevenue - paid,
-      totalInvoices: invoices.length,
-      overdueAmount,
-      paidInvoices: paidList.length,
-      unpaidInvoices: Math.max(0, invoices.length - paidList.length - overdueList.length),
-      overdueInvoices: overdueList.length,
-      totalExpenses,
-      netIncome: totalRevenue - totalExpenses,
-    },
+    metrics: dashboardMetrics(rows, today, totalExpenses),
     topCustomers,
     activities,
+    invoices: rows,
   };
 }

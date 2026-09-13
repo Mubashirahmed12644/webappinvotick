@@ -1,14 +1,12 @@
 "use client";
 
-import { useState, useMemo, useSyncExternalStore } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import { formatMoney, formatDate } from "@/lib/format";
 import { ALL_BUSINESSES, businessViewName, resolveBusinessView, saveBusinessView, useStoredBusinessView } from "@/lib/business-view";
-import { localDate, statusNow, summarizeInvoices, type StatusNow } from "@/lib/invoice-status";
+import { statusNow, summarizeInvoices, type StatusNow } from "@/lib/invoice-status";
+import { useViewerToday } from "@/lib/viewer-today";
 import type { InvoiceSummary } from "@/lib/types";
-
-// The viewer's date is read, not watched: nothing to subscribe to.
-const noSubscription = () => () => {};
 
 const C = {
   primary: "#0D4DC0",
@@ -308,7 +306,7 @@ export function InvoiceHome({
   // date, and a DRAFT or CANCELLED invoice counts in no figure. Overdue is counted in calendar days,
   // so the viewer's own date decides; the server's stands in until hydration, so that the server
   // render and the first client render agree.
-  const today = useSyncExternalStore(noSubscription, localDate, () => serverToday);
+  const today = useViewerToday(serverToday);
   const statusById = useMemo(
     () => new Map(businessInvoices.map((i) => [i.id, statusNow(i, today)] as const)),
     [businessInvoices, today],

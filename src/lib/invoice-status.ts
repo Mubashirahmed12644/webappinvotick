@@ -17,6 +17,10 @@ import type { InvoiceStatus } from "./types";
  * - Outstanding: what is still owed on those not fully paid. Overdue: what is still owed on the
  *   overdue ones. Revenue = Collected + Outstanding.
  *
+ * Every money screen on the web goes through this file (decision 0084). The invoice list and the
+ * dashboard add up through `summarizeInvoices`; a customer's total and a month of the dashboard's
+ * trend take only what `countsAsMoney` lets through. Both read today with `useViewerToday`.
+ *
  * One difference from the app remains: the app converts a mix of currencies into one before adding
  * them up, and the web adds the amounts as they are, as it did before.
  */
@@ -40,6 +44,15 @@ const num = (v: string | number | null | undefined): number => {
 export function localDate(d: Date = new Date()): string {
   const p = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+/**
+ * Whether an invoice is money at all. A DRAFT is not money anybody owes yet, and a CANCELLED invoice
+ * is money nobody owes any more, so neither counts in any figure (decision 0084).
+ */
+export function countsAsMoney(inv: Pick<MoneyRow, "status">): boolean {
+  const stored = (inv.status || "").toUpperCase();
+  return stored !== "DRAFT" && stored !== "CANCELLED";
 }
 
 /** The status an invoice is actually in on `today` (YYYY-MM-DD). */
@@ -76,7 +89,7 @@ export function summarizeInvoices(rows: readonly MoneyRow[], today: string): Mon
   for (const inv of rows) {
     const st = statusNow(inv, today);
     counts[st] = (counts[st] ?? 0) + 1;
-    if (st === "DRAFT" || st === "CANCELLED") continue;
+    if (!countsAsMoney(inv)) continue;
     const total = num(inv.totalAmount);
     const paid = num(inv.paidAmount);
     revenue += total;
