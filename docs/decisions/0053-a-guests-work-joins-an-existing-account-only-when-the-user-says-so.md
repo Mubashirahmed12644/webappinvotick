@@ -60,3 +60,92 @@ audit's class O.
 - **Server:** a claim step that verifies possession of the guest and moves all of its records in one
   transaction. The guard's migration branch goes.
 - The 90-day purge of declined guest work needs a job and a Health Centre line.
+
+## Built, 2026-09-13 (not pushed, not deployed, not released)
+
+Backend `feat/guest-work-moves-in-one-step` (`25a172a` → `6ee2b09`, on stage `42faec8`; suite 773/773). App
+`feat/146-guest-work-moves-in-one-step` (`b76b733f`, `3b281f89`, on `VC_102_VN_146` `b9669f53`;
+`:data:testDebugUnitTest` 243/243). No migration; no Room schema change.
+
+The owner, 2026-09-13: all work goes into 1.4.6 until they say "release". Also R1, the same day: the 32
+guests' left-behind rows move into their accounts through this claim, after the owner's go on the dry
+run's exact counts.
+
+### What the data said first (read-only, 2026-09-13)
+
+- **Phones that were a guest and then signed in** (`linked_device`, from 2026-07-20), by ISO week:
+
+  | Week | Sign-ups | of them left real work behind | Sign-ins to an existing account |
+  |---|---|---|---|
+  | w35 (Aug 24–30) | 6 (vc ≤ 94) | 1 | 3 |
+  | w36 (Aug 31–Sep 6) | 18 (17 vc ≤ 94, 1 vc 95–97) | 0 | 4 |
+  | w37 (Sep 7–13) | 39 (35 vc 95–97, 4 vc 98–101) | 6 (3 of them a document), all 1.4.4 | 2 |
+
+  Sign-up = the account was created within a day before that phone first used it, and no other phone
+  used it earlier. Real work = a live invoice, estimate or client still under the guest now.
+  Release events agree on the trend: `register_success` 9 → 11, `login_success` 17 → 25 (w36 → w37).
+- **What a repair would move (R1)**: 77 retired guests have a phone linked to both them and their account;
+  49 of them still own 202 rows (191 live) — 38 of those are share links. In the 21 synced tables alone:
+  38 guests, 164 rows, 153 live. 3 live documents, the three sign-ups of 2026-09-11/12.
+
+### What was built
+
+- **The claim (server, `GuestWorkClaim`).** Every row the guest owns — the 21 synced tables and
+  `shared_invoice` — changes owner in one transaction; the guest's row is locked first; the guest is
+  retired in the same transaction (the Invotick ID moves only to an account that has none, so an existing
+  account keeps its own). A move changes `user_id` and `last_synced_at` only: the content, the phone's time
+  (`updated_at`) and the number (`version`) stay, and the account's other phones pull the rows.
+- **The proof** is rule 11's, unchanged: a non-zero `X-Device-Id` that `linked_device` records for the
+  guest. The all-zero iOS id proves nothing. A guest the server holds nothing of needs no proof (nothing
+  to protect), and is then not retired.
+- **Idempotent.** A second claim finds nothing left and answers `NOTHING_TO_MOVE`; a guest already retired
+  to this account is swept again (stragglers, and R1's leftovers); a guest retired to another account is
+  refused.
+- **`POST /v2/guest-work`** (a registered account only): `MOVE` or `KEEP_APART`. A refusal answers 409 —
+  `NO_PROOF`, `JOINED_ANOTHER_ACCOUNT`, `NOT_A_GUEST`, `NOT_AN_ACCOUNT` — never 401, which every build reads
+  as "sign out". A "no" is proof-checked like a move and moves nothing; it answers `recorded: false`.
+- **Builds that never ask (up to 1.4.5)** keep signing up as they do: they re-own the work on the phone and
+  push it again. The server now answers that push with the whole claim, at the start of the push, inside
+  its transaction, before any record is judged — only for an unretired guest the phone held and the push
+  names. Chosen over keeping the record-by-record move for them: their phone has already merged, so a
+  refusal would split phone and server, and the record-by-record move is exactly what left 3 of 15 sign-ups
+  with a document behind. A 1.4.6 push of a guest's records is refused whole.
+- **The guard's record-by-record move is gone.** A record still owned by a guest is refused whatever the
+  phone (logged `reason=GuestWorkNotClaimed`).
+- **Sign-up or sign-in:** the auth answer now says `newAccount`. Google's button signs in and signs up alike,
+  so only the server can tell.
+- **The app (1.4.6).** A sign-up moves the work without a question: it joins the account on the phone at
+  once (nothing queued again, no time touched), the claim follows, and the account's pushes wait until the
+  server confirms. A sign-in to an existing account with real work (an invoice, an estimate or a client)
+  asks once, over every screen, until answered: yes is the same move; no leaves the rows under the guest,
+  out of the account's lists, sends the guest's unsent work under the guest's own token while this process
+  still holds it, and tells the server — again at each start until the server stores it. No real work: no
+  question, nothing moves. A server without the route (404) gets the work the way 1.4.5 sent it.
+- **iOS** sends one id per install (kept in `NSUserDefaults`, first taken from `identifierForVendor`), never
+  the zeros. A guest's first sync from that build records the proof its later sign-up needs.
+- **Evidence:** a refused claim is `sync_failed stage=guest_claim`, with `request_id`, `http_status`,
+  `error_type` (the server's refusal, or `HTTP_<n>`) and `exception_class`. Counter
+  `guest_work_claims_total{path, outcome, dry_run}` on the server.
+- **The repair (R1):** `POST /v1/webpanel/guest-work/repair`, admins only, a dry run unless the body says
+  `"dryRun": false`, per guest and per table, one transaction per guest, proof = a phone linked to both.
+  Never run against production without the owner's go on the dry run's exact counts.
+
+### Rejected while building
+
+- **Keeping the record-by-record move for old builds** — see above.
+- **A decline marker made of existing columns** (`is_active`, `deleted_at` without `is_deleted`, or a revoked
+  `linked_device` row). Each is ambiguous: 35 retired guests already hold rows from partial moves, and an
+  owner can revoke a device. A purge deletes data, so it must key on an explicit, recorded "no".
+- **Hiding the work on the phone until the server confirms a move.** Offline, the user's work would vanish
+  after a sign-up. It shows at once instead, and the pushes wait.
+- **Proof by the guest's own sign-in token.** Stronger than a device id, and it would cover iOS guests from
+  before the id fix; but it is not rule 11's proof. Left as a question.
+
+### Not built: the 90-day keep
+
+It needs a table, and a migration is the owner's call (the SQL is in the report of 2026-09-13). The design:
+one row per "no" (guest, account, phone, the phone's decision time, `purge_after` = +90 days, `purged_at`);
+a daily job hard-deletes a declined guest's rows once `purge_after` passes, children first, one transaction
+per guest, and only while the guest is still unclaimed; a Health Centre check shows the guests kept apart,
+the purges due in 7 days, the purges done in 30 days and any that failed. A hard delete of synced rows makes
+`NOT_FOUND` ambiguous, so 0059 is amended first (rule 13).

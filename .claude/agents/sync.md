@@ -158,7 +158,8 @@ Memory is dated observation. Verify any file:line against the code before relyin
 10. **Deploy.** Migrations ship alone and first. `stage` is production. Never retry an older pipeline
     once a newer one has deployed.
 11. **A guest's record moves to an account only with proof that the caller held that guest**
-    (0749457).
+    (0749457). **Since 0053 it moves only as the whole guest, in one step — rule 23.** The proof below is
+    unchanged; the record-by-record move it once allowed is gone (built 2026-09-13, not deployed).
     - **What the guard used to do:**
       - It allowed the GUEST→USER takeover on role alone: any USER, over any guest-owned record id.
         Invoice ids are public in `/v2/shared-invoice/{token}`, and 234 still-guest owners had a
@@ -323,8 +324,9 @@ Memory is dated observation. Verify any file:line against the code before relyin
           `resolveOwnedBusiness`);
         - the guest is retired by whatever did move.
 
-        Since `0749457`, 3 of 15 sign-ups left a document behind. The repair is the owner's (Tier 1);
-        the fix is 0053.
+        Since `0749457`, 3 of 15 sign-ups left a document behind. The fix is 0053 (rule 23). The repair
+        is decided (R1, 2026-09-13): through rule 23's repair endpoint, after the owner's go on the dry
+        run's exact counts.
       - **The same family is rule 21** (0069): lines of deleted invoices, their payment links, lines of
         deleted estimates, and deleted terms that a live invoice names.
       - Guards: `AClientInUseIsNotDeletedByTheWebTest`,
@@ -418,6 +420,49 @@ Memory is dated observation. Verify any file:line against the code before relyin
       1,107).
     - Guard: `ADeletedDocumentTakesItsLinesTest`.
 
+23. **A guest's work joins an account in one step, all or nothing, with proof, and a sign-in asks once**
+    (0053; backend `feat/guest-work-moves-in-one-step` @ `6ee2b09` on stage `42faec8`; app
+    `feat/146-guest-work-moves-in-one-step` @ `3b281f89` on `VC_102_VN_146` `b9669f53`; nothing pushed,
+    deployed or released). Suites: backend 773/773 at `4aa7ac9`; app `:data:testDebugUnitTest` 243/243.
+    - **The claim (`GuestWorkClaim`)** moves every row the guest owns — the 21 synced tables and
+      `shared_invoice` — in one transaction, after locking the guest's row, and retires the guest in it.
+      Only `user_id` and `last_synced_at` change; content, `updated_at` and `version` stay.
+    - **Proof** is rule 11's. A guest the server holds nothing of needs none, and is then not retired.
+    - **Idempotent:** a retry answers `NOTHING_TO_MOVE`; a guest retired to this account is swept again; one
+      retired to another account is refused.
+    - **`POST /v2/guest-work`** (USER): `MOVE` | `KEEP_APART`. Refusals are 409 with `data.outcome` —
+      never 401, which every build reads as "sign out". A "no" is proof-checked and answers `recorded: false`
+      until its table exists (0053's open migration).
+    - **Builds that never ask** (no `X-App-Version-Code`, or < 102): `OldBuildGuestClaim` runs the whole claim
+      at the start of their push, in its transaction, before any entity is loaded — only for an unretired
+      guest the pushing phone held and the push names. A 1.4.6 push of a guest's records is refused whole.
+    - **The guard** (`assertOwnership`) refuses a guest's record whatever the phone, logged
+      `reason=GuestWorkNotClaimed`. `GuestUpgradeCollector` and `markGuestMigrated` are gone.
+    - **Auth answers carry `newAccount`**; the phone decides sign-up vs sign-in from it.
+    - **The app (1.4.6):** a sign-up moves the work silently — re-owned on the phone at once with nothing
+      queued again and no time touched (`GuestDataManager.adoptClaimedGuestData`), then the claim; the
+      account's pushes are held until the server confirms (`SyncPushHandler.pushHold`). A sign-in to an
+      existing account with an invoice, estimate or client asks once (`GuestWorkQuestionHost`, above every
+      screen, until answered). "No" keeps the rows under the guest and out of the account's lists, pushes the
+      guest's unsent work under its own token while the process holds it, and tells the server at each start
+      until stored. A 404 falls back to 1.4.5's re-queue. `transferGuestData` is removed.
+    - **iOS** sends one id per install (`NSUserDefaults`, seeded from `identifierForVendor`), never the zeros.
+    - **Evidence:** `sync_failed stage=guest_claim` (`request_id`, `http_status`, `error_type`,
+      `exception_class`); counter `guest_work_claims_total{path, outcome, dry_run}`.
+    - **The repair (R1):** `POST /v1/webpanel/guest-work/repair` (ADMIN), a dry run unless `"dryRun": false`,
+      per guest and per table, one transaction per guest, proof = a phone linked to both. Never against
+      production without the owner's go on the exact counts.
+    - **Measured 2026-09-13 (read-only):** sign-ups w35 6, w36 18, w37 39 (w37: 35 on 1.4.4); 6 of the 39
+      left real work behind, 3 a document. Sign-ins to an existing account: 3, 4, 2. R1's dry run: 49 of 77
+      proven retired guests own 202 rows (191 live; 38 share links); 3 live documents.
+    - **Guards:** `AnOldBuildsSignUpMovesTheWholeGuestTest` (4 of 6 failed first on `42faec8`),
+      `AGuestsWorkMovesInOneStepTest` (every table read from the schema; a trigger failing the last table
+      rolls every table back), `ARefusedRecordIsNotWrittenTest`, `SyncV2MigrationFlowTest`; app
+      `AClaimedGuestJoinsTheAccountAsItIsTest` (real Room), `GuestWorkCoordinatorTest`, `GuestWorkRepositoryTest`.
+    - **Measure after the deploy and after 1.4.6 (6 h and 24 h):** `guest_work_claims_total` by path and
+      outcome; sign-ups that left real work behind (the M1 query in the 0053 report) → 0; `OWNERSHIP_VIOLATION`
+      rows whose reason says "guest whose work has not joined" → only old builds without proof.
+
 ## Established 2026-09-12, while planning the receipt number
 
 The plan is `docs/SYNC-RECEIPT-NUMBER-PLAN.md`. Each line says how it is known.
@@ -462,7 +507,8 @@ The plan is `docs/SYNC-RECEIPT-NUMBER-PLAN.md`. Each line says how it is known.
   4. a delete that carries its version (0036).
 
   The real-time "bell" to other devices comes after the pull cursor.
-- **A guest's records move to an account only as one claimed, proven step** (0053).
+- **A guest's records move to an account only as one claimed, proven step** (0053). **Built 2026-09-13 as
+  rule 23; not pushed, not deployed, not released.**
   - Sign-up moves them silently. Sign-in asks once, when there is real work.
   - The guard's record-by-record migration goes.
   - Declined work stays on the server for 90 days.

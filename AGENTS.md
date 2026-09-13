@@ -492,6 +492,12 @@ the list is wrong, not the app.**
   the server answered and nothing threw (decision
   [0065](docs/decisions/0065-a-failed-guest-sign-in-carries-its-calls-evidence.md)). Until then its
   `exception_class` read `Exception` on every row.
+  From 1.4.6 a refused claim of a guest's work (`POST /v2/guest-work`, decision
+  [0053](docs/decisions/0053-a-guests-work-joins-an-existing-account-only-when-the-user-says-so.md)) is
+  `stage=guest_claim`, carrying `request_id`, `http_status`, `error_type` (the server's refusal —
+  `NO_PROOF`, `JOINED_ANOTHER_ACCOUNT`, `NOT_A_GUEST`, `NOT_AN_ACCOUNT` — or `HTTP_<n>`) and
+  `exception_class`. No answer at all is not reported (0029). `guest_data_merged` now fires only where a
+  move is decided: a sign-up, or a "yes" to the one question.
 - **Shipped images, from 1.4.6:** **`bundled_image_unavailable`** — an image a row names (a seeded
   header, template or background) that this build cannot produce. `image` (our asset name),
   `stored_ext` (`png` on rows written up to 1.4.4, `webp` after), `failure`
