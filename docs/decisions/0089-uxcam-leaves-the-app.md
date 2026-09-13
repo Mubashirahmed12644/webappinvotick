@@ -1,7 +1,13 @@
 # 0089 — UXCam leaves the app
 
-**Status:** decided by the owner on 2026-09-14 ("Nahi, nikal do"). It is being removed in 1.4.6, together with the two
-unused image-crop libraries.
+**Status:** decided by the owner on 2026-09-14 ("Nahi, nikal do"). **Built** for 1.4.6 as `d4fb2ac7`: 26 files, 355
+lines fewer, 7 files deleted. `git grep -i uxcam` finds nothing.
+- The two image-crop libraries had already left on 2026-09-13 (`f142237c`).
+- **Found: on Android, UXCam started on every cold start, even with the key empty.** The app saved Remote Config's
+  `""`, and the splash checked only for null, so it called `startWithConfiguration("")`. Our code cannot show what
+  UXCam does with an empty key.
+- **The `UX_Cam` Remote Config key must stay empty** while builds up to 1.4.5 are on phones. They still read it on
+  every launch, so a key placed there would start recording on those phones at once.
 
 **Related:**
 - `memory/app-library-audit-2026-09-11.md`;
