@@ -305,6 +305,10 @@ Two classes of event:
 2. **Auto-captured taps** — a codemod stamped a stable `analyticsId` on every button/clickable, and
    `guardedTrackedClick` prefixes the screen, so the identity is `tap:<screen>:<File>.<label>_N`.
    Release builds send one **unless somebody switched it off**; debug builds send everything.
+   ⚠️ *Measured 2026-09-13: in release builds the switch-off does not take effect.* 372 taps with denied keys
+   arrived from 84 release phones, every one marked `allowlisted=true`, while debug builds honour the denylist.
+   The root cause is not found yet (`memory/analytics-allowlist-empty.md`), so a denied key is not proof that
+   release stopped sending it.
 
 **Send policy — inverted on 2026-08-23.** `AnalyticsSendPolicy.shouldSend(key) = key !in denied`,
 where `denied` comes from `GET /v2/analytics/denylist` at app start. It was an allowlist, and an

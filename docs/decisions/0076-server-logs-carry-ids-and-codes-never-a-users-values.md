@@ -1,7 +1,8 @@
 # 0076 — Server logs carry ids and codes, never a user's values
 
-**Status:** decided by the owner on 2026-09-13 ("Haan, values band karein"). Being built on
-`fix/logs-carry-no-values`; it rides the next backend deploy.
+**Status:** decided by the owner on 2026-09-13 ("Haan, values band karein"). **Live 2026-09-13 14:58 UTC**
+(`fix/logs-carry-no-values` → batch6 `14786cce`). Checked after the deploy: in 10 minutes, 0 sync-push lines carried
+`properties`.
 **Related:** 0050 (a sync failure carries its evidence as ids and codes only), `.claude/agents/sync.md` rule 2,
 `docs/SUPPORT-VIEW-PLAN.md` (where this was found).
 

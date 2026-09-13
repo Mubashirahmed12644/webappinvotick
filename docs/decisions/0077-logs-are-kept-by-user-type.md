@@ -1,7 +1,13 @@
 # 0077 — Logs are kept as long as the user's type allows: guests 15 days, registered 30, premium 90
 
-**Status:** decided by the owner on 2026-09-13 ("Guest 15, sign-up 30, premium 90"). Being built on
-`feat/log-retention-by-user-type` plus the VPS config for Loki and promtail. Not live.
+**Status:** decided by the owner on 2026-09-13 ("Guest 15, sign-up 30, premium 90"). **Live 2026-09-13 14:58 UTC**
+(`feat/log-retention-by-user-type` → batch6 `14786cce`, with the Loki and promtail config).
+- **Loki's running config** holds `retention_stream` guest 15d, registered 30d, premium 90d.
+- **Labels are on the lines.** In the 30 minutes to about 16:00 UTC, the lines of signed-in users were: guest 13,039,
+  registered 9,419, and 30 unlabelled.
+- **The data backup** taken before the change (`/root/retention-backup-2026-09-13/loki-data.tar`) still holds old
+  lines with values. It goes once the first compactor pass has been checked, and only on the owner's word, since
+  deleting it is final.
 **Related:** 0050, 0076 (logs carry ids and codes, never values), `memory/log-pipeline-stream-limit.md`,
 `memory/storage-not-ram.md`.
 

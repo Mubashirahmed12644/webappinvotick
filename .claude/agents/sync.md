@@ -526,6 +526,17 @@ The plan is `docs/SYNC-RECEIPT-NUMBER-PLAN.md`. Each line says how it is known.
 - **Who a merge serves** (data): in 30 days, 2 of 1,107 writing accounts had two or more writing
   phones. The receipt number's wide benefit is ending clock refusals and re-sent copies.
 
+## Decided by the owner, 2026-09-13
+
+- **A soft-deleted synced record is purged for good 90 days after its delete; for a premium account, one year**
+  (0079; not built). Three things must exist before anything is purged:
+  - 0059 is amended, so a delete of a purged record is not a sync failure and an edit of one is not a new record;
+  - a purge job that goes children first, one account per transaction;
+  - a Health Centre line with purges due, done and failed.
+
+  Payments wait for their form's review. Rejected: log-style windows (15/30/90), which would let a phone offline for
+  two weeks bring a record back; and keeping deleted rows for ever.
+
 ## Decided by the owner, 2026-09-11
 
 - **The order of the structural fixes:**
