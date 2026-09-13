@@ -264,7 +264,10 @@ Two that bite most often:
   closed 2026-09-13** in `fba532c` (batch3; decision
   [0072](docs/decisions/0072-the-ip-routes-answer-admins-only.md)). Until then anybody could list IP
   records with their locations, delete them, and spend the paid lookup quota. Every entry on that list
-  reaches its controller with no token at all; `/v1/lookup/phone` is still on it and unchecked.
+  reaches its controller with no token at all. All 40 were reviewed on 2026-09-13 (decision
+  [0073](docs/decisions/0073-four-more-public-routes-stop-answering-strangers.md)).
+  `/v1/lookup/phone` turned out to be a public reverse phone lookup, holding 77,625 names of people
+  who are not users. What to do with it is the owner's decision, still pending.
   Details + what is still open before payment-gateway work: `memory/admin-panel-security-audit.md`.
 - Read-mostly by rule; never recompute money client-side — show what the backend computed.
 
