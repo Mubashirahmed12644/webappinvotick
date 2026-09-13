@@ -1,4 +1,4 @@
-import { summarizeInvoices, type MoneyRow, type StatusNow } from "./invoice-status";
+import { countsAsMoney, summarizeInvoices, type MoneyRow, type StatusNow } from "./invoice-status";
 
 /**
  * The dashboard's figures, by the invoice list's rule (invoice-status.ts, decision 0084). A DRAFT or a
@@ -22,9 +22,10 @@ export interface DashboardMetrics {
 
 /**
  * - Revenue, Outstanding and Overdue are the invoice list's own figures for these invoices on `today`.
- * - Paid, Unpaid and Overdue count real invoices only. Paid means paid in full. Unpaid means owed and
- *   not late (SENT or PARTIAL). Overdue means late. A draft or a cancelled invoice is in none of them.
- * - Invoices counts every invoice, drafts included, as the list's header does.
+ * - Invoices, Paid, Unpaid and Overdue count real invoices only. Paid means paid in full. Unpaid means
+ *   owed and not late (SENT or PARTIAL). Overdue means late. A draft or a cancelled invoice is in none
+ *   of them, so Paid + Unpaid + Overdue always add up to Invoices (owner, 2026-09-14: "Sirf asal
+ *   invoices").
  */
 export function dashboardMetrics(invoices: readonly MoneyRow[], today: string, totalExpenses: number): DashboardMetrics {
   const s = summarizeInvoices(invoices, today);
@@ -32,7 +33,7 @@ export function dashboardMetrics(invoices: readonly MoneyRow[], today: string, t
   return {
     totalRevenue: s.revenue,
     outstanding: s.outstanding,
-    totalInvoices: invoices.length,
+    totalInvoices: invoices.filter(countsAsMoney).length,
     overdueAmount: s.overdue,
     paidInvoices: count("PAID"),
     unpaidInvoices: count("SENT") + count("PARTIAL"),
@@ -56,4 +57,14 @@ export function invoiceBadge(status: StatusNow): string | null {
     default:
       return null;
   }
+}
+
+/**
+ * The word under an invoice's amount in Recent Activity. A draft or a cancelled invoice keeps its
+ * line, under its own word, because it is not money: it is never "Income" (owner, 2026-09-14: "Apna
+ * nishan do").
+ */
+export function invoiceActivityLabel(inv: Pick<MoneyRow, "status">): "Income" | "Draft" | "Cancelled" {
+  if (countsAsMoney(inv)) return "Income";
+  return (inv.status || "").toUpperCase() === "DRAFT" ? "Draft" : "Cancelled";
 }

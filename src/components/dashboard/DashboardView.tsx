@@ -202,11 +202,17 @@ function TopCustomers({ customers, currency }: { customers: DashboardModel["topC
   );
 }
 
-function activityStyle(type: DashboardActivity["type"]) {
-  switch (type) {
-    case "PAYMENT_RECEIVED": return { color: C.success, light: C.successLight, icon: P.payment, kind: "Income" };
-    case "EXPENSE_ADDED": return { color: C.error, light: C.errorLight, icon: P.cart, kind: "Expense" };
-    default: return { color: C.info, light: C.infoLight, icon: P.doc, kind: "Income" };
+// The word under the amount comes with the activity (a.label). A draft or a cancelled invoice keeps its
+// line but is not money: it reads "Draft" or "Cancelled", never "Income", in grey as on the invoice list.
+function activityStyle(a: DashboardActivity) {
+  const kind = a.label;
+  switch (a.type) {
+    case "PAYMENT_RECEIVED": return { color: C.success, light: C.successLight, icon: P.payment, kind };
+    case "EXPENSE_ADDED": return { color: C.error, light: C.errorLight, icon: P.cart, kind };
+    default:
+      return kind === "Income"
+        ? { color: C.info, light: C.infoLight, icon: P.doc, kind }
+        : { color: C.grey, light: C.greyLight, icon: P.doc, kind };
   }
 }
 function statusChip(status: string) {
@@ -254,7 +260,7 @@ function RecentActivity({ activities, currency }: { activities: DashboardModel["
       ) : (
         <div className="p-3">
           {activities.map((a, i) => {
-            const st = activityStyle(a.type);
+            const st = activityStyle(a);
             const isLast = i === activities.length - 1;
             return (
               <div key={a.id} className="flex gap-2.5">

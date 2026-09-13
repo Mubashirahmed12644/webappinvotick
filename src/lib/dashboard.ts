@@ -2,12 +2,15 @@ import "server-only";
 import type { WorkspaceData } from "./data";
 import type { InvoiceSummary } from "./types";
 import { countsAsMoney, statusNow, type MoneyRow } from "./invoice-status";
-import { dashboardMetrics, invoiceBadge, type DashboardMetrics } from "./dashboard-figures";
+import { dashboardMetrics, invoiceActivityLabel, invoiceBadge, type DashboardMetrics } from "./dashboard-figures";
 
 export type { DashboardMetrics };
 
 // Mirrors the mobile app's dashboard model (feature/dashboard DashboardUiState).
 export type DashboardActivityType = "INVOICE_CREATED" | "PAYMENT_RECEIVED" | "EXPENSE_ADDED";
+
+/** The word under an activity's amount. */
+export type DashboardActivityLabel = "Income" | "Expense" | "Draft" | "Cancelled";
 
 export interface DashboardActivity {
   id: string;
@@ -17,6 +20,8 @@ export interface DashboardActivity {
   amount: number;
   date: string;
   status: string | null;
+  /** A draft or a cancelled invoice keeps its line but reads "Draft" or "Cancelled", never "Income". */
+  label: DashboardActivityLabel;
   /** For an invoice: its row as the rule reads it, so the page can work the badge out again on the viewer's date. */
   invoice?: MoneyRow;
 }
@@ -66,8 +71,9 @@ const moneyRow = (i: InvoiceSummary): MoneyRow => ({
 // payments, expenses and clients.
 //
 // Money follows the invoice list's rule (invoice-status.ts, decision 0084):
-// - A DRAFT or a CANCELLED invoice counts in no figure: not Revenue, Outstanding or Overdue, not a top
-//   customer's total, and not a month of the trend.
+// - A DRAFT or a CANCELLED invoice counts in no figure: not Revenue, Outstanding or Overdue, not the
+//   Invoices card, not a top customer's total, and not a month of the trend. It keeps its line in
+//   Recent Activity, labelled "Draft" or "Cancelled", never "Income".
 // - A status comes from the invoice's payments and its due date on `today`, never from the row. So a
 //   draft is never overdue, and an invoice marked OVERDUE by hand but paid in full counts as paid.
 // - `today` is the server's date. The page works the figures that depend on it out again on the
@@ -105,6 +111,7 @@ export function buildDashboard(ws: WorkspaceData, today: string): DashboardModel
       amount: n(inv.totalAmount),
       date: inv.invoiceDate,
       status: invoiceBadge(statusNow(inv, today)),
+      label: invoiceActivityLabel(inv),
       invoice: moneyRow(inv),
     });
   }
@@ -117,6 +124,7 @@ export function buildDashboard(ws: WorkspaceData, today: string): DashboardModel
       amount: n(p.amount),
       date: p.paymentDate,
       status: null,
+      label: "Income",
     });
   }
   for (const e of ws.expenses) {
@@ -128,6 +136,7 @@ export function buildDashboard(ws: WorkspaceData, today: string): DashboardModel
       amount: n(e.total),
       date: e.date,
       status: null,
+      label: "Expense",
     });
   }
   const activities = acts
