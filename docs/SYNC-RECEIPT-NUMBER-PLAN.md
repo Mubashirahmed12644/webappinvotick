@@ -604,6 +604,26 @@ own rule.
 
 Not planned here: it waits for old builds to leave (0042).
 
+### Phase 5 — the server remembers each phone's last pull (decision 0086, after the receipt number)
+
+The owner decided it on 2026-09-14 ("Server par, raseed ke baad"). It is the server half of the pull-bookmark fix
+(F2). It reaches the phones step 2.7 cannot: every build already out there (1.4.4, 1.4.5, 1.4.6) moves its bookmark
+to its own push time, then skips what another writer changed in between. It is built after phase 3's flip, and
+nothing in phases 1b–4 depends on it.
+
+| Step | What | Files | Failing-first test | Effort |
+|---|---|---|---|---|
+| 5.1 | **The migration, alone and first.** One small table, `device_pull_mark`: `user_id` binary(16), `device_id` varchar(128), `answered_at` datetime(6), primary key (`user_id`, `device_id`). Additive: nothing reads it until 5.3, and ddl-auto=validate ignores a table no entity maps | `V…__device_pull_mark.sql` | `MigrationsApplyToLiveSchemaTest`; a schema test | 0.25 d |
+| 5.2 | Every pull answered to a usable `X-Device-Id` records its `syncTimestamp` as that phone's mark, after the answer is built and outside the pull's read-only transaction. A failed write only leaves today's behaviour. The all-zero id and a missing one are nobody: no mark | `SyncV2PullService.processPullSync` | `APullIsRememberedPerPhoneTest` | 0.25 d |
+| 5.3 | A delta pull reads from the earlier of the phone's `lastSyncedAt` and its mark (with the same 60 s overlap), so a push that moved the bookmark hides nothing. In the stretch before the phone's own bookmark, a row whose `last_modify_by` is this phone is left out: it wrote that copy | `SyncV2PullService.deltaPull`; the delta queries | `AnotherWritersChangeIsNotSkippedTest`: a web write and a second phone's write, between a pull and a push, reach the next pull (fails first on today's code) | 0.5 d |
+| 5.4 | Evidence: a counter of the rows the earlier start added, by group and build, and the rows per pull | `SyncV2PullService`; the metrics | a counter test | 0.25 d |
+
+- **Total:** about 1–1.5 days (0086), plus the migration's own deploy.
+- **Order of deploys:** 5.1 alone; then 5.2–5.4 together.
+- **Storage, not memory** (the owner's standing rule): one row per account and phone.
+- **Not in 0086:** a full pull that also brings what was deleted since the phone's last pull (F2's second half). The
+  same mark would allow it. The owner's call.
+
 ---
 
 ## 6. Rollout gates and the kill switch
@@ -648,6 +668,8 @@ Not planned here: it waits for old builds to leave (0042).
 | 3 | Lockouts: STALE_CONFLICT "hours/days behind" on gated builds | 8 device-class rows in 29 h (vc97) | 0 |
 | 3 | Answers by kind (shadow → live) | — | the rates the shadow predicted |
 | 3 | Future clamps per device | 1.3 % of phone-stamped writes more than 1 min ahead | a counted rate; each clamp filed, never counted on the card |
+| 5 | Rows the earlier start added, per day and build (5.4): the changes a phone would have skipped | not visible to the server today (F2). Before 5.2, a Loki read: a web or second-phone write, then that account's next `Pull → START` with `lastSyncedAt` after the write | a count per day; about 0 from builds with step 2.7, which no longer move their bookmark |
+| 5 | Rows per pull (5.4) | not measured | close to today's: only other writers' changes are added |
 | every phase | Reconcile drift, `sync_failure` 7-day devices, Hikari pending | the card: CRITICAL, 431 devices, other causes (live read 14:51 UTC) | no new cause |
 
 Three things kept apart in every report:
@@ -705,8 +727,10 @@ Three things kept apart in every report:
 | 2.1–2.10, T4c | app | the release after 1.4.6 | 1b live, 2a | 17–19 d + a device |
 | 3.1–3.2 | server | any time after 1b, gate off | — | 3.5–4.5 d |
 | 3.3 (the flip) | config | after the phase 2 build spreads | 3.1, shadow counts | 0.5 d + a week |
+| 5.1 (the migration) | server | after 3.3, alone | — | 0.25 d |
+| 5.2–5.4 (0086) | server | after 5.1 | 5.1 live | 0.75–1.25 d |
 
-**Total:** about 34–38 working days across both repositories. About 5 of them fit 1.4.6.
+**Total:** about 35–39 working days across both repositories, phase 5 included. About 5 of them fit 1.4.6.
 
 ## 9. Owner decisions
 
@@ -756,7 +780,8 @@ Each of these is to be logged as one decision entry, with what was rejected, onc
 
 ## 11. Open, and not in this plan
 
-- **A full pull never carries deletes** (F2). This is structural fix 2.
+- **The pull bookmark's server half is decided** (0086, 2026-09-14): phase 5. Still open: a full pull never
+  carries deletes (F2's second half); the same mark would allow it, and it is the owner's call.
 - **One bad record sends the whole push back** (S1). This is structural fix 3.
 - **Per-field edit times** (0058 step 3): only if `merge_value_replaced` shows the per-record time
   misjudges. That needs a server schema change and the owner's OK.

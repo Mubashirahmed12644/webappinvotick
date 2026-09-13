@@ -95,8 +95,16 @@ are owed.
   - TEXT instead of varchar(1000). The mapped type changes, so code would have to ship with the migration.
   - naming `ALGORITHM=INPLACE` in the SQL. MySQL picks it anyway, and a surprise would become a failed migration that
     no image can start past.
-- **Unchanged:** every other name still holds 255. A longer one is still refused alone and stays on its phone.
-- **Measure after `V20260914_01`, at 6 h and 24 h:**
+- **Client names too** (the owner, 2026-09-14: "Haan, sirf client ka naam").
+  - `V20260914_03` widens `clients.name` to varchar(1000) in place. The column has no index, and on MySQL 8.0.46 no
+    table was copied.
+  - It ships in the same migration-only deploy as `V20260914_01` and `V20260914_02`. `Client.name` takes
+    `length = 1000` with the code.
+  - It lets the fourth phone's refused client arrive.
+  - Production on 2026-09-13: 6,232 clients, the longest name 208 characters.
+- **Unchanged:** every other typed name still holds 255. A longer one is still refused alone and stays on its phone.
+- **Measure after the migrations, at 6 h and 24 h:**
   - the three phones' products are stored;
   - their latest `last_synced_at` moves past 07-01 / 09-11;
-  - "The database refused" rows for `inventoryItems name` stop.
+  - "The database refused" rows for `inventoryItems name` stop;
+  - `f1b05cfd`'s client is stored, and its "The database refused" row stops growing.

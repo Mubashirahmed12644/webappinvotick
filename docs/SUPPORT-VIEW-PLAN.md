@@ -110,11 +110,18 @@ A retired guest points to its current account.
 
 ## The owner's decisions (asked one at a time)
 
-1. Mask the list pages too. Recommended: yes.
-2. Mask addresses and names as well. Recommended: not for now.
-3. Require a reason for each reveal.
-4. The audit table: now, or later.
-5. Stop logging sync field values. Recommended: yes; see below.
+**Build it now.** The owner, 2026-09-14: "Abhi shuru kro".
+- First check the panel's existing work. Continue it where that serves best; otherwise build from scratch.
+- An agent is auditing, then building phases 0, 1 and 1b.
+
+1. Mask the list pages too. **The owner: yes, everywhere (2026-09-14).** Phase 1b is in.
+2. Mask addresses and names as well. **The owner: not for now (2026-09-14).** Support needs the name to recognise the
+   user.
+3. Require a reason for each reveal. **The owner: not required (2026-09-14).** The record of who looked, when, and at
+   what is kept anyway. Revisit when more people use the panel.
+4. The audit table: now, or later. **The owner: now (2026-09-14, "Abhi banao"),** against the recommendation to wait.
+   Its migration ships alone and first, in its own deploy, and the code follows.
+5. ~~Stop logging sync field values.~~ Done by decision 0076, live 2026-09-13.
 
 ## Found in passing (outside this plan)
 
