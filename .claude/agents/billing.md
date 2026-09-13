@@ -142,8 +142,10 @@ Memory is dated observation. Verify any file:line against the code before relyin
      - Until it is deployed, 1.4.6 reads Google's register refusal as "could not ask". A faked purchase
        then keeps premium on Play's word until the next launch, whose restore says `NOT_VALID`.
 2. **Lifetime purchases are refused unless `GOOGLE_PLAY_LIFETIME_PRODUCTS` is set.** It defaults to empty.
-   - **Production was EMPTY** (the owner checked it on 2026-09-12), **and still is** (2026-09-12 23:10 UTC,
-     after two deploys). The change was never made:
+   - **FIXED 2026-09-13.** The lead set it on the owner's instruction (the owner was remote) at 07:23 UTC, and it
+     went live with the batch4 deploy at 07:43 UTC. The container reads `life_time_purchase`.
+   - **Production was EMPTY** (the owner checked it on 2026-09-12), and was still empty at 2026-09-12 23:10 UTC,
+     after two deploys. The change was never made:
      - `.env.prod` last changed on 09-04;
      - there is no 09-12 backup;
      - the key is absent.
