@@ -1,8 +1,10 @@
 # 0078 — What the web writes reaches the phones, and a web delete takes its lines
 
 **Status:** decided by the owner on 2026-09-13. They want an invoice made on the web to show on the phone, and when
-it is deleted on the web, even days later, to disappear from the phone too ("Haan, dono karein"). Being built on
-`fix/web-writes-reach-phones`.
+it is deleted on the web, even days later, to disappear from the phone too ("Haan, dono karein"). **Built
+2026-09-13:** backend `87382c2` (failing test) + `4a55fd3` (`RowReceipts`, one Hibernate listener for every REST write
+of a synced row; the web's invoice delete takes its lines), deployed as batch8. App proof `09c212fb` (`beab1158` on
+`VC_102_VN_146`). Suite 809/809 on today's stage.
 **Related:** 0042/0067 (the server owns the version), 0069 Q2 (the phone's delete takes its lines), 0076,
 `.claude/agents/sync.md` rules 15, 21 and 23.
 

@@ -414,7 +414,7 @@ Memory is dated observation. Verify any file:line against the code before relyin
         (`memory/payment-form-review-postponed.md`).
 
       Until then, the cascade touches no payment or payment link.
-    - **Pulled and web deletes are not touched.** That is open, and the owner's.
+    - **A web delete takes its lines too** (0078, rule 25). A pulled delete still applies row by row.
     - **Until 0042 phase 3,** a second phone's later edit revives the invoice without its lines
       (`FinancialSyncV2Services.kt:308`). This reaches only accounts with 2 or more writing phones (2 of
       1,107).
@@ -422,8 +422,8 @@ Memory is dated observation. Verify any file:line against the code before relyin
 
 24. **A guest's work joins an account in one step, all or nothing, with proof, and a sign-in asks once**
     (0053; backend `feat/guest-work-moves-in-one-step` @ `6ee2b09` on stage `42faec8`; app
-    `feat/146-guest-work-moves-in-one-step` @ `3b281f89` on `VC_102_VN_146` `b9669f53`; nothing pushed,
-    deployed or released). Suites: backend 773/773 at `4aa7ac9`; app `:data:testDebugUnitTest` 243/243.
+    `feat/146-guest-work-moves-in-one-step` @ `3b281f89` on `VC_102_VN_146` `b9669f53`; backend deployed
+    2026-09-13 15:23 UTC as `5e6a46e7` (batch7); app in 1.4.6, not released). Suites: backend 773/773 at `4aa7ac9`; app `:data:testDebugUnitTest` 243/243.
     - **The claim (`GuestWorkClaim`)** moves every row the guest owns — the 21 synced tables and
       `shared_invoice` — in one transaction, after locking the guest's row, and retires the guest in it.
       Only `user_id` and `last_synced_at` change; content, `updated_at` and `version` stay.
@@ -462,6 +462,34 @@ Memory is dated observation. Verify any file:line against the code before relyin
     - **Measure after the deploy and after 1.4.6 (6 h and 24 h):** `guest_work_claims_total` by path and
       outcome; sign-ups that left real work behind (the M1 query in the 0053 report) → 0; `OWNERSHIP_VIOLATION`
       rows whose reason says "guest whose work has not joined" → only old builds without proof.
+
+25. **A synced row written outside the sync gets its receipt, as a sync write gives one** (0078; backend
+    `fix/web-writes-reach-phones` @ `4a55fd3`, deployed as batch8; app proof `09c212fb` = `beab1158` on
+    `VC_102_VN_146`).
+    - **`RowReceipts`,** one Hibernate listener for every REST write of a synced row: a create gets version 1, a
+      change gets the loaded version + 1, `last_synced_at` now, and the writer is `X-Device-Id` (nobody for none or
+      the zeros).
+    - **Left alone:** a write that numbered itself (the sync); a write that changes nothing a phone holds (rule 15);
+      payments and invoice-payment links (0078: the Payments form waits for its review). Bulk UPDATEs are unseen;
+      the guest claim sets its own receipt.
+    - **It runs per statement sent,** never in the discarded dirty check (rule 3).
+    - **The web's invoice delete takes every live line** in the same transaction (`InvoiceService.softDeleteInvoice`).
+    - **Not closed: the pull bookmark.**
+      - Every build pushes, then pulls, in the foreground (`AppLifecycleObserver.kt:45,51`; in the background,
+        push every 15 min and pull every 30).
+      - A push that sent anything moves the bookmark to its own time (`SyncPushHandler.kt:207-209`), and the pull
+        rewinds only 60 s. So a web write older than that is skipped until a full pull, and a full pull never
+        brings a delete.
+      - 24 h to 2026-09-13: vc97, 1,263 pushes from 88 phones (972 of 1,050 writes were unchanged re-sends);
+        vc101, 954 from 237 (464 of 827).
+      - The server half of the fix is the owner's next question: structural fix #2.
+    - **Guards:** `AWebWriteReachesThePhonesTest` (10; 6 of 9 failed first on `14786cc`); the app's
+      `AnInvoiceTheWebWroteArrivesAndLeavesTest` (4). The `contexttest` profile logs at DEBUG, so a test that saves
+      an invoice with lines sets `org.hibernate` to WARN: the entities' `toString` recurse.
+    - **Measure after the deploy (6 h and 24 h):**
+      - REST-written rows (payments aside) with a NULL `last_synced_at` → 0;
+      - live lines of web-deleted invoices → 0 (the 19 older ones wait for 0069 Q1's cleanup and the owner's go);
+      - STALE_CONFLICT per active phone, as before.
 
 ## Established 2026-09-12, while planning the receipt number
 
@@ -508,7 +536,7 @@ The plan is `docs/SYNC-RECEIPT-NUMBER-PLAN.md`. Each line says how it is known.
 
   The real-time "bell" to other devices comes after the pull cursor.
 - **A guest's records move to an account only as one claimed, proven step** (0053). **Built 2026-09-13 as
-  rule 24; not pushed, not deployed, not released.**
+  rule 24; the backend was deployed the same day (`5e6a46e7`), and the app waits for 1.4.6.**
   - Sign-up moves them silently. Sign-in asks once, when there is real work.
   - The guard's record-by-record migration goes.
   - Declined work stays on the server for 90 days.
