@@ -35,7 +35,7 @@ Answer the owner in **Roman Urdu and plain words** (`AGENTS.md` §7.4).
 ## Read first, every task
 
 1. Decisions:
-   - 0041 — premium as a dated grant (planned, not built);
+   - 0041 — the account's premium on every device, as a dated grant (built for 1.4.6, 2026-09-14; rule 9);
    - 0047 — Play's answer decides premium on a device;
    - 0048 — the paywall says what Google charges; how refusals, tokens and restore answers work; the
      defer endpoint;
@@ -68,7 +68,11 @@ Memory is dated observation. Verify any file:line against the code before relyin
   - `core/ads` `AdEligibility` (`adVerdictOf`), and `composeApp` `StoreAwareAdEligibility`;
   - `PremiumRepository` — the interface is in `domain`, `PremiumRepositoryImpl` in `core/premium`.
     Its DataStore keys: `is_premium`, `premium_unverified`, `store_said_none_at`;
-  - `data/billing` `ServerPurchaseVerification` — a 503 means unknown;
+  - `data/billing` `ServerPurchaseVerification` — a 503 means unknown; `currentEntitlement()` reads the
+    account's premium, and only a 200 is an answer;
+  - `domain/billing` `AccountPremium` (`shownPremium`, `accountGrantHolds`) and `AccountPremiumRefresh`
+    (0041). DataStore keys `account_premium_owner`, `account_premium_until`, `account_premium_answered_for`,
+    `account_premium_answered_at`. Remote Config switch `account_premium_enabled`;
   - the paywall in `feature/premium`: `PremiumPaywallSheet`, and `PlanPeriod.kt`
     (`planPeriodText`, `yearlySavingsLabel`);
   - iOS runs `NoOpBillingRepository` (`domain`) until StoreKit exists.
@@ -76,7 +80,9 @@ Memory is dated observation. Verify any file:line against the code before relyin
   - `PlayPurchaseVerifier` — `baseOrderId`; 400/404/410 means Google refused, anything else is not
     definitive;
   - `EntitlementService` — register, and restore into `purchase_restore_answer` (every restore, a
-    purchase's first included, from one Google answer);
+    purchase's first included, from one Google answer). `currentEntitlement` (`GET /v1/billing/entitlement`)
+    answers the longest live grant, asks Google about a passed date before saying no, and throws "could not
+    ask" as a 503 `UNVERIFIED`;
   - `PlaySubscriptionAdmin` — `orders.get`, `subscriptionsv2`, defer;
   - `BillingAdminController` — `POST /v2/admin/billing/subscriptions/defer`, ADMIN only;
   - `PlayNotificationController` — real-time notifications;
@@ -117,6 +123,20 @@ Memory is dated observation. Verify any file:line against the code before relyin
    installed from Play.
 8. **Release builds and store uploads happen only on the owner's word.** The version name is the live
    release + 1.
+9. **An account's premium reaches every device of it** (0041; the owner, 2026-09-14: *"aik user android sy
+   buy kery to sab jaga premium show kery"*).
+   - A device is premium when Play says so (rule 1), or else on the account's grant from our server, kept as
+     a date. The two are stored apart and neither ever writes the other. `PremiumGrant` reads Play's flag
+     alone (`hasStoreGrant`).
+   - The app asks after the splash hands off, at most once a day per account, again the same day once the
+     date has passed, and at once when the account changes after the splash. A guest made on this very open
+     is not asked.
+   - Only a 200 is an answer: premium is kept until its date, and no ends the grant. Anything else is
+     silence and changes nothing. There is no 24 h window, because silence never takes premium away.
+   - The server's "no" must be true. `CANCELLED` with time left is premium. A passed date is asked of Google
+     first, and Google unreachable is a 503 `UNVERIFIED`.
+   - Kill switch `account_premium_enabled` (default on). Off: nothing is asked, and a stored grant does not
+     count.
 
 ## Known gaps (2026-09-12, found while checking 1.4.5)
 
@@ -214,6 +234,14 @@ Memory is dated observation. Verify any file:line against the code before relyin
    - "7-day refund" is our own promise; Google does not make it.
    - Opened on 305 release phones (not ours) from 2026-08-25 to 2026-09-14. The one real purchase is the first
      customer's (`first-premium-user-2026-09-10.md`).
+9. **A refunded buyer's other devices keep premium until the plan's date if they never reach our server
+   again** (found 2026-09-14, building 0041; the owner's decision).
+   - It is the price of rule 9's "silence never takes premium away": the planned 24 h window was not built.
+   - The buying phone loses premium on Play's word. An online device loses it at its next daily check.
+10. **Play notifications are not arriving** (0 in the 15 days to 2026-09-13; Play Console → Monetisation
+    setup → Real-time developer notifications is the owner's to check).
+    - Without them, the server's copy of a renewal date moves only on the buying phone's launch restore,
+      or when a device asks after the date has passed (then the server asks Google). Built into 0041.
 
 ## How you get at the data (read-only)
 

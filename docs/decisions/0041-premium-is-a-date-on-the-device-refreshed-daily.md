@@ -1,6 +1,6 @@
 # 0041 — Premium is a date on the device, refreshed daily
 
-**Date:** 2026-09-07 · **Status:** approved by the owner on 2026-09-14 for 1.4.6 ("1.4.6 main add kerky again bundle banao", after asking whether a purchase on Android shows premium everywhere). The billing agent is building it: the server first, then the app. The bundle is rebuilt as versionCode 103.
+**Date:** 2026-09-07 · **Status:** approved by the owner on 2026-09-14 for 1.4.6 ("1.4.6 main add kerky again bundle banao", after asking whether a purchase on Android shows premium everywhere). Built by the billing agent on 2026-09-14, server and app; not deployed or released. The bundle is rebuilt as versionCode 103. **As built for 1.4.6**, at the end, records where the build departs from the plan below.
 **Touches:** `core/premium`, `domain/billing`, backend `EntitlementController`
 
 ## Context
@@ -152,3 +152,61 @@ set the clock back and hold premium past a refund.
 Closing that means asking the server every time, which is the dependency constraint 4 exists to
 prevent. The trade looks right — a person moving their clock to steal premium was not going to pay —
 but it is a deliberate hole and it belongs in writing rather than in a surprise later.
+
+## As built for 1.4.6 (2026-09-14, billing agent)
+
+Backend `invotick-apis` branch `feat/entitlement-every-device` (`e0a0703` red, `56fac3e` green). App
+`invoice-kmp-app` branch `feat/146-premium-every-device`, from `VC_102_VN_146` (`ca0d6c4d` red, then green).
+No schema change on either side.
+
+### What a device shows
+
+**Premium = Play's own flag (0047), or else the account's grant from our server, kept as a date.** Play's
+flag is read first and alone, so a phone Play calls premium reads exactly as before.
+
+| case | the phone that bought | any other device of the account |
+|---|---|---|
+| bought | premium the moment Play says so | premium after its next splash hands off |
+| plan still running, offline | premium (Play) | premium until the plan's date |
+| server unreachable / 5xx / 401 | premium (Play) | unchanged; asked again next launch |
+| plan ended, Google confirms | Play says none | server says no → grant gone |
+| refunded | Play says none | server says no at the next check (≤ 1 day if online) |
+| another account signed in here | Play's word only | the grant does not count |
+| switch `account_premium_enabled` off | Play's word only | not premium |
+
+### Where the build departs from the plan above, and why
+
+1. **No `verifiedUntil` (the 24 h window).** The owner's rule for this build is *silence never takes premium
+   away*, and the outcome table above already says "untouched" for no answer. A 24 h window switches premium
+   off after one offline day, which is silence taking it away. Premium is bounded by the plan's date alone.
+   **Cost:** the refund hole the owner found reopens for one case only — a refunded buyer's *other* devices
+   that never reach our server again keep premium until the plan's date. The buying phone loses it on Play's
+   word. The owner decides whether that is acceptable (question 1 in the report).
+2. **Guests are asked too.** The plan skipped "a guest who has never bought". Devices joined by device-link
+   share one guest account, and are exactly the "every device" a guest has, but the device in hand cannot
+   know whether the account bought. So only **a guest made on this very open** is skipped (constraint 2).
+3. **Step 2 was already true.** `GET /v1/billing/entitlement` has always returned `premium`, `plan`,
+   `status` and `expiresAt`, for the caller's own account, behind `@RequireRole(USER, GUEST, ADMIN)`. What
+   was missing on the server was that its "no" could be false:
+   - `CANCELLED` with its date ahead (Google's CANCELED keeps access) read as not premium — fixed, with the
+     two SQL twins;
+   - a date that passed on our copy with no word from Google (renewals arrive only as Play notifications,
+     and none arrived in the 15 days to 2026-09-13) read as no. Google is now asked first; Google's own
+     EXPIRED or refusal ends the row; Google unreachable is a **503 `UNVERIFIED`**, never a no;
+   - a restore now writes Google's date onto the row it finds, so the buying phone's launch keeps the copy
+     current;
+   - several live rows: the longest is answered, a lifetime first.
+4. **iOS is included.** It has no store, so it cannot buy, but it reads the same grant.
+5. **A kill switch**, `account_premium_enabled` (Remote Config, default on), as PROJECT_RULES requires.
+
+### Rejected while building
+
+- **One flag for both** (the server's answer written into `is_premium`). A server "no" would then switch off
+  a phone Play calls premium — the first customer's. The two are stored apart and neither writes the other.
+- **Letting the grant count as "confirmed" for a purchase on this device** (`PremiumGrant`). It would put a
+  faked purchase here beyond Google's refusal. `PremiumGrant` reads Play's flag alone (`hasStoreGrant`).
+- **Asking inside the splash, or holding the splash for the server.** Constraint 1. The first launch of 1.4.6
+  on a second device therefore still shows its splash ad once; the answer lands after it.
+- **Answering "no" when Google cannot be asked about a passed date.** That is silence dressed as a refusal.
+- **A new route.** The existing one already answers only the caller's own account and is role-gated.
+- **Asking every launch.** Rejected in the plan already; kept.
