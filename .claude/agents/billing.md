@@ -131,10 +131,17 @@ Memory is dated observation. Verify any file:line against the code before relyin
    - The app asks after the splash hands off, at most once a day per account, again the same day once the
      date has passed, and at once when the account changes after the splash. A guest made on this very open
      is not asked.
-   - Only a 200 is an answer: premium is kept until its date, and no ends the grant. Anything else is
-     silence and changes nothing. There is no 24 h window, because silence never takes premium away.
+   - Only a 200 is an answer: premium is kept until `offlineValidUntil`, and no ends the grant. Anything else
+     is silence and keeps the current dates.
+   - **The server sets `offlineValidUntil`** (the owner's design, 2026-09-14): `min(expiresAt, now + 24 h)`
+     inside the store's refund window of the current charge, in grace, or when the charge's time is unknown;
+     `expiresAt` after it (null for a lifetime: no end). Windows: Google Play 48 h, Apple 14 days. A server
+     that sends none gets a day on the device, never the plan's date.
+   - The server asks Google on each check, at most once per purchase in 10 minutes (`purchase_identity
+     .last_verified_at`): `subscriptionsv2`, then the Orders API's `createTime` for
+     `latestSuccessfulOrderId`, or `purchaseTimeMillis` for a lifetime.
    - The server's "no" must be true. `CANCELLED` with time left is premium. A passed date is asked of Google
-     first, and Google unreachable is a 503 `UNVERIFIED`.
+     first, and Google unreachable is a 503 `UNVERIFIED` (for a live row, a day instead).
    - Kill switch `account_premium_enabled` (default on). Off: nothing is asked, and a stored grant does not
      count.
 
@@ -234,10 +241,10 @@ Memory is dated observation. Verify any file:line against the code before relyin
    - "7-day refund" is our own promise; Google does not make it.
    - Opened on 305 release phones (not ours) from 2026-08-25 to 2026-09-14. The one real purchase is the first
      customer's (`first-premium-user-2026-09-10.md`).
-9. **A refunded buyer's other devices keep premium until the plan's date if they never reach our server
-   again** (found 2026-09-14, building 0041; the owner's decision).
-   - It is the price of rule 9's "silence never takes premium away": the planned 24 h window was not built.
-   - The buying phone loses premium on Play's word. An online device loses it at its next daily check.
+9. ~~A refunded buyer's other devices keep premium until the plan's date if they never reach our server
+   again~~ **Closed 2026-09-14 by the owner's design** (rule 9): inside the 48 h refund window a device holds
+   premium a day at a time, so an offline one runs out within a day. A refund we or a bank issue after the
+   window reaches an offline device only when it next asks; online, at its next daily check.
 10. **Play notifications are not arriving** (0 in the 15 days to 2026-09-13; Play Console → Monetisation
     setup → Real-time developer notifications is the owner's to check).
     - Without them, the server's copy of a renewal date moves only on the buying phone's launch restore,

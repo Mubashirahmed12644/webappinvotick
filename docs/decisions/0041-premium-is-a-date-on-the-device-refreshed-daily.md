@@ -161,27 +161,47 @@ No schema change on either side.
 
 ### What a device shows
 
-**Premium = Play's own flag (0047), or else the account's grant from our server, kept as a date.** Play's
-flag is read first and alone, so a phone Play calls premium reads exactly as before.
+**Premium = Play's own flag (0047), or else the account's grant from our server, held until the server's
+`offlineValidUntil`.** Play's flag is read first and alone, so a phone Play calls premium reads exactly as
+before.
+
+**The owner's design, 2026-09-14** (he rejected a first build with no window): *"Stores have a set refund
+period. Give the app a short local validity during it, and once that period has passed, extend the
+validity."* The server decides, per store, and the device obeys one field:
+
+- inside the refund window of the current charge (the first purchase or a renewal), in a grace period, or
+  when the charge's time cannot be read: `offlineValidUntil = min(expiresAt, now + 24 h)`;
+- after the window: `offlineValidUntil = expiresAt` — null for a lifetime, which then never runs out;
+- the window: **Google Play 48 h** (Play's self-service refund; later refunds are caught by the next check),
+  **Apple 14 days** (the EU/UK right to cancel in Apple's Media Services Terms; not in use until StoreKit);
+- the stored row cannot see a refund (Play notifications are not arriving), so on every device's check the
+  server asks Google — `subscriptionsv2`, then the Orders API for `latestSuccessfulOrderId`'s `createTime`,
+  or `purchaseTimeMillis` for a lifetime — at most once per purchase in ten minutes. No schema change: the
+  charge's time is read from Google each time instead of stored.
 
 | case | the phone that bought | any other device of the account |
 |---|---|---|
-| bought | premium the moment Play says so | premium after its next splash hands off |
-| plan still running, offline | premium (Play) | premium until the plan's date |
-| server unreachable / 5xx / 401 | premium (Play) | unchanged; asked again next launch |
-| plan ended, Google confirms | Play says none | server says no → grant gone |
-| refunded | Play says none | server says no at the next check (≤ 1 day if online) |
+| first subscription (first 48 h) | premium (Play) | premium a day at a time, renewed by the daily check |
+| after 48 h | premium (Play) | premium offline until the plan's date |
+| renewal charged | premium (Play) | a day at a time again for 48 h |
+| cancelled, time left | premium (Play) | premium until the plan's date |
+| refunded inside 48 h | Play says none | off at the next check; an offline device runs out within a day |
+| refunded later | Play says none | off at the next check |
+| expired / account hold / paused | Play says none | off at the next check |
+| grace period | premium (Play) | premium a day at a time |
+| upgrade or downgrade | premium (Play) | the new purchase answers; a new window |
+| lifetime | premium (Play) | a day at a time for 48 h, then no end |
+| server unreachable / 5xx / 401 | premium (Play) | keeps its dates; a day inside the window simply runs out |
+| Google unreachable, row live | premium (Play) | premium for a day |
 | another account signed in here | Play's word only | the grant does not count |
 | switch `account_premium_enabled` off | Play's word only | not premium |
 
 ### Where the build departs from the plan above, and why
 
-1. **No `verifiedUntil` (the 24 h window).** The owner's rule for this build is *silence never takes premium
-   away*, and the outcome table above already says "untouched" for no answer. A 24 h window switches premium
-   off after one offline day, which is silence taking it away. Premium is bounded by the plan's date alone.
-   **Cost:** the refund hole the owner found reopens for one case only — a refunded buyer's *other* devices
-   that never reach our server again keep premium until the plan's date. The buying phone loses it on Play's
-   word. The owner decides whether that is acceptable (question 1 in the report).
+1. **`verifiedUntil` became `offlineValidUntil`, decided by the server.** The plan's fixed 24 h window on
+   every answer would switch a paying customer off after one offline day for the whole life of the plan. The
+   owner's design keeps the short validity only while a refund is still easy, which is when the free time
+   after a refund was the risk. A first build had dropped the window altogether; the owner rejected it.
 2. **Guests are asked too.** The plan skipped "a guest who has never bought". Devices joined by device-link
    share one guest account, and are exactly the "every device" a guest has, but the device in hand cannot
    know whether the account bought. So only **a guest made on this very open** is skipped (constraint 2).
