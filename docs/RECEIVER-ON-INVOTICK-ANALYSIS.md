@@ -8,7 +8,8 @@ He raised it while deciding on `/v1/lookup/phone`, asking two things:
 - is removing that route tied to this requirement?
 - and he wants a full critical analysis.
 
-**Status:** analysis only. Nothing is decided or built.
+**Status:** the owner decided on 2026-09-14 to build it after 1.4.6, in steps (0097). The wording, the identity method and
+the receiver's defaults are still to decide. Nothing is built.
 
 ## Is removing `/v1/lookup/phone` tied to it? No.
 
