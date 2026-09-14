@@ -629,10 +629,17 @@ Memory is dated observation. Verify any file:line against the code before relyin
       - Decided 2026-09-14 (0099, "Haan, password se wapas").
       - Backend `fix/password-sign-in-readmits`: test `458c70d`, fix `994191e`; 965/965; not pushed.
       - Builds up to 1.4.6 name no phone on sign-in, so nothing is re-admitted for them.
-      - Covering them would need the token to carry how it was proven (an `amr` claim), read by the filter on the next
-        sync. Proposed, not built.
-    - **The app half, for 1.4.6:** `fix/146-removed-phone`, tests `2de00a56`, code `6f00981a`. Not built or run yet:
-      the app slot is held.
+      - **For them, next on the same branch** (the coordinator, 2026-09-14; not built yet): a password or Google
+        sign-in writes into its pass how it was earned and when, and the first call that names the removed phone with
+        such a pass, earned after the removal, lets it back in. Never a guest pass, an admin-impersonation pass, a
+        drain token, or a pass earned before the removal.
+    - **The app half, for 1.4.6:** `fix/146-removed-phone` on `598ccc8d`: tests `574d2a9b`, code `3163b7f7`; not pushed.
+      - Red first: at `574d2a9b` the data tests did not compile (41 errors, all in its three test files, all naming
+        what the code adds).
+      - Green at `3163b7f7`: data 288/288, domain 28/28, core:datastore 20/20, composeApp 9/9, and the Android and
+        iOS (simulator) compiles.
+      - The rebase onto `598ccc8d` met 0100 in two files, `PreferencesKeys.kt` and `dataStoreModule.kt`; both sides
+        were kept.
       - It sends `X-Device-Id` on the device list, the revoke, the guest pass, and the password and Google sign-ins.
       - On the guest-pass 403, or the sync 401 "This device was signed out.", the phone stops syncing and stops asking
         for passes (`RemovedPhoneGate`). It keeps every row.
