@@ -592,7 +592,7 @@ Memory is dated observation. Verify any file:line against the code before relyin
     - Guards: `AnInvoiceDateRepairMovesOnlyTheListedRowsTest` (8) and `ARepairedDateIsNotSentBackTest` (8). On the
       register alone, 12 of the 16 failed first; the other 4 are what must not change.
 28. **A phone can never remove itself, a removed phone gets no new pass, and every refusal names its phone and build**
-    (backend `fix/a-phone-cannot-remove-itself` @ `2c9cbfb`, from `81d711f`; suite 952/952; not pushed, not deployed).
+    (backend `fix/a-phone-cannot-remove-itself`; **LIVE 2026-09-14 10:03 UTC as batch17, `32b89cd`**; suite 959/959).
     - **Found 2026-09-14.** Guest phone `e0e2de82` (account `d4e1f6a8`, 1.4.5, its only device) removed itself from its
       own Linked devices screen, 2026-09-13 at 19:49:41 UTC.
       - Loki: the list, the revoke and the refresh all ran on the phone's own pass.
@@ -615,17 +615,43 @@ Memory is dated observation. Verify any file:line against the code before relyin
       - These values ride on ERROR lines, and Grafana pages Slack for ERROR plus "SYNC". Hex, digits and those three
         names cannot spell it.
       - To read it: `{container="/invotick-server"} |= "Request refused" | json`.
-    - **Proposed, not built (app):**
-      - send `X-Device-Id` on the device list, the revoke and `login-as-guest`;
-      - on the guest-pass 403, or the sync 401 "This device was signed out.", stop syncing and stop asking for passes,
-        keep every row, and say so once.
-    - **Proposed, not run:** re-admit `e0e2de82`'s row (1 row).
-    - **Open (Tier 1):** should a password sign-in re-admit a removed phone? Today only the device-link approval does.
+    - **No refusal is an ERROR line** (`a5a3fb8` → `32b89cd`, in batch17).
+      - Grafana pages Slack on log text: one ERROR line containing "SYNC", "FINANCIAL" or "SCHEDULER", and a line of
+        any level containing "security tier 4".
+      - A refused or missing token used to log ERROR lines carrying the caller's path, method, request id and unsigned
+        subject, so anyone could page Slack.
+      - Token refusals and the entry point's 401 are now WARN. Only a store that cannot answer is ERROR. An unsigned
+        subject is written only as a UUID.
+      - Still open, queued as a Grafana rule change (match on the server-written prefix, e.g. `[SYNC]`):
+        - the catch-all logs Spring's 405 and 415 at ERROR, with the method in the message;
+        - an adopted request id may hold letters.
+    - **A correct password or Google sign-in that names its phone re-admits it.**
+      - Decided 2026-09-14 (0099, "Haan, password se wapas").
+      - Backend `fix/password-sign-in-readmits`: test `458c70d`, fix `994191e`; 965/965; not pushed.
+      - Builds up to 1.4.6 name no phone on sign-in, so nothing is re-admitted for them.
+      - Covering them would need the token to carry how it was proven (an `amr` claim), read by the filter on the next
+        sync. Proposed, not built.
+    - **The app half, for 1.4.6:** `fix/146-removed-phone`, tests `2de00a56`, code `6f00981a`. Not built or run yet:
+      the app slot is held.
+      - It sends `X-Device-Id` on the device list, the revoke, the guest pass, and the password and Google sign-ins.
+      - On the guest-pass 403, or the sync 401 "This device was signed out.", the phone stops syncing and stops asking
+        for passes (`RemovedPhoneGate`). It keeps every row.
+      - It says so once: a guest is told to link the phone again from the other device, a registered account to sign
+        in again.
+      - A new pass, or another account, lifts it.
+    - **`e0e2de82`'s row was re-admitted 2026-09-14, after batch17** (the coordinator, exact filter, count 1).
+      - At 10:10 UTC `revoked_at` was NULL.
+      - The phone had not synced since.
     - Guards:
       - `APhoneCannotRemoveItselfTest`: 2 of 4 failed first.
       - `ARemovedPhoneGetsNoGuestPassTest`, plus the `login-as-guest` cases in `AuthControllerApiTest` and
         `AuthControllerV2ApiTest`: did not compile first.
       - `ARefusalNamesItsPhoneAndBuildTest`: 4 of 5 failed first.
+      - `AStrangerCannotPageSlackTest`: 5 of 7 failed first.
+      - `APasswordSignInAdmitsItsPhoneAgainTest`, plus the sign-in cases in both controller tests: did not compile
+        first.
+      - App (not run yet): `APhoneSaysWhichPhoneItIsTest`, `ARemovedPhoneStopsAskingTest`,
+        `ARemovedPhoneIsNamedByTheSyncTest`.
 
 ## Established 2026-09-12, while planning the receipt number
 

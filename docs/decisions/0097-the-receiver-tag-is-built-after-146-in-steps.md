@@ -50,9 +50,9 @@ After each step, measure four things:
   - A line in the privacy policy.
 - **The sender's side, the owner's concern.** A sender may not want every client told that an invoice was made in their
   name.
-  - Proposed: the receiver hears only when the sender shares the invoice or sends a reminder. Creating one alone
-    notifies nobody.
-  - This is asked.
+  - **Decided on 2026-09-14** ("Sirf jab sender bheje"): the receiver hears only when the sender shares the invoice or
+    sends a reminder. Creating an invoice alone notifies nobody.
+  - Rejected: notifying on creation, and a per-client switch.
 - **The goal behind it (the owner):** automatic payment-due messages from the sender to every client with a payment due.
   They go in the app for linked clients, and by WhatsApp.
   - Still to analyse: automatic WhatsApp sending goes through Meta's business platform, whose cost and opt-in rules must

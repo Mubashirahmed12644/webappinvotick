@@ -1,9 +1,15 @@
 # 0099 — A phone cannot remove itself, and a removed phone gets no new pass
 
 **Status:** decided by the owner on 2026-09-14 ("Dono karo").
-- **The server fix** is built on `fix/a-phone-cannot-remove-itself` and deploys as batch17.
-- **The stuck guest's row** is re-admitted after that deploy.
-- **The app half** is built for 1.4.6.
+- **The server fix is live:** batch17, `32b89cde`, started 10:03 UTC 2026-09-14. The proofs after the deploy:
+  - a request without a token answers 401;
+  - the refusal writes one WARN line naming its phone and build;
+  - 0 ERROR lines in the 3 minutes after the deploy.
+- **The stuck guest's row was re-admitted at 10:05 UTC.** The exact filter matched 1 row, 1 row changed, and the row now
+  reads as admitted.
+  - The phone's next sync should be accepted, and its waiting record should arrive.
+  - The proof: its `last_seen_at` moves past 19:49:11, and the "Revoked device refused" lines stop.
+- **The app half** is being built for 1.4.6.
 
 **Related:**
 - sync agent rule 28;
