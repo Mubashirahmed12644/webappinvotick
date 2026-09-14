@@ -17,5 +17,10 @@
         ]
       }
     ]
+  },
+  "webcredentials": {
+    "apps": [
+      "UG6X672JBW.invotick.invoicemaker"
+    ]
   }
 }
