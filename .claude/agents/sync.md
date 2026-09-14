@@ -546,6 +546,52 @@ Memory is dated observation. Verify any file:line against the code before relyin
       - live lines of web-deleted invoices → 0 (the 19 older ones wait for 0069 Q1's cleanup and the owner's go);
       - STALE_CONFLICT per active phone, as before.
 
+26. **An app update's full pull puts the server's copy over every synced record, and a tie goes to the server** (code,
+    established 2026-09-14 for 0093).
+    - Since 1.4.2 the first start after every update asks for a full pull (`AppViewModel.kt:108` on 1.4.2, 1.4.5 and
+      1.4.6).
+    - The pull replaces a synced row unless the phone's copy is more than 1 s newer (`SyncConflictPolicy.shouldKeepIncoming`),
+      and copies the server's `updatedAt` into the phone's `dateUpdated`. Only a row with unsent work survives
+      (`localHasUnsentWork`, from 1.4.2).
+    - Until 2026-09-11 the server stamped its own clock on every write (rule 3), later than the phone's edit, so the
+      server's copy won every time.
+    - **So a value the server holds wrong reaches every phone at its next update, and the phone's own right copy is gone
+      after it.**
+      - The invoice days of builds up to 1.4.0 are the case: 61 of 63 share copies made before an update show the phone's
+        right day.
+      - The phones that updated since hold the server's early day. That is the code; per phone it cannot be measured (2
+        shares).
+    - **Repair the server before the release that updates the phones.** A server write outside a phone's push reaches a
+      phone that pushes before it pulls only at its next full pull (rule 25), until 0086 is built.
+
+27. **A server-side repair of synced rows keeps the phone's edit time, gives the receipt, keeps a register, and writes
+    only on the owner's go** (0093; backend `fix/invoice-dates-repair`, not deployed).
+    - The commits: `07525b7` is the register (V20260914_06), alone and first, suite 900/900; `0bc9b05` is the code, suite
+      921/921.
+    - **Only what a reviewed list names.**
+      - The list is a read-only query's output: `docs/sync/invoice-date-repair-group-a.sql` in the backend, 1,745
+        invoices of 258 owners on 2026-09-14.
+      - A row moves only while it still holds exactly the listed values and receipt time.
+      - Each owner's rows move in one transaction, each locked and read again first.
+    - **A dry run by default** (`POST /v1/webpanel/invoice-dates/repair`, ADMIN). The owner gives the go on its exact
+      count, and `…/repair/undo` names the run.
+    - **The receipt:** `version` + 1, `last_synced_at` now, the writer nobody.
+      - **`updated_at` is kept.** The server's clock there would refuse every edit a phone queued before the repair as
+        "older than server state" (rule 3).
+      - Plain SQL, as the guest claim writes: no entity hook runs, and `RowReceipts` adds no second number.
+    - **A register row per record** (`invoice_date_repair`): the values before and after, and the receipt replaced.
+      - It is the undo, and the echo guard's memory.
+      - It is not a guest's work, so a claim leaves it where it is: `AGuestsWorkMovesInOneStepTest` names it.
+    - **A copy that brings a repaired record's old value back is an echo, and the repaired value stays; the rest of the
+      copy applies** (`InvoiceDateEchoGuard`: each date on its own, 120 days, undone repairs excluded).
+      - Why: a phone that has not yet pulled the repair still holds the old copy, and its next edit would undo the repair
+        in silence.
+      - It reads the register only for a copy that sends a day exactly one before the stored one, and never flushes the
+        push (rule 5).
+      - Counted as `invoice_date_repair_echo_total{field, build}` after the commit, and logged at INFO.
+    - Guards: `AnInvoiceDateRepairMovesOnlyTheListedRowsTest` (8) and `ARepairedDateIsNotSentBackTest` (8). On the
+      register alone, 12 of the 16 failed first; the other 4 are what must not change.
+
 ## Established 2026-09-12, while planning the receipt number
 
 The plan is `docs/SYNC-RECEIPT-NUMBER-PLAN.md`. Each line says how it is known.
@@ -580,6 +626,27 @@ The plan is `docs/SYNC-RECEIPT-NUMBER-PLAN.md`. Each line says how it is known.
     the previous writer's id~~ — closed by 0067 on `feat/sync-phase-1b`, not deployed.
 - **Who a merge serves** (data): in 30 days, 2 of 1,107 writing accounts had two or more writing
   phones. The receipt number's wide benefit is ending clock refusals and re-sent copies.
+
+## Decided by the owner, 2026-09-14
+
+- **Invoices proven a day early are repaired on the server, before 1.4.6** (0093; "Haan, is tareeqe se"). Built as rule
+  27; not deployed.
+  - **Group A:** 1,745 invoices of 258 owners, last written 2026-05-04 → 08-23 by builds up to 1.4.0, east of Greenwich.
+    - Those builds saved an invoice's day as the phone's local midnight, and the server kept its UTC day.
+    - 61 of 63 of the phones' own share copies are one day ahead of the server, and the due date with them.
+  - **A dry run first.** The real run happens only on the owner's go on its exact count, and before 1.4.6's rollout, so
+    the update's full pull carries the right day to every phone (rule 26).
+  - **Group B, 2,595 invoices, is left alone** ("Haan, abhi na chheden").
+    - No share copy exists before July, and 7.8% of its rows already read as the upload day.
+    - One of its invoices is repaired only once its own proof is found.
+  - **For a week from the deploy, the invoice days builds up to 1.4.0 still send are counted** ("Pehle aik hafta ginti").
+    - The counter is `sync_invoice_date_arrived_total{field, shape, build}`, with the shapes `calendar_day`,
+      `midnight_day_early`, `midnight_same_day`, `other_time` and `unreadable`.
+    - Nothing changes on arrival: `AnInvoiceDayIsReadExactlyAsBeforeTest` compares the reader with the one before it.
+    - To read: `sum by (shape, build) (increase(sync_invoice_date_arrived_total{field="invoice_date"}[7d]))`. Read the raw
+      `sum by (shape, build) (sync_invoice_date_arrived_total)` beside it, since `increase()` misses a series born at 1.
+    - The owner then decides whether the server reads an old build's midnight as the phone's own day.
+  - **Payments** (about 535 of the same shape) wait for the Payments form's review.
 
 ## Decided by the owner, 2026-09-13
 

@@ -1,10 +1,16 @@
 # Invoice dates the server holds one day early — repair plan
 
-**Status, 2026-09-14:** plan only. Nothing has been written to production.
-- **Owner's word:** "Haan, plan banao" (2026-09-14), to plan the repair.
-- **Before anything changes,** the owner sees the dry run's exact counts and gives a separate go.
-- **Decision:** once the owner answers, log it under the next free number (0092 when this was written). Include the
-  rejected options in §3.
+**Status, 2026-09-14:** decided as [0093](decisions/0093-invoices-proven-a-day-early-are-repaired-on-the-server.md); built,
+not deployed. Nothing has been written to production.
+- **Owner's word:** "Haan, plan banao" (2026-09-14), to plan the repair; "Haan, is tareeqe se" (0093), to build it.
+- **Built** on backend `fix/invoice-dates-repair`:
+  - `07525b7`: the register (V20260914_06), alone and first. Full suite 900/900.
+  - `0bc9b05`: the endpoint, the echo guard, and the week's count. Full suite 921/921.
+- **Not built:** §4.4's reading of an old build's midnight. The owner chose a week's count first (0093), and `0bc9b05`
+  holds it.
+- **The list:** backend `docs/sync/invoice-date-repair-group-a.sql`. It printed 1,745 invoices and 258 owners on
+  2026-09-14.
+- **Before anything changes,** the owner sees the dry run's exact count and gives a separate go.
 
 **Anchors.** Every file:line below was read on:
 - app `VC_102_VN_146` @ `85c29d93` (1.4.6), `VC_96_VN_144` (1.4.5), `VC_93_VN_142` (1.4.2), `VC_90_VN_140` (1.4.0),
