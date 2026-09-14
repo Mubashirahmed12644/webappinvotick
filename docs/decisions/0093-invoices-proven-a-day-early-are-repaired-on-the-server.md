@@ -9,7 +9,12 @@
   - the query listed 1,745 invoices of 258 owners;
   - the endpoint answered `WOULD_MOVE` 1,745 of 1,745, for 258 owners, with 0 failures;
   - the register held 0 rows afterwards.
-- **No invoice is changed yet.** The real run waits for the owner's go on that count.
+- **The real run, 09:20 UTC 2026-09-14,** on the owner's go ("Haan, chalao"):
+  - `MOVED` 1,745 of 1,745, for 258 owners, with 0 failures;
+  - **run id `84e1a19e-329e-45ac-b6e0-0b62baca7426`.** The undo names this id;
+  - the register holds 1,745 rows;
+  - a second dry run of the same list moves nothing (`CHANGED_SINCE_LISTED` 1,745).
+- **Measure at 6 h, 24 h and 7 d** (§6 of the plan). Check the echo counter too.
 
 **Related:**
 - `docs/INVOICE-DATE-REPAIR-PLAN.md`;
