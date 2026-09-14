@@ -56,7 +56,12 @@ usko pura kro, ye ainda harkat naa ho."
 ## Open, each waiting on a decision
 
 - **A product deleted on the phone before it reached the server.** This is the largest class: 7,095 lines a day from one
-  account. It needs an app change in 1.4.6.
+  account. **Built for 1.4.6 on 2026-09-14** (the owner: "1.4.6 mein"), on the app branch
+  `feat/146-deleted-product-reaches-server`: tests `1f889172` (6 of 11 failed first), fix `e97bacd0`. Not merged.
+  - The three gathers send a never-synced deleted product, template or payment method as the deleted row it is.
+  - The repair knows `inventoryItemId`, `customerId` and `categoryId`.
+  - A TERMINAL delete (answered NOT_FOUND) no longer blocks re-sending that record, in the repair or the orphan scan.
+  - Once a parent lands, the operations waiting on it come back, even past the revival ceiling.
   - `ProductDao.getProductById` skips deleted rows. So the push closes such a product's CREATE as "local row missing"
     (539 reports from that phone), and the product is never sent. The invoice lines that name it are refused for ever.
   - The repair cannot help: the server names the line's product `inventoryItemId`, and the app's map knows only

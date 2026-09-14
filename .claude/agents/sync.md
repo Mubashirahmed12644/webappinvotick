@@ -744,6 +744,28 @@ Memory is dated observation. Verify any file:line against the code before relyin
       - 1.4.4 invoices with no client: `invoices.client_id` is NOT NULL.
       - One invoice naming another account's payment instruction (0053).
     - Guard: `ACopyOlderThanTheServersIsNotAnErrorTest` (all 21 groups; a missing invoice still pages).
+    - **The product fix, for 1.4.6** (the owner: "1.4.6 mein"). App branch `feat/146-deleted-product-reaches-server`:
+      tests `1f889172` (6 of 11 failed first), fix `e97bacd0`. Not merged.
+      - A never-synced product, template or payment method deleted here is sent as the deleted row it is. Before, the
+        live lookup skipped it and the CREATE was closed as "local row missing".
+      - `MissingReferenceRepair` knows `inventoryItemId`, `customerId` and `categoryId`.
+      - A TERMINAL delete (NOT_FOUND) does not stop the repair (`openStatusesForRepair`) or the orphan scan re-sending a
+        row that still owes its create.
+      - When a parent lands, every FAILED operation whose `lastError` names it is revived, past the ceiling
+        (`reviveWaitingOn`).
+      - Guards: `ADeletedParentReachesTheServerTest`, `MissingReferenceRepairTest`.
+31. **An invoice without a client never goes to the server, and its lines wait with it** (0109; the owner, 2026-09-14).
+    Built for 1.4.6 on the same branch: tests `26f729d2` (3 of 4 failed first), fix `e681530c`; the branch is pushed, head
+    `e681530c` on `812abba1`, `:data:testDebugUnitTest` 312/312, and both the Android and the iOS simulator compiles pass.
+    Not merged.
+    - One rule, `InvoiceReadiness`: `isReady` in code, `HAS_CLIENT_SQL` in the bulk queries.
+    - The orphan scan and the sign-in's queueing skip such a draft and its lines. The push closes one queued by an
+      earlier build, quietly.
+    - The save that adds a client queues the draft as a create, and its lines follow.
+    - Before: 68,744 refusals from one 1.4.4 phone; 8 drafts on 2 phones; 172 line refusals a day.
+    - Estimates are unchanged: the server stores one without a client.
+    - Rejected: a nullable client on the server (the owner said no).
+    - Guard: `ADraftWithNoClientStaysOnThePhoneTest`.
 
 ## Established 2026-09-12, while planning the receipt number
 
