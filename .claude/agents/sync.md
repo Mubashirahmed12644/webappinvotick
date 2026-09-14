@@ -728,6 +728,22 @@ Memory is dated observation. Verify any file:line against the code before relyin
       - Red and green are under "The app half" above.
     - Guards: `DatesArriveAsCalendarDaysCheckTest`, `PrometheusClientTest`, `APaymentDayIsCountedAsItArrivesTest`,
       `APaymentDayIsReadExactlyAsBeforeTest`, and the web cases in `InvoiceControllerApiTest`.
+30. **A correct refusal is a WARN line, and a fault stays an ERROR line** (0108; the owner, 2026-09-14: fix what pages,
+    and silence only what is not a defect). Backend `fix/a-correct-refusal-is-not-an-error`: test `8b931b7`, fix `df6f6a1`;
+    suite 1047/1047. Not deployed.
+    - A copy older than the server's (`StaleSyncOperationException`: "older than server state", or "not applied: the
+      server already holds a newer version") is logged at WARN, in all 26 create and update catches that still used
+      ERROR. The answer and the filed failure are unchanged.
+    - A missing reference stays ERROR: it is a record that cannot arrive.
+    - Measured 24 h to 2026-09-14 17:23 UTC: 8,358 paging lines. 7,095 were one account's lines naming 89 products its
+      phone deleted before sending (`563374d0`), 252 were a line's missing invoice, 380+ were stale, and 151 were a
+      missing template (all 4 invoices have since arrived).
+    - Open (0108):
+      - App 1.4.6: a never-synced deleted product is closed as "local row missing" instead of being sent, and
+        `MissingReferenceRepair` lacks `inventoryItemId`, `customerId` and `categoryId`.
+      - 1.4.4 invoices with no client: `invoices.client_id` is NOT NULL.
+      - One invoice naming another account's payment instruction (0053).
+    - Guard: `ACopyOlderThanTheServersIsNotAnErrorTest` (all 21 groups; a missing invoice still pages).
 
 ## Established 2026-09-12, while planning the receipt number
 
