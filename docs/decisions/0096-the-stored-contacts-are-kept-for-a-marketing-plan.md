@@ -52,6 +52,17 @@ This is written down so the plan starts from it.
   - This is not legal advice. The plan needs a lawyer's review before any message is sent.
 - **Trust (G3).** A recipient learns that a friend's phonebook was uploaded, and the friend is our user. AGENTS.md:
   never trade G3 for G2.
+- **Apple's App Store rules forbid this use on iPhone outright.** These are paraphrased from App Store Review
+  Guidelines 5.1.2, as read on 2026-09-14:
+  - **(iv)** An app may not use Contacts data to build a contact database for its own use or for others.
+  - **(v)** An app may not contact people from a user's Contacts. The exception is when that user starts it, one person
+    at a time, with no "select all".
+  - **(ii)** Data collected for one purpose needs new consent before it is used for another.
+- **Google Play makes `READ_CONTACTS` a restricted permission.**
+  - The rule was announced on 2026-04-15, and Play Console asks for a declaration from September 2026.
+  - It is mandatory from 2027-01-27 for apps targeting Android 17 (API 37). An app that does not comply can be removed.
+  - The minimum-scope alternative is the system Contact Picker (`ACTION_PICK_CONTACTS`), which needs no permission.
+  - Bringing back a whole-book upload would have to justify `READ_CONTACTS` against that.
 - **A compliant route to the same goal:**
   - users invite people themselves, from their own phone (a share or invite);
   - the invoice share link, the existing G2 surface.
