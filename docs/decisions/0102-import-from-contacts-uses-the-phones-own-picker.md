@@ -27,6 +27,30 @@
   - Android's `READ_CONTACTS` leaves the manifest.
   - The iOS permission text goes, if nothing else needs it.
 
+## Decided later the same day
+
+- **Below Android 17, the phone's picker gives only the name and one number.** Email and address are typed by hand.
+- **The invoice client sheet's type-ahead of the phone's contacts goes,** because it read the whole book.
+- The owner: "Theek hai, aise hi".
+- Rejected:
+  - the permission back on older Android;
+  - a second pick for email and address.
+
+## As built (`8f259399`, on `VC_102_VN_146`, 2026-09-14)
+
+- **What arrives:** iOS and Android 17 give the name, numbers, emails and address.
+- **Android 17:** the path reads the picker's constants from the phone's framework, since compileSdk is 36. It can only be
+  verified on an Android 17 phone.
+- **Removed:**
+  - `READ_CONTACTS`;
+  - `NSContactsUsageDescription`;
+  - the whole-book repositories;
+  - the unused `core/permissions` module.
+- **Events no longer sent:** `contacts_loaded` and `contacts_permission_*`; some taps went too. The list goes to the
+  user-journey agent.
+- **Tests:** red-first, 10 of 14 failed; then 390 tests passed, with Android and iOS compiling. The build also caught an
+  iPhone email bug, which was fixed.
+
 ## Rejected
 
 - **After 1.4.6, before targeting Android 17.** This was the recommendation, to keep 1.4.6 on time.

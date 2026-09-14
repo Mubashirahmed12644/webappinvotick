@@ -37,8 +37,13 @@
 
 - **1.4.6 ships about 3 weeks later** than it otherwise would.
 - **The screens table is a migration,** so it needs the owner's word before it ships.
+- **How screens are drawn: decided the same day as B,** blocks designed in the panel and drawn by the app ("B: panel mein
+  blocks").
+  - A button can open a page on invotick.com in the app's existing WebView dialog, with no bridge into the app.
+  - Rejected:
+    - A, a whole HTML page in a WebView: heavier on old phones, no dark mode, and a bridge is needed to act in the app;
+    - C, Firebase In-App Messaging: designed in Firebase's console, not our panel, and still labelled Beta.
 - **Still to decide, one at a time:**
-  - how screens are drawn;
   - the first use;
   - the account-X screen;
   - who publishes;

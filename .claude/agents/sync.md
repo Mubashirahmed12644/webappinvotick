@@ -629,10 +629,21 @@ Memory is dated observation. Verify any file:line against the code before relyin
       - Decided 2026-09-14 (0099, "Haan, password se wapas").
       - Backend `fix/password-sign-in-readmits`: test `458c70d`, fix `994191e`; 965/965; not pushed.
       - Builds up to 1.4.6 name no phone on sign-in, so nothing is re-admitted for them.
-      - **For them, next on the same branch** (the coordinator, 2026-09-14; not built yet): a password or Google
-        sign-in writes into its pass how it was earned and when, and the first call that names the removed phone with
-        such a pass, earned after the removal, lets it back in. Never a guest pass, an admin-impersonation pass, a
-        drain token, or a pass earned before the removal.
+      - **For them: built on the same branch** (the coordinator's go, 2026-09-14). Tests `680763e` (7 of 13 failed first
+        on `994191e`), fix `fda5290`; full suite 980/980 under the lock; not pushed, for batch18. No migration.
+        - A password or Google sign-in writes `proof` (password|google) and `proofAt` (ms) into its pass
+          (`JwtService.generateSignInToken`). Every other pass carries none.
+        - Step 7b: a removed phone whose pass carries a proof goes to `LinkedDeviceService.readmitOnItsFirstCall`. It
+          lets the phone back in, in one transaction, only when `proofAt` is after `revoked_at`, and writes one INFO
+          line. Otherwise the answer is 401 as before, and the WARN line carries `sign_in=none|before_removal|not_written`.
+        - Never a guest, impersonation or drain pass, a pass with no proof, or a sign-in at or before the removal.
+        - Guards: `ARemovedPhoneComesBackOnItsFirstCallAfterASignInTest`, `ASignInPassSaysHowItWasEarnedTest`.
+      - **Found while building it (proven by a probe, not fixed):** `JwtService.isAdminImpersonationToken` answers false
+        for every pass.
+        - `claims.get(..., Boolean::class.java)` asks JJWT for the primitive `boolean`, and JJWT throws on the stored
+          `java.lang.Boolean`. The catch then returns false.
+        - So `AuthorizationInterceptor`'s write block and the renewal's skip never fire for an impersonation pass.
+        - No code mints one today. The fix is one line.
     - **The app half, for 1.4.6:** `fix/146-removed-phone` on `598ccc8d`: tests `574d2a9b`, code `3163b7f7`; not pushed.
       - Red first: at `574d2a9b` the data tests did not compile (41 errors, all in its three test files, all naming
         what the code adds).

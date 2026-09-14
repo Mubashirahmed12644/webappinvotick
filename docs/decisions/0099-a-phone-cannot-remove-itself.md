@@ -60,3 +60,31 @@
   - **Google sign-in** proves the account the same way, so it follows the same rule.
 - **Rejected: re-admission only through another device's approval.** It is stricter, but a phone removed by mistake would
   need a second device, and one-phone users would be stuck.
+
+## Built the same day: phones whose sign-in does not name the phone
+
+- **A removed phone comes back on its first sync after a correct password or Google sign-in.** This is how the owner's
+  rule above reaches the builds up to 1.4.6. The coordinator gave the go on 2026-09-14. Built on
+  `fix/password-sign-in-readmits` for batch18: tests `680763e`, fix `fda5290`, full suite 980/980. Not deployed.
+  - **Why it is needed:** a sign-in re-admits only a phone it can name (`X-Device-Id`), and no build up to 1.4.6 names
+    its phone when it signs in. On those builds the sign-in worked, and every sync after it was refused with "This
+    device was signed out.". Every build does name its phone on sync.
+  - **How:** a password or Google sign-in writes into its pass how it was earned and when (`proof`, and `proofAt` in
+    milliseconds). When a removed phone calls, the server compares that time with the removal inside one transaction.
+    It lets the phone back in only if the sign-in came after the removal.
+  - **Never, whatever the pass claims:**
+    - a guest pass, an admin-impersonation pass or a drain pass;
+    - a pass with no proof: a renewal, a device link, an API token or an admin sign-in;
+    - a proof the server does not write (anything but a password or Google);
+    - a sign-in dated at or before the removal. So a phone removed again after it came back stays out.
+  - **Evidence:**
+    - a refusal line says why the pass could not bring the phone back (`sign_in=none|before_removal|not_written`);
+    - a re-admission writes one INFO line naming the sign-in.
+- **Rejected:**
+  - **The pass's own issue time.** A renewal mints a new pass. If one ever copied the proof, an old sign-in would pass
+    for a new one. So the sign-in's time is a claim of its own.
+  - **The standard names `amr` and `auth_time`.** `auth_time` counts in seconds, and nothing outside this server reads
+    these passes.
+  - **Waiting for 1.4.6.** Every older phone would stay locked out after a correct sign-in until it updates.
+  - **Allowing it only on the sync path.** The proof is in the pass, so the path adds no safety, and old builds name
+    their phone only on sync anyway.
