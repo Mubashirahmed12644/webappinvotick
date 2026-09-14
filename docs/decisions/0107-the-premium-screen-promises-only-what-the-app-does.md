@@ -40,8 +40,17 @@
    - "4.8★" goes until Play shows a real rating, and then it shows that number.
    - Rejected: dropping both, which would lose a true number; leaving them, which is untrue.
 
-Parts 3 to 5 follow, one question at a time: the wording of the benefits that are free for everyone, the "7-day
-refund" promise, and the live builds.
+3. **Only "No Ads" is presented as a premium benefit** ("Alfaz sach karo").
+   - The eight features everyone already has are no longer called premium benefits.
+   - Locking any of them to premium is a separate decision, to be made after measurement.
+   - Rejected: locking them now, which is a big change that could stop new users reaching a first invoice; leaving the
+     list as it is.
+
+4. **The "7-day refund" pill goes** ("Hata do").
+   - A promise already shown still stands for whoever bought under it.
+   - The first premium user can ask until 2026-09-17 11:44 UTC.
+
+Part 5 (the live builds) is moot: the owner froze 1.4.6 and ships it now.
 
 ## Rejected
 

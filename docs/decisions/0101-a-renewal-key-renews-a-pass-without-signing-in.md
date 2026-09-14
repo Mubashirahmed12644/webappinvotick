@@ -1,6 +1,8 @@
 # 0101 — A renewal key lets a phone get a new pass without signing in again, in 1.4.6
 
-**Status:** decided by the owner on 2026-09-14 ("1.4.6 mein hi"). It is being built: the server part first, then the app.
+**Status:** decided by the owner on 2026-09-14 ("1.4.6 mein hi").
+- **The app half moved to 1.4.7 the same day,** when the owner froze 1.4.6 to what was already built. The server half
+  and its table still go ahead, on the owner's word for the migration. It is being built: the server part first, then the app.
 
 **Related:**
 - 0026, a session is renewed before it dies and never revived after;

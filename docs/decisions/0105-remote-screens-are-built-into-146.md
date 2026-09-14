@@ -1,6 +1,8 @@
 # 0105 — Remote screens are built into 1.4.6
 
 **Status:** decided by the owner on 2026-09-14 ("Haan, 1.4.6 mein hi").
+- **Moved to 1.4.7 the same day.** The owner froze 1.4.6: "ab naya kam koe open nhi kerna… build bana kerdo". They chose
+  "Jo bana hai + premium text". None of this had been started.
 - The analysis is in `docs/REMOTE-SCREENS-ANALYSIS.md`.
 - The seven decisions on how it is built are asked one at a time.
 
