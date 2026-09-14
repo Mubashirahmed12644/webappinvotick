@@ -45,6 +45,12 @@
 - **The guard only,** which would leave the guest's record stranded.
 - **Doing nothing.** Any phone could strand its own work the same way.
 
-## Still open (Tier 1)
+## Decided later the same day (Tier 1)
 
-- **Should a password sign-in re-admit a removed phone?** Today only the device-link approval does.
+- **A correct password sign-in re-admits a removed phone.** The owner, 2026-09-14: "Haan, password se wapas".
+  - **Why:** the password is the account's key. Whoever holds it can sign in on any phone, so keeping one phone out
+    protects nothing.
+  - **To keep a phone out,** change the password.
+  - **Google sign-in** proves the account the same way, so it follows the same rule.
+- **Rejected: re-admission only through another device's approval.** It is stricter, but a phone removed by mistake would
+  need a second device, and one-phone users would be stuck.
