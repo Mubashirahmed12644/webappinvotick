@@ -3,7 +3,9 @@
 **Status:** decided by the owner on 2026-09-14, and built. Not deployed yet.
 - **The table is LIVE:** `V20260914_04` went alone as batch12 (`8dfb5fa`, 2026-09-13 23:54 UTC). The migration
   applied, and `support_view_log` exists.
-- The code and the panel follow.
+- **The code is LIVE:** batch14 (`ad625178`, 2026-09-14 00:47 UTC). The support lookup answers 200 to an admin and 401
+  without a token.
+- **The panel is LIVE:** `c2e414b` on main. Vercel reported success, and admin.invotick.com answers 200.
 - How long the record is kept (365 days, the agent's default) waits for the owner's word.
 
 **Related:**

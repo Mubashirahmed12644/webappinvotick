@@ -62,6 +62,6 @@ schema, secrets or Play uploads go without asking. Built as backend `fba532c` (b
 - **Nothing on the server needs rotating.** No JWT secret, database credential or session token went out, and 0 OTPs
   are live.
 - **Follow-ups:**
-  - `4f089db` trims the response to the id, the name and a masked email, so admins stop receiving hashes too. It
-    ships in batch13.
-  - The owner decides whether to reset the 516 passwords, and whether to tell users.
+  - `4f089db` trims the response to the id, the name and a masked email, so admins stop receiving hashes too. It is
+    live in batch14 (`ad625178`, 2026-09-14 00:47 UTC).
+  - The owner decided on no password reset (0092). Whether to tell users is still his to decide.
