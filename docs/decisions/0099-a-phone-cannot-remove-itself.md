@@ -65,7 +65,8 @@
 
 - **A removed phone comes back on its first sync after a correct password or Google sign-in.** This is how the owner's
   rule above reaches the builds up to 1.4.6. The coordinator gave the go on 2026-09-14. Built on
-  `fix/password-sign-in-readmits` for batch18: tests `680763e`, fix `fda5290`, full suite 980/980. Not deployed.
+  `fix/password-sign-in-readmits`: tests `680763e`, fix `fda5290`, full suite 980/980. **Live since 2026-09-14 11:53
+  UTC** as batch18 (image `fda5290b`), together with `994191e` (a sign-in that names its phone re-admits it).
   - **Why it is needed:** a sign-in re-admits only a phone it can name (`X-Device-Id`), and no build up to 1.4.6 names
     its phone when it signs in. On those builds the sign-in worked, and every sync after it was refused with "This
     device was signed out.". Every build does name its phone on sync.
