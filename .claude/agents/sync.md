@@ -627,10 +627,12 @@ Memory is dated observation. Verify any file:line against the code before relyin
         - an adopted request id may hold letters.
     - **A correct password or Google sign-in that names its phone re-admits it.**
       - Decided 2026-09-14 (0099, "Haan, password se wapas").
-      - Backend `fix/password-sign-in-readmits`: test `458c70d`, fix `994191e`; 965/965; not pushed.
+      - Backend `fix/password-sign-in-readmits`: test `458c70d`, fix `994191e`; 965/965. **LIVE in batch18** (below).
       - Builds up to 1.4.6 name no phone on sign-in, so nothing is re-admitted for them.
       - **For them: built on the same branch** (the coordinator's go, 2026-09-14). Tests `680763e` (7 of 13 failed first
-        on `994191e`), fix `fda5290`; full suite 980/980 under the lock; not pushed, for batch18. No migration.
+        on `994191e`), fix `fda5290`; full suite 980/980 under the lock. No migration.
+        - **LIVE 2026-09-14 11:53:14 UTC as batch18** (image `fda5290b`, healthy 11:53:51). In its first 73 s: 0 ERROR
+          lines, 0 refusals of a removed phone, 0 re-admissions, 271 sync lines. The 6 h read is due at 17:53 UTC.
         - A password or Google sign-in writes `proof` (password|google) and `proofAt` (ms) into its pass
           (`JwtService.generateSignInToken`). Every other pass carries none.
         - Step 7b: a removed phone whose pass carries a proof goes to `LinkedDeviceService.readmitOnItsFirstCall`. It
@@ -671,11 +673,22 @@ Memory is dated observation. Verify any file:line against the code before relyin
       - App (not run yet): `APhoneSaysWhichPhoneItIsTest`, `ARemovedPhoneStopsAskingTest`,
         `ARemovedPhoneIsNamedByTheSyncTest`.
 29. **Every date the apps send is watched until it arrives as a calendar day** (0106, on the owner's ask of 2026-09-14;
-    with 0104's payment date). Backend `feat/date-shapes-arrive-as-days` from `32b89cd`, not pushed:
-    - tests `96b92f0` (4 of 4 failed first: no payment count, no platform) and `d8e1179` (did not compile first: 25
+    with 0104's payment date). Backend `feat/date-shapes-arrive-as-days`, rebased onto batch18 `fda5290` with no
+    conflict; not pushed, for batch19:
+    - tests `d430431` (4 of 4 failed first: no payment count, no platform) and `8cf2db1` (did not compile first: 25
       errors, each naming what the code adds);
-    - code `62d45c2`;
-    - targeted 43/43; full suite 981/981 (201 classes) under the lock, 11:26–11:28 UTC.
+    - code `3cbc218`;
+    - targeted 43/43; full suite **1002/1002** (204 classes) under the lock, 11:42–11:45 UTC. Before the rebase: 981/981
+      on `32b89cd`.
+    - **The app half:** `fix/146-dates-travel-as-calendar-days`, rebased onto `VC_102_VN_146` `6f956125` with no
+      conflict. Test `0cb5f9dd`, then fix `6b23ac79` (0104: a payment's date out as a day, a pulled day kept at local
+      midnight). Not pushed.
+      - Red at `0cb5f9dd`: only the payment's two dates, 38 wrong lines (30 + 8), none for an invoice or an estimate. A
+        New York payment entered at 23:59:59.999 left as `2026-09-17T03:59:59.999Z`, a day late.
+      - Green at `6b23ac79`, 11:40–11:44 UTC:
+        - `:data:testDebugUnitTest` 290/290 (55 classes);
+        - `:composeApp:compileDebugKotlinAndroid`;
+        - `:composeApp:compileKotlinIosSimulatorArm64`, with 0 errors.
     - **The Health card `date-shapes`, "Invoice dates arrive as calendar days"** (`DatesArriveAsCalendarDaysCheck`,
       every 30 min):
       - red on any shape but `calendar_day`, within 7 days, from a build that should send days:
@@ -700,7 +713,7 @@ Memory is dated observation. Verify any file:line against the code before relyin
       - the web's REST invoice writes join the invoice count under `Web`.
     - **A payment's date (0104):**
       - stage already read `YYYY-MM-DD`, and the pull already sends it;
-      - the app (1.4.6, `1d2dde48`) now sends the day, and keeps a pulled day at local midnight;
+      - the app (1.4.6, `6b23ac79`) now sends the day, and keeps a pulled day at local midnight;
       - changing only the way out would have sent a western phone's pulled day back a day early.
     - **To read:** `sum by (build, platform, shape) (increase(sync_invoice_date_arrived_total{field="invoice_date"}[7d]))`,
       plus the same over `min_over_time(...[7d]) unless ... offset 7d` for the series born inside the window.
@@ -709,10 +722,10 @@ Memory is dated observation. Verify any file:line against the code before relyin
       - 146 invoice dates from 1.4.5 and 1.4.4, every one a day;
       - 1 old-build midnight a day early;
       - no payment series yet.
-    - **The app guard:** `ADateTravelsAsItsCalendarDayTest` (`c2ae6d03`, `fix/146-dates-travel-as-calendar-days`).
+    - **The app guard:** `ADateTravelsAsItsCalendarDayTest` (`0cb5f9dd`, `fix/146-dates-travel-as-calendar-days`).
       - It covers six dates in Karachi, New York and Tonga, at midnight and near it, and a pulled day going back as
         itself.
-      - Not run yet: the app slot is held.
+      - Red and green are under "The app half" above.
     - Guards: `DatesArriveAsCalendarDaysCheckTest`, `PrometheusClientTest`, `APaymentDayIsCountedAsItArrivesTest`,
       `APaymentDayIsReadExactlyAsBeforeTest`, and the web cases in `InvoiceControllerApiTest`.
 

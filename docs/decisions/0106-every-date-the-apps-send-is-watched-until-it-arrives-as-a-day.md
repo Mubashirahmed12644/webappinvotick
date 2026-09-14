@@ -14,10 +14,12 @@
 
 ## What was built
 
-- **Backend** `feat/date-shapes-arrive-as-days`, from `stage` `32b89cd`. Not pushed.
-  - Tests `96b92f0` (4 of 4 failed first on stage) and `d8e1179` (did not compile first: 25 errors), code `62d45c2`.
-  - Targeted 43/43; full suite 981/981 (201 classes) under the shared lock.
-  - App: test `c2ae6d03`, then fix `1d2dde48`, on `fix/146-dates-travel-as-calendar-days`.
+- **Backend** `feat/date-shapes-arrive-as-days`, rebased onto batch18 `fda5290` with no conflict. Not pushed; for batch19.
+  - Tests `d430431` (4 of 4 failed first on stage) and `8cf2db1` (did not compile first: 25 errors), code `3cbc218`.
+  - Targeted 43/43; full suite 1002/1002 (204 classes) under the shared lock.
+  - App: test `0cb5f9dd`, then fix `6b23ac79`, rebased onto `6f956125` with no conflict.
+    - Red at the test: only the payment's two dates (38 wrong lines).
+    - Green at the fix: data 290/290, and the Android and iOS compiles.
   - **The card** (`DatesArriveAsCalendarDaysCheck`, id `date-shapes`, every 30 minutes):
     - **Red:** any shape but `calendar_day`, in the last 7 days, from a build that should send days:
       - an invoice's date or due date from every build that sends its build number, every iPhone, and the web;
@@ -31,7 +33,7 @@
       analytics, else `unknown`;
     - `sync.payment.date.arrived{field, shape, build, platform}` is new;
     - the web's invoice form (REST `/v1/invoices`) is counted too.
-- **App** `fix/146-dates-travel-as-calendar-days`, from `VC_102_VN_146` `598ccc8d`. Not pushed, not run yet.
+- **App** `fix/146-dates-travel-as-calendar-days`, now on `VC_102_VN_146` `6f956125`. Not pushed; red and green are above.
   - `ADateTravelsAsItsCalendarDayTest` pins all six dates on the wire, in Karachi, New York and Tonga.
   - 0104's payment date is built there: out as a calendar day, and in at local midnight.
 
