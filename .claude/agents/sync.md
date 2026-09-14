@@ -670,6 +670,51 @@ Memory is dated observation. Verify any file:line against the code before relyin
         first.
       - App (not run yet): `APhoneSaysWhichPhoneItIsTest`, `ARemovedPhoneStopsAskingTest`,
         `ARemovedPhoneIsNamedByTheSyncTest`.
+29. **Every date the apps send is watched until it arrives as a calendar day** (0106, on the owner's ask of 2026-09-14;
+    with 0104's payment date). Backend `feat/date-shapes-arrive-as-days` from `32b89cd`, not pushed:
+    - tests `96b92f0` (4 of 4 failed first: no payment count, no platform) and `d8e1179` (did not compile first: 25
+      errors, each naming what the code adds);
+    - code `62d45c2`;
+    - targeted 43/43; full suite 981/981 (201 classes) under the lock, 11:26–11:28 UTC.
+    - **The Health card `date-shapes`, "Invoice dates arrive as calendar days"** (`DatesArriveAsCalendarDaysCheck`,
+      every 30 min):
+      - red on any shape but `calendar_day`, within 7 days, from a build that should send days:
+        - an invoice's dates from every build that sends its number, from every iPhone, and from the web;
+        - a payment's dates from Android ≥ 102 and iOS ≥ 19 (`health.date-shapes.payment-days-from-*-build`);
+      - shown, never judged: the old builds' midnights (0093's week of counting), and payments before 1.4.6;
+      - UNKNOWN when Prometheus is silent, or when no invoice date was counted in 7 days.
+    - **A build number means days.**
+      - `X-App-Version-Code` reached the app in 1.4.2 (`6fca7076`), after the calendar day (`73879b2d`); all four
+        branches with the first carry the second.
+      - So an iPhone's number (16–18) is never compared with 91.
+      - 1.4.1 sends days but no number, and sits with the old builds.
+    - **It reads Prometheus** (`PrometheusClient`, `http://prometheus:9090`, reachable from `invotick-server`), which keeps
+      each series across deploys for 15 days.
+      - `increase()` misses a series' first count, so each series first seen inside the window adds
+        `min_over_time(M[7d]) unless M offset 7d`.
+      - On 2026-09-14 only that showed an old build's one midnight.
+    - **The counters:**
+      - `sync_invoice_date_arrived_total` gains `platform`: the call's X-Platform, else what the phone declared in
+        `analytics_sessions_v2`, else `unknown`. It is asked once per push that carries a day, before its transaction;
+      - `sync_payment_date_arrived_total{field, shape, build, platform}` is new;
+      - the web's REST invoice writes join the invoice count under `Web`.
+    - **A payment's date (0104):**
+      - stage already read `YYYY-MM-DD`, and the pull already sends it;
+      - the app (1.4.6, `1d2dde48`) now sends the day, and keeps a pulled day at local midnight;
+      - changing only the way out would have sent a western phone's pulled day back a day early.
+    - **To read:** `sum by (build, platform, shape) (increase(sync_invoice_date_arrived_total{field="invoice_date"}[7d]))`,
+      plus the same over `min_over_time(...[7d]) unless ... offset 7d` for the series born inside the window.
+    - **What it showed first** (live, read-only, 11:21 UTC 2026-09-14):
+      - green;
+      - 146 invoice dates from 1.4.5 and 1.4.4, every one a day;
+      - 1 old-build midnight a day early;
+      - no payment series yet.
+    - **The app guard:** `ADateTravelsAsItsCalendarDayTest` (`c2ae6d03`, `fix/146-dates-travel-as-calendar-days`).
+      - It covers six dates in Karachi, New York and Tonga, at midnight and near it, and a pulled day going back as
+        itself.
+      - Not run yet: the app slot is held.
+    - Guards: `DatesArriveAsCalendarDaysCheckTest`, `PrometheusClientTest`, `APaymentDayIsCountedAsItArrivesTest`,
+      `APaymentDayIsReadExactlyAsBeforeTest`, and the web cases in `InvoiceControllerApiTest`.
 
 ## Established 2026-09-12, while planning the receipt number
 

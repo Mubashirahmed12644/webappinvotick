@@ -166,6 +166,8 @@ Memory is dated observation. Verify any file:line against the code before relyin
    - **The one possible victim:** device `6af51ecf`, Sierra Leone, vc94, pressed buy on Lifetime on 2026-09-05
      at 15:05:26 UTC. Play Console → Order management, filtered to `life_time_purchase`, says whether they
      paid.
+     - Checked 2026-09-14: that device has sent nothing since 2026-09-05 15:14 UTC. So if they paid, they
+       still have no premium, and they get it at their next launch.
 3. **Billing calls send no `X-Device-Id`,** so the device column of each billing row is always empty. 0048
    #6 promises one row per purchase, account and device.
    - **Fixed for 1.4.6**, merged into `VC_102_VN_146` (`b9669f53`): register, restore and entitlement
@@ -195,6 +197,23 @@ Memory is dated observation. Verify any file:line against the code before relyin
    - It binds the purchase with reason `PURCHASE`, as before.
    - It stores its answer like every other restore (`RESTORED`, no owner).
    - What the apps receive is unchanged.
+8. **The paywall lists features no build has** (found 2026-09-14; not fixed; the wording is the owner's decision).
+   - `PremiumPaywallSheet.FeaturesGrid()` is compiled in, with the same text in every release from 1.3.9 (vc79)
+     to 1.4.6. `RemoteConfigKeys` has no paywall key, so live builds cannot be changed remotely.
+   - **Never true in any build:**
+     - "Payment Reminders: Auto follow-ups for unpaid invoices". The reminder picker is commented out in every
+       release commit, and the reminder only ever notified the sender.
+     - "Payment Forms: Shareable payment links for clients". No payment link exists, and the receipt's Share
+       and Download both answer "coming soon" (`PaymentSlipViewModel.kt:361-376`).
+     - "Priority Cloud Sync". The server records the premium flag but never acts on it
+       (`SyncV2Controller.kt:507`).
+   - **The hero's chips:** "50K+ Businesses" (the server holds 4,586), and "4.8★ Rating" (Play shows no public
+     rating for Invotick, in the US or in Pakistan).
+   - Eight lines describe what every free user already has. `FeatureAccessManager.requestAccess` has no caller,
+     so premium adds only one thing today: no ads.
+   - "7-day refund" is our own promise; Google does not make it.
+   - Opened on 305 release phones (not ours) from 2026-08-25 to 2026-09-14. The one real purchase is the first
+     customer's (`first-premium-user-2026-09-10.md`).
 
 ## How you get at the data (read-only)
 
