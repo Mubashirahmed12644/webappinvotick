@@ -257,18 +257,28 @@ Two that bite most often:
   its own, each already held the evidence, and neither got opened on the ordinary day when the thing
   it watched started failing. Details + the two design rules: `memory/health-centre.md`.
 - One API client: `lib/api.ts`; browser calls go through the same-origin `/backend` rewrite.
-- ⚠️ **Auth is opt-in, not default.** `AuthorizationInterceptor` returns `true` when a handler has no
-  `@RequireRole` — no annotation means *any authenticated caller*, guests included. A new admin or
-  webpanel controller is open until you annotate it. `/v2/admin/**` was additionally listed in
-  `security.public-paths` and answered with no token at all until 2026-07-28. **So was `/v1/ip/**`,
-  closed 2026-09-13** in `fba532c` (batch3; decision
-  [0072](docs/decisions/0072-the-ip-routes-answer-admins-only.md)). Until then anybody could list IP
-  records with their locations, delete them, and spend the paid lookup quota. Every entry on that list
-  reaches its controller with no token at all. All 40 were reviewed on 2026-09-13 (decision
-  [0073](docs/decisions/0073-four-more-public-routes-stop-answering-strangers.md)).
-  `/v1/lookup/phone` turned out to be a public reverse phone lookup, holding 77,625 names of people
-  who are not users. What to do with it is the owner's decision, still pending.
-  Details + what is still open before payment-gateway work: `memory/admin-panel-security-audit.md`.
+- **Auth is deny-by-default since 2026-09-14** (batch16, `81d711fe`, live 08:44 UTC).
+  - **The rule.** Every handler carries `@RequireRole`, or is on the reviewed list in `PublicRoutes.kt`:
+    - 31 handler routes: sign-in, the app before sign-in, device linking, a user's client (the share link and the
+      referral redirects), and Google Play's notifications;
+    - plus 4 static paths.
+  - **The guard.** `RoutesDeclareWhoMayCallThemTest` fails the build when a handler has neither.
+  - **The 125 app handlers** that had no annotation now say `@RequireRole(USER, GUEST, ADMIN)`.
+  - **Until then,** a handler with no annotation let *any authenticated caller* in, guests included.
+  - **Public paths:**
+    - `/v2/admin/**` answered with no token at all until 2026-07-28.
+    - **So did `/v1/ip/**`, until 2026-09-13** (`fba532c`, decision
+      [0072](docs/decisions/0072-the-ip-routes-answer-admins-only.md)). Anybody could list IP records with their
+      locations, delete them, and spend the paid lookup quota.
+    - All 40 `security.public-paths` entries were reviewed on 2026-09-13 (decision
+      [0073](docs/decisions/0073-four-more-public-routes-stop-answering-strangers.md)).
+  - **`/v1/lookup/phone` is removed** (decision [0094](docs/decisions/0094-the-phone-number-name-lookup-is-removed.md)).
+    It was a reverse phone lookup over 81,923 names taken from users' address books.
+  - **Still open, from the agent that built this:**
+    - the impersonation write-block does not cover the 125 app routes;
+    - `POST /v1/uploads/batch` stores files for any signed-in caller without an owner;
+    - the IP lookup echoes the typed IP unmasked.
+  - Details, and what is still open before payment-gateway work: `memory/admin-panel-security-audit.md`.
 - Read-mostly by rule; never recompute money client-side — show what the backend computed.
 
 ## 5a. Reading rules — a page costs what it shows *(decision [0034](docs/decisions/0034-a-page-costs-what-it-shows.md))*
