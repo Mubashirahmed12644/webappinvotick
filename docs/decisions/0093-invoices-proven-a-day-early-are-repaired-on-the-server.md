@@ -1,8 +1,10 @@
 # 0093 — Invoices proven a day early are repaired on the server, before 1.4.6
 
-**Status:** decided by the owner on 2026-09-14 ("Haan, is tareeqe se"). A sync agent is building it.
-- Nothing is written yet.
-- The real run waits for the owner's go on the dry run's exact count.
+**Status:** decided by the owner on 2026-09-14 ("Haan, is tareeqe se").
+- **The undo register is live:** `V20260914_06` shipped alone as batch15 (`07525b77`, 06:57 UTC 2026-09-14). The
+  read-only check found the migration applied and `invoice_date_repair` present.
+- **The code** (`0bc9b05`: the repair endpoint, undo, echo guard, counters) ships in the next batch.
+- **No invoice is changed yet.** The real run waits for the owner's go on the dry run's exact count.
 
 **Related:**
 - `docs/INVOICE-DATE-REPAIR-PLAN.md`;
