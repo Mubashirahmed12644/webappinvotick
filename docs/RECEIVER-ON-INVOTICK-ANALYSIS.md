@@ -14,10 +14,12 @@ He raised it while deciding on `/v1/lookup/phone`, asking two things:
 
 - **What the route returns** is `identity_public_profile.bestName`, with a confidence score and a photo URL. That is
   the name *other users* most often saved for a number in their uploaded address books.
-  - They are names of people who are not users: 77,625 of them.
+  - They are names of people who are not users: 81,923 numbers carried a name on 2026-09-14.
   - It is a Truecaller-style store.
   - The route has been admin-only since 2026-09-13. The app's Contacts "verify" (`ContactsViewModel.kt:124`) has shown
     no name since then, and it had 0 calls in 7 days.
+  - **The owner removed the route on 2026-09-14** (0094). The app stops sending address books (0095). The stored
+    contacts are kept for a marketing plan (0096).
 - **The requirement needs a different fact:** is this client a verified Invotick user? The server already holds part
   of that:
   - `registered_phone_lookup`, a registered user's own phone, hashed;
