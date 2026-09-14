@@ -55,6 +55,7 @@
 ## Consequences
 
 - **Deploy order:** the table first and alone, then the code, then the panel.
-- **Still open for the owner:**
-  - how long to keep the record. The default is 365 days, and it is a setting;
-  - whether the Overview header's last-login IP should be masked too.
+- **The record is kept 365 days** (the owner, 2026-09-14: "365 din"). That is the default of the setting
+  `support.view.log.retention-days`, and older rows are purged.
+- **The last-login IP is masked too** (the owner, 2026-09-14: "Haan, chhupa do"). It follows the email and phone rule:
+  masked by default, and a reveal is recorded. Being built.

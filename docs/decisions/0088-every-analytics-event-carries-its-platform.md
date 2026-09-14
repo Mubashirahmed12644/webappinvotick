@@ -4,7 +4,14 @@
 user-journey agent: the migration first and alone (`V20260914_05`), then the code.
 - **The column is LIVE:** batch13 (`ee7cfea`, 2026-09-14 00:21 UTC). The migration applied, and
   `analytics_events.platform` exists.
-- The code follows in batch14, then the backfill (dry run first).
+- **The code is LIVE:** batch14 (`ad625178`, 2026-09-14 00:47 UTC).
+  - New events carry their platform on arrival: 744 of 744 in the first 18 minutes.
+  - 31 iPhone events arrived with it during the backfill.
+- **Backfilled** from 01:44 to 01:57 UTC (766 s):
+  - 105 Web, 1,373,259 Android, and 6,774 from sessions;
+  - 416 stay NULL, which is the iOS backlog.
+  - The nightly cleanup deleted 80 old rows during the pass, so Android comes to 58 fewer than the dry run's
+    1,373,317.
 
 **Related:**
 - 0083 and 0085: iPhones send events;
