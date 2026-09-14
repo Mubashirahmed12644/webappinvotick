@@ -1,7 +1,10 @@
 # 0088 — Every analytics event carries its platform
 
-**Status:** decided by the owner on 2026-09-14 ("Abhi"), against the recommendation to wait. Being built by the
+**Status:** decided by the owner on 2026-09-14 ("Abhi"), against the recommendation to wait. Built by the
 user-journey agent: the migration first and alone (`V20260914_05`), then the code.
+- **The column is LIVE:** batch13 (`ee7cfea`, 2026-09-14 00:21 UTC). The migration applied, and
+  `analytics_events.platform` exists.
+- The code follows in batch14, then the backfill (dry run first).
 
 **Related:**
 - 0083 and 0085: iPhones send events;
