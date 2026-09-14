@@ -1,6 +1,6 @@
 # 0041 — Premium is a date on the device, refreshed daily
 
-**Date:** 2026-09-07 · **Status:** planned, awaiting the owner's approval before any code
+**Date:** 2026-09-07 · **Status:** approved by the owner on 2026-09-14 for 1.4.6 ("1.4.6 main add kerky again bundle banao", after asking whether a purchase on Android shows premium everywhere). The billing agent is building it: the server first, then the app. The bundle is rebuilt as versionCode 103.
 **Touches:** `core/premium`, `domain/billing`, backend `EntitlementController`
 
 ## Context
