@@ -792,6 +792,13 @@ Full detail in `memory/mysql-binary-uuid-and-test-clock.md`. In native queries:
     different windows and checking the numbers differ. A parameter that changes nothing is not a
     parameter.
 
+14. **Bound every time window on both sides.** *(2026-09-14)* Phones with wrong clocks stamp events in the
+    future: 634 rows from 3 phones carry stamps as late as 2027-02-15.
+    - So `event_timestamp >= NOW() - INTERVAL 5 MINUTE` read as "81% of new events have no platform". At that
+      moment, 744 of 744 new arrivals had one.
+    - The same mistake read 7 old, future-dated `sync_failure` rows as a platform lookup that failed.
+    - To ask "what arrived since X", use the arrival column (`created_at`), and bound the window with `BETWEEN`.
+
 ---
 
 ## 4. Admin panel rules

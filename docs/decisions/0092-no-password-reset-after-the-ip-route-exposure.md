@@ -18,6 +18,13 @@
 ## Decided
 
 - **No password reset, and no new step for users.**
+- **Users are not told; the record is kept** (the owner, 2026-09-14: "Nahi, sirf record").
+  - The owner first confirmed that the door is shut. A live check at 01:07 UTC showed all three `/v1/ip` routes
+    answering 401 without a login.
+  - What happened and why these choices were made stays written in 0072 and here.
+  - **If any evidence of access ever appears, users are told at once.**
+  - The owner was told that 33 of the 516 accounts log in from places whose laws may require notice (EU 5, UK 2, US 26),
+    and that only a lawyer can settle that.
 
 ## Rejected
 
