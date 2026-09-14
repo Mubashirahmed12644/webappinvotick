@@ -113,8 +113,9 @@ app."
     reminders with premium.
   - The gate is defined, but nothing uses it yet.
 - **The paywall already sells it.**
-  - Premium lists "Payment Reminders: Auto follow-ups for unpaid invoices" (`PremiumPaywallSheet.kt:922`, in 1.4.5
-    and 1.4.6).
+  - Premium lists "Payment Reminders: Auto follow-ups for unpaid invoices". It has been in every release since 1.3.9
+    (June 2026): 1.4.4 at `PremiumPaywallSheet.kt:923`, 1.4.5 and 1.4.6 at `:922`. The billing agent checked this on
+    2026-09-14.
   - No build does that.
   - A promise the app does not keep is a trust problem (G3). It is a question for the owner, with the billing agent
     (see the decisions).

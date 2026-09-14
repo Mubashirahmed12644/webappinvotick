@@ -33,6 +33,33 @@
 - **The app tries the key once on a refused pass,** before it shows the sign-in-again screen (0098).
 - **A kill switch sits on both sides,** as PROJECT_RULES requires.
 
+## The design, decided later the same day
+
+The owner, 2026-09-14: "Saboot wala tareeqa".
+- Before choosing, they asked what happens if the internet drops for more than 2 minutes, and whether a way without a
+  timer exists that is both secure and complete.
+
+**What was decided:**
+- **Proof of receipt, not a timer.**
+  - An exchange hands the phone a new pass and a new key, and keeps the old key waiting.
+  - The first call made with the new pass proves the answer arrived. From then on, the old key is dead for good.
+  - If the answer was lost, the new pass is never used. Whenever the phone comes back, it retries with the old key.
+    The server hands it a fresh pair and cancels the unused one. The length of the drop does not matter.
+- **A 7-day cap.** An old key whose successor was never used can retry for 7 days, then no longer. That phone signs in
+  once, so a stolen old key cannot wait for ever.
+- **Theft.** An old key seen after its successor's pass was used is a theft signal. It cancels that phone's keys and
+  the passes they minted. That needs one more column, added to `V20260914_07` before it ships; the migration was
+  never applied anywhere.
+- **Expiry.** A key ends after 180 days without use. A phone in use never loses it.
+- **The rate limits** are as proposed: `/renew` 10 an hour per phone and 100 per address.
+- **Runbook:** if the signing secret ever leaks again, cancel every renewal key in the same step.
+
+**Rejected:**
+- **A retry timer of 2, 10 or 5 minutes.** A drop longer than the timer would still force a sign-in, and the timer
+  measures the clock, not whether the answer arrived.
+- **Strict rotation with no retry.**
+- **Cancelling only keys on theft.** A thief's pass would live for 90 days.
+
 ## Rejected
 
 - **Building it after 1.4.6.** This was the recommendation, to keep 1.4.6 on time.
