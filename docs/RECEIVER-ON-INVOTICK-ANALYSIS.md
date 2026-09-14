@@ -85,6 +85,6 @@ identity and senders store their clients' phone or email.
 ## The owner's decisions (later, one at a time)
 
 - Build it, and when. Recommended: after 1.4.6, in phases.
-- The wording. Recommended: "Invotick par hai" rather than "verified".
+- The wording: **decided 2026-09-14, "On Invotick"** (0097).
 - Identity. Recommended: email first, phone OTP later.
 - Receiver defaults: who may deliver to me, and whether I can be found.

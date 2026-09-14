@@ -37,6 +37,24 @@ After each step, measure four things:
 
 ## Still to decide, one at a time
 
-- **The wording.** Recommended: "Invotick par hai" rather than "verified".
-- **The identity method.** Recommended: email first.
-- **The receiver's defaults:** who may deliver to them, and whether they can be found.
+- **The wording: decided on 2026-09-14 as "On Invotick"** (the owner chose "On Invotick (Recommended)").
+  - Rejected: "Invotick verified", which users read as an endorsement that a scam invoice could borrow.
+  - Rejected: a bare logo, which a new user would not understand.
+- **Identity: decided on 2026-09-14 as automatic, from the user's own actions.** Nobody is asked to verify anything for
+  this. The owner asked to "tie it to an action so the experience isn't spoiled".
+  - Candidate actions, to be settled in the build:
+    - the receiver opens the sender's shared invoice in the app while signed in, or approves or rejects it there;
+    - the account's email is already proven (Google sign-in, or the sign-up code) and equals the client's email.
+- **The receiver's side: decided the same day.**
+  - A setting, "Show that I'm on Invotick", on by default, that the receiver can switch off.
+  - A line in the privacy policy.
+- **The sender's side, the owner's concern.** A sender may not want every client told that an invoice was made in their
+  name.
+  - Proposed: the receiver hears only when the sender shares the invoice or sends a reminder. Creating one alone
+    notifies nobody.
+  - This is asked.
+- **The goal behind it (the owner):** automatic payment-due messages from the sender to every client with a payment due.
+  They go in the app for linked clients, and by WhatsApp.
+  - Still to analyse: automatic WhatsApp sending goes through Meta's business platform, whose cost and opt-in rules must
+    be checked, unless the sender taps send.
+  - "Due" depends on payment status, which the owner's postponed Payments review owns.

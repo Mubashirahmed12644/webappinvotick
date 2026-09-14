@@ -39,6 +39,22 @@
     save the password at every sign-in. The password never reaches us.
   - **"Login as Guest" is not offered.**
 
+## As built (`feat/146-sign-in-again`, `ca2bccc5`, 2026-09-14)
+
+- **When the mode opens:** it also opens from the sync-refused snackbar's "Sign in". A guest whose session ended still
+  gets the old screen and snackbar.
+- **The kept email:** it is copied in the same edit that removes the session's email. Any new session, guest included,
+  clears it, and so does a deliberate sign-out.
+- **The password:**
+  - On Android the saved-password sheet opens by itself.
+  - After any email sign-in, Android asks once to save the password, unless the password came from the manager.
+  - On iOS only the keyboard's AutoFill works until `webcredentials:invotick.com` is in the app's associated domains
+    and in the site's apple-app-site-association.
+- **The guest button:** the sign-in screen never had a "Login as Guest" button (`LoginFooterActions.kt` is dead code). The
+  real guest entry is Register's "Continue as Guest", which is hidden when reached from this mode.
+- **A forced sign-out keeps the half-written invoice draft** (being added). A deliberate sign-out still clears it.
+- **A Remote Config kill-switch, `sign_in_again_enabled`,** is on by default, as PROJECT_RULES requires.
+
 ## Rejected
 
 - **Accepting the old key for a while.** Anyone holding it could forge a pass for any account.
