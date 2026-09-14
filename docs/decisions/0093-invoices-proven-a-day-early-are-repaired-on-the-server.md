@@ -3,8 +3,13 @@
 **Status:** decided by the owner on 2026-09-14 ("Haan, is tareeqe se").
 - **The undo register is live:** `V20260914_06` shipped alone as batch15 (`07525b77`, 06:57 UTC 2026-09-14). The
   read-only check found the migration applied and `invoice_date_repair` present.
-- **The code** (`0bc9b05`: the repair endpoint, undo, echo guard, counters) ships in the next batch.
-- **No invoice is changed yet.** The real run waits for the owner's go on the dry run's exact count.
+- **The code is live:** batch16 (`81d711fe`, 08:44 UTC 2026-09-14), with the repair endpoint, the undo, the echo guard
+  and the counters.
+- **The dry run, 09:07 UTC 2026-09-14:**
+  - the query listed 1,745 invoices of 258 owners;
+  - the endpoint answered `WOULD_MOVE` 1,745 of 1,745, for 258 owners, with 0 failures;
+  - the register held 0 rows afterwards.
+- **No invoice is changed yet.** The real run waits for the owner's go on that count.
 
 **Related:**
 - `docs/INVOICE-DATE-REPAIR-PLAN.md`;

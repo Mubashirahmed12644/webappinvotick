@@ -591,6 +591,41 @@ Memory is dated observation. Verify any file:line against the code before relyin
       - Counted as `invoice_date_repair_echo_total{field, build}` after the commit, and logged at INFO.
     - Guards: `AnInvoiceDateRepairMovesOnlyTheListedRowsTest` (8) and `ARepairedDateIsNotSentBackTest` (8). On the
       register alone, 12 of the 16 failed first; the other 4 are what must not change.
+28. **A phone can never remove itself, a removed phone gets no new pass, and every refusal names its phone and build**
+    (backend `fix/a-phone-cannot-remove-itself` @ `2c9cbfb`, from `81d711f`; suite 952/952; not pushed, not deployed).
+    - **Found 2026-09-14.** Guest phone `e0e2de82` (account `d4e1f6a8`, 1.4.5, its only device) removed itself from its
+      own Linked devices screen, 2026-09-13 at 19:49:41 UTC.
+      - Loki: the list, the revoke and the refresh all ran on the phone's own pass.
+      - Analytics: `linked_devices`, then `inspect_device_12`, then `log_out_10`.
+      - Why it could happen: the app sends `X-Device-Id` only from `SyncApi` (1.4.6 adds billing and guest work). So the
+        list never marked the current row, and `revoke`'s own-device check never ran.
+      - Since then every sync is refused "This device was signed out.", and the phone answers each 401 with a new guest
+        pass. 110 refusals so far, and its work cannot reach the server.
+      - 7 days: 1 phone, a guest; 0 registered. Revokes ever: 12, and 11 of them were our own tests.
+    - **A revoke that does not say which phone asks is refused, and removes nothing** ("Update Invotick to remove a
+      device."). Builds up to 1.4.6 cannot remove a device until they send the header on that call.
+    - **A phone its account removed is refused a guest pass, with 403.**
+      - Both `login-as-guest` endpoints read `X-Device-Id`, never the body.
+      - Never 401: every build answers a 401 by asking for a pass again.
+      - It binds only a call that names its phone, and no build up to 1.4.6 does.
+    - **Every request line carries `device`, `build` and `platform`, and each refusal writes one WARN line**
+      (`[AUTH] ⛔ Request refused | status | reason | device | build | platform | endpoint`).
+      - `CallerDevice` keeps only hex and dashes, digits, or ANDROID/IOS/WEB; anything else is written "invalid" or
+        "other".
+      - These values ride on ERROR lines, and Grafana pages Slack for ERROR plus "SYNC". Hex, digits and those three
+        names cannot spell it.
+      - To read it: `{container="/invotick-server"} |= "Request refused" | json`.
+    - **Proposed, not built (app):**
+      - send `X-Device-Id` on the device list, the revoke and `login-as-guest`;
+      - on the guest-pass 403, or the sync 401 "This device was signed out.", stop syncing and stop asking for passes,
+        keep every row, and say so once.
+    - **Proposed, not run:** re-admit `e0e2de82`'s row (1 row).
+    - **Open (Tier 1):** should a password sign-in re-admit a removed phone? Today only the device-link approval does.
+    - Guards:
+      - `APhoneCannotRemoveItselfTest`: 2 of 4 failed first.
+      - `ARemovedPhoneGetsNoGuestPassTest`, plus the `login-as-guest` cases in `AuthControllerApiTest` and
+        `AuthControllerV2ApiTest`: did not compile first.
+      - `ARefusalNamesItsPhoneAndBuildTest`: 4 of 5 failed first.
 
 ## Established 2026-09-12, while planning the receipt number
 
