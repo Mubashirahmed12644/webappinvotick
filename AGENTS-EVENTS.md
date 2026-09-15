@@ -565,6 +565,29 @@ So read a burst like that by `event_timestamp`, and never count it as new users.
 it look current: a rewritten id is a guess stored as a fact (§1.7). Decision
 [0083](docs/decisions/0083-ios-sends-its-analytics-through-the-one-shared-drain.md).
 
+### 1.21 A step of a loop names the thing it belongs to, in the name the next step already uses. *(decided 2026-09-15)*
+
+On 2026-09-15 the share → install chain was audited. Every step had rows, but two joins could not be made.
+
+1. **The link.** Web page views and Play presses named no link, while the install named it as `iv_doc`.
+2. **The door.** `shared_invoice_opened` did not say whether the open came from a tapped link, a Play install or
+   the received list. The install door is the loop itself, and it could only be found by joining another event on
+   `app_instance_id`.
+
+**The rule.**
+- When a step's row cannot be joined to the step before or after it, add the join key as a **parameter on the
+  existing event** (§1.1).
+- Give it the **name and value space the neighbouring step already uses**. Here that is `iv_doc`, the raw token,
+  because `install_referrer` and `findShareLoopInstalls` already use exactly that.
+- Stamp it **where it can be observed** (§2.8):
+  - the web route reads the page's own address from `Referer`, never the body (§1.17);
+  - the app sets `entry` where the door is known: the link parser, the one install-referrer builder, the received
+    list.
+- A closed set, and absent when unknown (§1.7).
+
+A hash, a second name for the same value, or a new event were each rejected. Decision
+[0110](docs/decisions/0110-the-share-loop-events-name-their-link-and-their-door.md).
+
 ### 1.10 Layers
 
 `intent.screen` · `intent.action` · `response.outcome` · `response.gate` · `response.interruption` ·

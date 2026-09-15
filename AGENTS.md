@@ -366,6 +366,9 @@ the list is wrong, not the app.**
 - **G1 primary — proof an invoice is real:** **`invoice_shared_success`** (fires only on a **confirmed**
   share: the user picks a target app in the OS chooser, tagged `mode` + `target`; **live since 1.4.1**)
   and `payment_added`. `estimate_shared` is the estimate twin.
+  **`share_bottom_sheet_open`** (`mode`) is the chooser going up, before any pick. It was missing from
+  this list until 2026-09-15, while sending 471 rows in 7 days. The gap between it and
+  `invoice_shared_success` is the last drop before G1.
 - **Form-typing proxies:** `business_form_text_typed`, `client_form_text_add`, `item_form_text_add` —
   fired **once per form**, on the first non-blank keystroke in the *name* field. They prove the user
   started typing, **not** that the data was real. Plus `client_add_success` and `Item_added`.
@@ -419,9 +422,16 @@ the list is wrong, not the app.**
   [0062](docs/decisions/0062-a-request-whose-screen-closed-is-not-a-failed-open.md)). Builds up to
   1.4.5 still send `reason=exception_CancellationException`; exclude it, or split by version, in any
   ratio that spans builds.
+  **From 1.4.6, `entry` on all three open events** — `shared_invoice_opened`, `_opened_by_owner` and
+  `_open_failed` (decision
+  [0110](docs/decisions/0110-the-share-loop-events-name-their-link-and-their-door.md)).
+  - It says how the receiver got there. `link_tap` is an App Link or iOS universal link. `install_referrer`
+    means the invoice opened right after a Play install, from `iv_doc`. `received_list` is Tools → Received.
+  - When the door is not known, the key is absent, and absent is unknown.
+  - Rows up to 1.4.5 have no `entry`. Never read them as `link_tap`.
 - **Growth (G2), receiver side — on the web** *(`Webinvotick`, decision
-  [0045](docs/decisions/0045-the-share-link-page-reports-its-own-journey.md); **built, not
-  deployed**).* The `/i/{token}` page is the first non-app client in this pipeline. It posts to the
+  [0045](docs/decisions/0045-the-share-link-page-reports-its-own-journey.md); **live** — 105
+  `shared_invoice_page_view` in the 7 days to 2026-09-15. This line said "built, not deployed" until then).* The `/i/{token}` page is the first non-app client in this pipeline. It posts to the
   same `POST /v2/analytics/track` as `platform=Web`, through its own same-origin route
   (`src/app/api/analytics/track/route.ts`) which fixes the permitted names and parameter values,
   generates the event id, and stamps `surface` + `viewer_platform` server-side. Six names:
@@ -437,6 +447,13 @@ the list is wrong, not the app.**
   (`android|ios|desktop`, from the User-Agent — deliberately **not** named `platform`, which is
   already the batch-level `Android|iOS|Web` code space). The app sends no `surface`, so that facet
   reads `web_share_link` against **NULL = unknown, not app** (§1.7).
+  **`iv_doc` on every web event, from the web deploy after 2026-09-15** (decision 0110; branch
+  `feat/web-share-events-carry-link`, **not deployed**).
+  - It is the page's share token, stamped by the route from the request's `Referer`, never from the body.
+  - It has the same name and value as `install_referrer.iv_doc`, so a view, a Play press and an install join to
+    `shared_invoice.token` in one expression.
+  - It is an id: a join key, never a breakdown (§1.18).
+  - With no `Referer`, the key is absent.
   ⚠️ **Backend deploys first.** `AnalyticsVersionGate` refused any batch with a null
   `appVersionCode`, which is every web batch — 200 OK, zero stored. It now exempts `Platform.Web`.
   Ship the web against the old gate and the funnel reads as a step nobody reached.
