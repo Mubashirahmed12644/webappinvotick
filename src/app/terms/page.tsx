@@ -242,6 +242,16 @@ const sections: LegalSection[] = [
     ),
   },
   {
+    id: "governing-law",
+    heading: "Governing law",
+    body: (
+      <p>
+        These Terms are governed by the laws of the State of Wyoming, USA, without regard to its conflict-of-law rules.
+        This does not take away any protection you have under the mandatory consumer laws of the country where you live.
+      </p>
+    ),
+  },
+  {
     id: "changes-terms",
     heading: "Changes to these terms",
     body: (
