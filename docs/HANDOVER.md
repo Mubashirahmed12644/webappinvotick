@@ -63,6 +63,18 @@ to them are **git worktrees** of those repos, one per feature branch.
 
 ## 4. IN FLIGHT — pick these up
 
+### 4.0 URGENT — 1.4.6 (105) crash, fixed in code, bundle 106 NOT built yet
+Crashlytics issue `ca8fc4bd1ae075e822e109d87f3f3c28`: NullPointerException in
+`InvoiceListViewModel.calculateSummary` (the Invoices list). Cause: `1318ceae` (09-14, money screens 0081/0082)
+declared `buildSummaryRates` below `init`; `init` starts the list collector at once, so it read the property
+while still null. Retraced with 105's own mapping (inside the AAB: `BUNDLE-METADATA/.../proguard.map`,
+pg_map_id `a4c6522f…`). **Fix pushed on `VC_102_VN_146` @ `b7a02325`** (property moved above `init`) with the guard test
+`data/src/androidUnitTest/.../ViewModelsDeclarePropertiesBeforeInitTest.kt` (red at `d607e05e`, green after;
+28 older cases grandfathered — a chip exists to audit them). **The owner said "Abhi nahi" to building 106 (2026-09-16)** —
+do not build it until he asks. When he does: versionCode 105 → **106** (name stays 1.4.6), clean release bundle
+(script pattern: `~/Documents/invotick-ops-scripts/android-146-105-release.sh`), and suggest pausing 105's rollout in
+Play Console until 106 is up. Any later bundle from `VC_102_VN_146` carries the fix automatically.
+
 ### 4.1 batch24 — account-deletion migration, ALONE — ✅ DONE
 Owner's go 2026-09-15. Pipeline `2850548471` success (test 1196 s, docker 474 s, deploy 93 s); app `c2896472`
 healthy from 12:21:06 UTC. Proof read at 12:22 UTC: Flyway `20260915.01 users closed at` success in 8,685 ms;
