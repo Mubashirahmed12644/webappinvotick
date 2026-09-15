@@ -442,7 +442,14 @@ the list is wrong, not the app.**
   the app already owns, fired at the app's own moments: `shared_invoice_approved` /
   `shared_invoice_rejected` on the backend's confirmation, `shared_invoice_decision_failed`
   (`decision`, `http_status`) and `shared_invoice_create_own_click` (`destination` =
-  `play_store|web_app`) on the click.
+  `play_store|app_store|web_app`) on the click.
+  **`app_store`** exists from the iOS release (decision 0110 addendum; branch `feat/web-share-events-carry-link`,
+  **not deployed**, and it must wait for the App Store listing).
+  - An iPhone's own-app button goes to `apps.apple.com/app/id6757918977`.
+  - "Download PDF" stays `print_dialog` on iOS.
+  - Safari's Smart App Banner (Open/Get) is not in our events.
+  - iOS has no install referrer: after an App Store install the receiver taps the link again. That open is
+    `entry=link_tap`.
   Every web event carries **`surface=web_share_link`** and **`viewer_platform`**
   (`android|ios|desktop`, from the User-Agent — deliberately **not** named `platform`, which is
   already the batch-level `Android|iOS|Web` code space). The app sends no `surface`, so that facet

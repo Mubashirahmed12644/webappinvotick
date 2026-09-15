@@ -106,3 +106,45 @@ changed.
   `with_doc` near `n`, and `joins` equal to `with_doc`, prove it arrives and joins.
 - **Proof after 1.4.6 spreads:** group `shared_invoice_opened` / `_open_failed` on versionCode ≥ 105 by
   `params->>'$.entry'`. `install_referrer` should roughly match the shared-invoice installs of the same window.
+
+## Addendum — the share page sends iPhones to the App Store (2026-09-15)
+
+- **Decided by the owner** on 2026-09-15: "aaj ios ki app release kerni hy to isko set kerdo usky hisab sy".
+  - It is built on the same web branch, so it ships in one web deploy.
+  - **It must not go live before the App Store listing does.** On 2026-09-15 `itunes.apple.com/lookup?id=6757918977`
+    still answered `resultCount: 0`.
+- **What changes, for iPhone viewers only** (`viewer_platform=ios`). Android and desktop are unchanged.
+  - **The own-app button** was "Create yours — free" (web app). It becomes **"Get it on the App Store"**, linking to
+    `https://apps.apple.com/app/id6757918977`.
+    - `6757918977` is the Apple ID of "Invoice Maker by Invotick", from Xcode's distribution logs. Nothing in the
+      repos contradicts it.
+    - Its tap is `shared_invoice_create_own_click` with **`destination=app_store`**, a new value in the route's
+      closed set. There is no new event name (§1.1).
+  - **"Download PDF" stays the print dialog.** `app_store` is refused on `shared_invoice_pdf_click`: the PDF must
+    not cost an install.
+  - **One line under the buttons**, on a live document only:
+    - it says "After installing, tap the link in your chat again to open this invoice in the app";
+    - it keeps "Or create one on the web" as a text link (`destination=web_app`).
+  - **Safari's Smart App Banner** (Next `itunes` metadata, `app-argument` = this `/i/{token}` address).
+    - It shows "Open" when the app is installed and "Get" when it is not.
+    - Safari owns that tap, so it is **not in our events**.
+  - **A dead link still sends every device, the iPhone included, to the web app.**
+- **iOS has no install referrer.**
+  - After an App Store install **the invoice does not open by itself**, as it does on Android through `iv_doc`.
+  - **The receiver taps the link in their chat again.** It is a universal link (`/i/*` in the AASA), so it opens the
+    app on that invoice. The app then records `shared_invoice_opened` with `entry=link_tap`, because on iOS an
+    install-referred open cannot exist.
+  - So an iPhone install is joined to its link only by that second tap. There is no `install_referrer` row on iOS.
+- **Rejected:**
+  - **An "Open in the app" button** (for example `destination=open_in_app`).
+    - iOS does not open the app for a universal link to the same domain as the page it was tapped on, so a button
+      to `/i/{token}` reloads the page in Safari.
+    - A custom-scheme link shows Safari's "address is invalid" alert when the app is missing (G3).
+    - A phone that has the app rarely sees this page at all: the link in the chat opens the app directly.
+    - The Smart App Banner covers that case natively.
+  - **Fingerprinting** (matching IP and device between the page visit and the first open to fake a referrer). The
+    owner ruled it out. It is also a guess stored as a fact (§1.7).
+  - **Dropping the web-app route on iPhone.** The owner said to keep it, so it stays as a text link.
+  - **Routing "Download PDF" to the App Store on iPhone.** The document would not open after install.
+- **iPads read as `desktop`** (iPadOS sends a Mac User-Agent, `platform.ts`), so they keep the web app and the QR.
+  That is a known limit, left alone.
