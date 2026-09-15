@@ -7,8 +7,10 @@ import { trackWebEvent } from "@/lib/analytics/client";
  *
  * Two behaviours behind one promise (decision 0017): on Android it sends the receiver to the app,
  * because a person holding the product and wanting something from it is the best moment in the
- * growth loop; everywhere else it produces the PDF in the browser, because there is no iOS app to
- * install and a desktop has nowhere to be sent.
+ * growth loop; everywhere else it produces the PDF in the browser. On an iPhone that stays true
+ * after the iOS release (decision 0110 addendum). The App Store route belongs to the own-app button,
+ * and the PDF must not cost an install on iOS, where the document would not open by itself
+ * afterwards. A desktop has nowhere to be sent.
  *
  * The card and the page description say "download the PDF" without listing the steps, and that stays
  * true either way: the receiver does get a PDF. Only the route differs.

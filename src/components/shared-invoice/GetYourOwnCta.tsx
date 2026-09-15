@@ -2,14 +2,19 @@
 
 import Link from "next/link";
 import { trackWebEvent } from "@/lib/analytics/client";
+import { ownCta } from "@/lib/shared-invoice-cta";
 
 /**
- * The receiver → sender CTA: one slot on the page, one intent ("get your own Invotick"), two routes.
+ * The receiver → sender CTA: one slot on the page, one intent ("get your own Invotick"), three routes.
  *
- * Android goes to the Play Store carrying the share token in the install referrer, so the app can
- * open THIS document after install. Everyone else goes to the web tool, because there is no iOS app
- * on the App Store to send them to (checked 2026-09-09: `itunes.apple.com/lookup` returns nothing
- * for `invotick.invoicemaker`) and a desktop has nowhere to be sent.
+ * - **Android** goes to the Play Store carrying the share token in the install referrer, so the app
+ *   can open THIS document after install.
+ * - **iPhone** goes to the App Store listing, from the iOS release on 2026-09-15 (decision 0110
+ *   addendum). iOS has no install referrer, so the document does not open by itself after install.
+ *   [IosAfterInstallNote] tells the receiver to tap the link again.
+ * - **Desktop**, and every device on a dead link, goes to the web tool.
+ *
+ * Which route is which lives in `shared-invoice-cta.ts`, where `npm test` pins it.
  *
  * **One event, `destination` as the parameter.** Splitting it into `install_click` and
  * `create_own_click` would put one funnel step under two names, and the first query that forgot one
@@ -40,27 +45,53 @@ export function GetYourOwnCta({
    */
   route?: "auto" | "web_app";
 }) {
-  if (platform === "android" && route === "auto") {
+  const cta = ownCta(platform, installUrl, route);
+
+  if (cta.destination === "web_app") {
     return (
-      <a
-        href={installUrl}
+      <Link
+        href={cta.href}
         className={className}
-        // Leaving for the Play Store cancels an in-flight request; `keepalive` in trackWebEvent is
-        // what keeps this one alive across the navigation.
-        onClick={() => trackWebEvent("shared_invoice_create_own_click", { destination: "play_store" })}
+        onClick={() => trackWebEvent("shared_invoice_create_own_click", { destination: "web_app" })}
       >
-        Install Invotick — free
-      </a>
+        {cta.label}
+      </Link>
     );
   }
 
   return (
-    <Link
-      href="/"
+    <a
+      href={cta.href}
       className={className}
-      onClick={() => trackWebEvent("shared_invoice_create_own_click", { destination: "web_app" })}
+      // Leaving for a store cancels an in-flight request; `keepalive` in trackWebEvent is what keeps
+      // this one alive across the navigation.
+      onClick={() => trackWebEvent("shared_invoice_create_own_click", { destination: cta.destination })}
     >
-      Create yours — free
-    </Link>
+      {cta.label}
+    </a>
+  );
+}
+
+/**
+ * One line under the iPhone buttons, only on a live document.
+ *
+ * - **"Tap the link again".** After an App Store install nothing brings the receiver back to this
+ *   invoice: iOS has no install referrer. The link in their chat does, because it is a universal
+ *   link. Without this line, the step that closes the loop is one nobody would guess.
+ * - **The web app stays**, as a text link rather than a second button. The web route an iPhone had
+ *   until today is kept, and one filled button remains the primary action.
+ */
+export function IosAfterInstallNote({ kind }: { kind: string }) {
+  return (
+    <p className="text-center text-xs text-neutral-500">
+      After installing, tap the link in your chat again to open this {kind.toLowerCase()} in the app.{" "}
+      <Link
+        href="/"
+        className="font-medium text-[#0D4DC0] underline"
+        onClick={() => trackWebEvent("shared_invoice_create_own_click", { destination: "web_app" })}
+      >
+        Or create one on the web
+      </Link>
+    </p>
   );
 }
