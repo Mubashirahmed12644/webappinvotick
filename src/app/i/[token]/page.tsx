@@ -11,8 +11,9 @@ import { SharedInvoiceViewer } from "@/components/shared-invoice/SharedInvoiceVi
 import { ViewBeacon } from "@/components/shared-invoice/ViewBeacon";
 import { SharedInvoicePageView } from "@/components/shared-invoice/SharedInvoicePageView";
 import { PdfButton } from "@/components/shared-invoice/PdfButton";
-import { GetYourOwnCta } from "@/components/shared-invoice/GetYourOwnCta";
+import { GetYourOwnCta, IosAfterInstallNote } from "@/components/shared-invoice/GetYourOwnCta";
 import { platformFromUserAgent, type ViewerPlatform } from "@/lib/analytics/platform";
+import { smartAppBanner } from "@/lib/shared-invoice-cta";
 
 const SITE = "https://www.invotick.com";
 
@@ -77,6 +78,9 @@ export async function generateMetadata({
     alternates: { canonical: `${SITE}/i/${token}` },
     openGraph: { type: "website", title, description, url: `${SITE}/i/${token}`, images: [ogImage] },
     twitter: { card: "summary_large_image", title, description, images: [ogImage.url] },
+    // Safari's own banner: "Open" puts this document in the app when it is installed, "Get" offers
+    // it otherwise. Not on the dead-link branch, where there is no document to open (0110 addendum).
+    itunes: smartAppBanner(token),
   };
 }
 
@@ -181,12 +185,13 @@ export default async function SharedInvoicePage({
         )}
 
         {/* Decision 0017: everyone is offered the PDF. Android reaches it through the app, which
-            is where the growth loop lives; iOS and desktop get it from the browser, because there is
-            no iOS app to install and a desktop has nowhere to be sent. */}
+            is where the growth loop lives; iOS and desktop get it from the browser. The own-app
+            button goes to Play on Android and to the App Store on an iPhone (0110 addendum). */}
         <div className="flex gap-2">
           <PdfButton platform={platform} installUrl={installUrl} kind={kind} />
           <GetYourOwnCta platform={platform} installUrl={installUrl} />
         </div>
+        {platform === "ios" && <IosAfterInstallNote kind={kind} />}
       </footer>
     </main>
   );

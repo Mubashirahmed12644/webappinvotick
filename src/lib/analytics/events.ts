@@ -61,7 +61,7 @@ export type LinkState = (typeof LINK_STATES)[number];
  * page holding one intent (get your own Invotick) down two routes, so they are one event with this
  * as the variation, not two names.
  */
-export const CTA_DESTINATIONS = ["play_store", "web_app", "print_dialog"] as const;
+export const CTA_DESTINATIONS = ["play_store", "app_store", "web_app", "print_dialog"] as const;
 export type CtaDestination = (typeof CTA_DESTINATIONS)[number];
 
 export const DECISIONS = ["APPROVED", "REJECTED"] as const;
@@ -101,8 +101,10 @@ const PARAM_SCHEMA: Record<WebEventName, Record<string, ParamRule>> = {
     // buckets for the same receiver-side outcome, and only this separates them.
     http_status: { kind: "http_status", required: false },
   },
+  // `app_store` from the iOS release (decision 0110 addendum). The PDF button has no App Store route:
+  // on an iPhone it stays the print dialog, so `app_store` is refused on `shared_invoice_pdf_click`.
   shared_invoice_create_own_click: {
-    destination: { kind: "enum", values: ["play_store", "web_app"], required: true },
+    destination: { kind: "enum", values: ["play_store", "app_store", "web_app"], required: true },
   },
   shared_invoice_pdf_click: {
     destination: { kind: "enum", values: ["play_store", "print_dialog"], required: true },
