@@ -73,7 +73,7 @@ export function LegalPage({
             {" · "}
             <Link href="/" className="font-semibold text-[var(--color-primary)] underline">Invotick home</Link>
           </p>
-          <p className="mt-2">© 2026 Invotick</p>
+          <p className="mt-2">© 2026 Flixotech LLC · Invotick</p>
         </footer>
       </main>
     </div>

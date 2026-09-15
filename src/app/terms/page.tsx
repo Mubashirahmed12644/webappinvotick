@@ -4,7 +4,7 @@ import { LegalPage, type LegalSection } from "@/components/legal/LegalPage";
 
 const SITE = "https://www.invotick.com";
 const EFFECTIVE = "15 September 2026";
-// TODO(owner): confirm this mailbox is real and read (same address as the Privacy Policy).
+// Confirmed by the owner on 2026-09-15 (same address as the Privacy Policy).
 const CONTACT = "support@invotick.com";
 
 const TITLE = "Terms of Use — Invotick";
@@ -39,8 +39,10 @@ const sections: LegalSection[] = [
     body: (
       <p>
         These terms apply when you use the Invotick app for Android or iPhone, the web app and free invoice tool at
-        www.invotick.com, or an invoice page we host (together, &quot;Invotick&quot;). By using Invotick you agree to
-        them. If you do not agree, please do not use Invotick. Our <Link href="/privacy-policy">Privacy Policy</Link>{" "}
+        www.invotick.com, or an invoice page we host (together, &quot;Invotick&quot;). Invotick is operated by Flixotech
+        LLC, a company in the United States (&quot;we&quot;, &quot;us&quot;), and these terms are an agreement between
+        you and Flixotech LLC. On Google Play, the Android app is published by Touchpedia LLC. By using Invotick you
+        agree to these terms. If you do not agree, please do not use Invotick. Our <Link href="/privacy-policy">Privacy Policy</Link>{" "}
         explains how we handle your information.
       </p>
     ),
@@ -205,7 +207,7 @@ const sections: LegalSection[] = [
     heading: "Our app and brand",
     body: (
       <p>
-        The Invotick apps, website, templates, design and name belong to us. You may use them to create and share your own
+        The Invotick apps, website, templates, design and name belong to Flixotech LLC. You may use them to create and share your own
         documents, but you may not copy or reuse them for any other purpose without our permission.
       </p>
     ),

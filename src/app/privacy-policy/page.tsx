@@ -13,7 +13,7 @@ import { LegalPage, LegalTable, type LegalSection } from "@/components/legal/Leg
 
 const SITE = "https://www.invotick.com";
 const EFFECTIVE = "15 September 2026";
-// TODO(owner): confirm this mailbox is real and read. It is the only way to reach us today.
+// Confirmed by the owner on 2026-09-15. It is the only way to reach us today, deletion included.
 const CONTACT = "support@invotick.com";
 
 const TITLE = "Privacy Policy — Invotick";
@@ -63,8 +63,10 @@ const sections: LegalSection[] = [
     body: (
       <>
         <p>
-          Invotick (&quot;Invotick&quot;, &quot;we&quot;, &quot;us&quot;) makes an invoicing and estimates app for small
-          businesses. This policy covers the Invotick app for Android, the Invotick app for iPhone, the web app and free
+          Invotick is an invoicing and estimates app for small businesses. Invotick is operated by{" "}
+          <strong>Flixotech LLC</strong>, a company in the United States (&quot;we&quot;, &quot;us&quot;), which is
+          responsible for your information under this policy. On Google Play, the Android app is published by Touchpedia
+          LLC. This policy covers the Invotick app for Android, the Invotick app for iPhone, the web app and free
           invoice tool at <Link href="/">www.invotick.com</Link>, and the invoice pages we host when you share an
           invoice link.
         </p>
