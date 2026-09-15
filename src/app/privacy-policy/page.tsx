@@ -271,7 +271,7 @@ const sections: LegalSection[] = [
             ["Google Play Billing / Apple App Store", "Taking payments for Premium", "Android / iPhone"],
             ["ip-api.com, ipinfo.io", "Estimating country and city from an IP address", "Our servers"],
             ["Google Drive", "Storing backup copies of our database", "Our servers"],
-            ["UXCam", "Screen and session analytics (how screens are used)", "Android 1.4.5 and earlier only; removed in 1.4.6"],
+            ["UXCam", "Usage analytics: how the app's screens are used", "Older Android versions only (1.4.5 and earlier); removed in 1.4.6"],
           ]}
         />
       </>
