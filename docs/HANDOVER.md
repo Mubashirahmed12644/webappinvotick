@@ -57,15 +57,17 @@ to them are **git worktrees** of those repos, one per feature branch.
 |---|---|
 | Android on Play | 1.4.5 (101) live; **1.4.6 (105)** bundle built — the owner was creating the production release (screenshot 2026-09-15). File: `~/Documents/invotick-releases/invotick-1.4.6-105-release.aab` (sha256 `002a7a9d…e2ae`), code `invoice-kmp-app` `VC_102_VN_146` @ `d607e05e`. 102/103/104 files are superseded — never upload them. |
 | iOS | TestFlight build 19 (1.4.6). **Not on the App Store yet** — first submission blocked by the audit (§5). Next build = **20**. |
-| Backend (`stage`) | `df6f6a1` (batch23: correct sync refusals log WARN) → **batch24 `c289647` running** (§4.1). |
+| Backend (`stage`) | **`c289647` (batch24, live 12:21 UTC 09-15)**: the account-deletion migration on top of batch23 `df6f6a1` (correct sync refusals log WARN). |
 | Grafana alerts | batch22 `6b623a2`: `or vector(0)`, `last_over_time` bridges, new "Log Pipeline Silent" rule; 18/18 Normal. |
 | Web (www.invotick.com) | `main` = `03a676f`: **/privacy-policy and /terms live** (Flixotech LLC, support@invotick.com, Wyoming law), `/privacy` → 308. |
 
 ## 4. IN FLIGHT — pick these up
 
-### 4.1 batch24 — account-deletion migration, ALONE (owner said yes)
-Pushed `c289647` to `stage` at 11:52 UTC 09-15, pipeline `2850548471`. The watcher died with the old session.
-Check it, read-only:
+### 4.1 batch24 — account-deletion migration, ALONE — ✅ DONE
+Owner's go 2026-09-15. Pipeline `2850548471` success (test 1196 s, docker 474 s, deploy 93 s); app `c2896472`
+healthy from 12:21:06 UTC. Proof read at 12:22 UTC: Flyway `20260915.01 users closed at` success in 8,685 ms;
+`users.closed_at datetime(6) NULL`; `idx_users_closed_at` and `idx_identity_claims_user_id` present; 0 closed
+accounts; 0 ERROR lines in 5 min. **Next: backend #1 `feat/account-deletion` (code).** To re-check any time, read-only:
 ```
 ssh -i ~/.ssh/invotick_ro -o BatchMode=yes root@82.112.253.168 "mysql -uroot -N -B invotick_prod -e \"SELECT version, success FROM flyway_schema_history WHERE version LIKE '20260915%'; SELECT index_name FROM information_schema.statistics WHERE table_schema='invotick_prod' AND index_name IN ('idx_users_closed_at','idx_identity_claims_user_id'); SELECT COUNT(*) FROM information_schema.columns WHERE table_schema='invotick_prod' AND table_name='users' AND column_name='closed_at';\""
 ```
