@@ -661,6 +661,11 @@ Memory is dated observation. Verify any file:line against the code before relyin
       - A new pass, or another account, lifts it.
     - **`e0e2de82`'s row was re-admitted 2026-09-14, after batch17** (the coordinator, exact filter, count 1).
       - At 10:10 UTC `revoked_at` was NULL.
+      - **Confirmed 22:05:39 UTC.** The phone called for the first time since 05:45. It got a new guest pass
+        (expiring 12-13), and its push (`6c1b62f1`) was answered 200. `last_seen_at` moved to 22:05:39. Since the
+        re-admit: 0 "Revoked device refused".
+      - Its waiting record was business `807fe1c7`, an UPDATE. The answer was SUCCESS, `written=false` ("copy changed
+        nothing, number kept", v4): the server already held that exact copy from 09-13 15:53. Nothing was lost.
       - The phone had not synced since.
     - Guards:
       - `APhoneCannotRemoveItselfTest`: 2 of 4 failed first.

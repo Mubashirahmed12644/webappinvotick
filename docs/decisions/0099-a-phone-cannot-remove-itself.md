@@ -9,6 +9,10 @@
   reads as admitted.
   - The phone's next sync should be accepted, and its waiting record should arrive.
   - The proof: its `last_seen_at` moves past 19:49:11, and the "Revoked device refused" lines stop.
+  - **Confirmed 2026-09-14 22:05:39 UTC.**
+    - The phone's push was answered 200, and `last_seen_at` moved. There were 0 removed-phone refusals after the
+      re-admit.
+    - Its waiting record (business `807fe1c7`) was already on the server as that exact copy, so nothing was lost.
 - **The app half** is being built for 1.4.6.
 
 **Related:**
