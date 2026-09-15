@@ -10,14 +10,14 @@
 ## Context (the owner's iPhone, TestFlight 1.4.6 (16))
 
 - **The ledger converted each client's own figures** into the summary currency.
-- **So "Apptrick", a PKR client with one Rs62,500 invoice, showed $225.53.** A person who invoiced Rs62,500 saw a
+- **So "Crescent Traders", a PKR client with one Rs62,500 invoice, showed $225.53.** A person who invoiced Rs62,500 saw a
   number they never wrote, and it moved with the day's rate.
 
 ## Decided
 
 - **Each client's line shows the client's own currency, exactly as invoiced.**
-  - Apptrick: Rs62,500.
-  - Apptrick $: $640,000.
+  - Crescent Traders: Rs62,500.
+  - Crescent Traders $: $640,000.
 - **Only the ledger's overview total converts,** into the chip's currency (0081) and marked "≈".
 - **If a client's invoices ever mix currencies** (legacy data), that one line converts into the chip's currency and
   carries "≈".
