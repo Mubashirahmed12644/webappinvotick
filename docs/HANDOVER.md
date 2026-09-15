@@ -30,7 +30,7 @@ against git / production before acting on any single line** (the project's first
 | Sync policy / billing policy (domain owners) | `.claude/agents/sync.md`, `.claude/agents/billing.md`, `.claude/agents/user-journey.md` |
 | Memory (incidents, dated state, standing rules) | `~/.claude/projects/-Users-ahmedmubashir-Documents-Webinvotick/memory/` — index `MEMORY.md` |
 | **The full backlog, newest first** | `memory/pending-work-queue.md` (top sections = 2026-09-14/15) |
-| Deploy scripts of this week | session scratchpad (gone after the session) — pattern: fast-forward push to `stage`, watch the pipeline by FULL sha, prove from inside the box |
+| Deploy/build scripts of this week | **`~/Documents/invotick-ops-scripts/`** (copied from the old session): `batchNN-deploy.sh` (pattern: fast-forward push to `stage`, `watch_pipeline` by FULL sha — defined in `batch12-deploy.sh` —, prove from inside the box), `android-146-10x-release.sh`, `ios-146-20-build-and-upload.sh` (build 20, ready, not run). Paths inside still say the old scratchpad `S=` — change `S` to this folder before running. They read the GitLab token from the memory file; no secrets inside. |
 
 Repos (all under `~/Documents`): `Webinvotick` (web + docs), `invoice-kmp-app` (Android/iOS app), `invotick-apis`
 (backend; branch `stage` IS production), `invotick-admin-panel`, `invotick-exchange`. Many `*-<topic>` folders next
