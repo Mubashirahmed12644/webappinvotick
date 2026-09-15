@@ -100,7 +100,11 @@ export default function LandingPage() {
         <p className="mx-auto mt-10 max-w-2xl text-center text-xs text-[var(--color-on-surface-variant)]">
           Your invoices are saved only in this browser — nothing is sent to our servers until you sign in
           to back them up. By using this tool you agree to our{" "}
-          <Link href="/privacy" className="font-semibold text-[var(--color-primary)] underline">
+          <Link href="/terms" className="font-semibold text-[var(--color-primary)] underline">
+            Terms of Use
+          </Link>{" "}
+          and{" "}
+          <Link href="/privacy-policy" className="font-semibold text-[var(--color-primary)] underline">
             Privacy Policy
           </Link>
           .

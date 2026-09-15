@@ -11,7 +11,10 @@ const AUTH_PATHS = ["/login", "/signup", "/forgot-password"];
 // "/.well-known/" = Android App Links assetlinks.json (must be publicly fetchable).
 // "/embed/" = headless invoice renderer loaded inside the app's WebView (and later the
 // single renderer for OG / shared-invoice) — the app WebView has no web session, so public.
-const PUBLIC_PREFIXES = ["/privacy", "/i/", "/.well-known/", "/embed/"];
+// "/privacy" (also matches "/privacy-policy") and "/terms" = the legal pages. The app stores and
+// the apps link to them, and a reviewer who meets a sign-in page there rejects the app; /terms
+// answered with /login?next=/terms until 2026-09-15.
+const PUBLIC_PREFIXES = ["/privacy", "/terms", "/i/", "/.well-known/", "/embed/"];
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;

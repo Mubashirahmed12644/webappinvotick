@@ -11,6 +11,19 @@ const nextConfig: NextConfig = {
   // page never hydrates (used by the native-vs-HTML parity harness). No production effect.
   allowedDevOrigins: ["192.168.18.68", "10.0.2.2", "localhost"],
 
+  async redirects() {
+    return [
+      {
+        // One address for the policy. /privacy-policy is what goes into the app stores and the apps;
+        // /privacy is where the old site linked, so it keeps working with a permanent (308) redirect
+        // instead of serving the same text twice under two addresses.
+        source: "/privacy",
+        destination: "/privacy-policy",
+        permanent: true,
+      },
+    ];
+  },
+
   async headers() {
     return [
       {

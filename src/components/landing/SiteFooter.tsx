@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-// Footer with internal links — feeds Google's crawl of /templates, /blog, /privacy.
+// Footer with internal links — feeds Google's crawl of /templates, /blog, /privacy-policy, /terms.
 export function SiteFooter() {
   return (
     <footer className="mt-16 border-t border-[var(--color-outline-variant)] bg-[var(--color-surface)]">
@@ -21,7 +21,8 @@ export function SiteFooter() {
             <div className="flex flex-col gap-2">
               <p className="text-xs font-bold uppercase tracking-wide text-[var(--color-on-surface-variant)]">Resources</p>
               <Link href="/blog" className="text-sm text-[var(--color-on-surface)] hover:text-[var(--color-primary)]">Blog</Link>
-              <Link href="/privacy" className="text-sm text-[var(--color-on-surface)] hover:text-[var(--color-primary)]">Privacy Policy</Link>
+              <Link href="/privacy-policy" className="text-sm text-[var(--color-on-surface)] hover:text-[var(--color-primary)]">Privacy Policy</Link>
+              <Link href="/terms" className="text-sm text-[var(--color-on-surface)] hover:text-[var(--color-primary)]">Terms of Use</Link>
             </div>
           </nav>
         </div>
