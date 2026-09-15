@@ -39,7 +39,9 @@ Answer the owner in **Roman Urdu and plain words** (`AGENTS.md` §7.4).
    - 0047 — Play's answer decides premium on a device;
    - 0048 — the paywall says what Google charges; how refusals, tokens and restore answers work; the
      defer endpoint;
-   - 0049 — the app-open request, and which side waits for Play.
+   - 0049 — the app-open request, and which side waits for Play;
+   - 0112 — the iPhone buys through the App Store by Android's rules; the server checks Apple's signature
+     (rule 10).
 2. Memory (`~/.claude/projects/-Users-ahmedmubashir-Documents-Webinvotick/memory/`):
    - `first-premium-user-2026-09-10.md`;
    - `play-console-target-api-billing.md`;
@@ -60,6 +62,10 @@ Memory is dated observation. Verify any file:line against the code before relyin
   - `life_time_purchase`.
 
   **Keep one active base plan per product**: the app buys the offer with the cheapest first phase.
+- **App Store Connect** (0112; the owner creates them): the same three ids.
+  - `yearly_subscription` and `monthly_subscription` are auto-renewable, in one subscription group.
+  - `life_time_purchase` is non-consumable.
+  - No introductory offer or trial (known gap #6).
 - **App** (`~/Documents/invoice-kmp-app`):
   - `core/premium` — `BillingRepositoryImpl`, Android only (`androidMain`): `chosenOffer`,
     restore, `handlePurchase`;
@@ -75,7 +81,14 @@ Memory is dated observation. Verify any file:line against the code before relyin
     `account_premium_answered_at`. Remote Config switch `account_premium_enabled`;
   - the paywall in `feature/premium`: `PremiumPaywallSheet`, and `PlanPeriod.kt`
     (`planPeriodText`, `yearlySavingsLabel`);
-  - iOS runs `NoOpBillingRepository` (`domain`) until StoreKit exists.
+  - **iOS: `AppStoreBillingRepository`** (`core/premium` commonMain, tested on the JVM; 0112).
+    - Its `AppStorePort` is StoreKit 2 behind the Swift bridge: `composeApp` iosMain `platform/StoreKitBridge.kt`
+      and `iosApp/iosApp/StoreKitBridge.swift`.
+    - The AppDelegate registers the bridge; `IosBilling.start()` in `MainViewController` starts billing.
+    - Its own `ServerPurchaseVerification(store = "APPLE_APP_STORE")`.
+    - `productsUnavailable` and `reloadProducts()` on `BillingRepository` give the paywall its retry line.
+      Android's Play client never sets them.
+    - `NoOpBillingRepository` remains only for desktop.
 - **Backend** (`~/Documents/invotick-apis`, `dev.backend.infotick`):
   - `PlayPurchaseVerifier` — `baseOrderId`; 400/404/410 means Google refused, anything else is not
     definitive;
@@ -86,6 +99,13 @@ Memory is dated observation. Verify any file:line against the code before relyin
   - `PlaySubscriptionAdmin` — `orders.get`, `subscriptionsv2`, defer;
   - `BillingAdminController` — `POST /v2/admin/billing/subscriptions/defer`, ADMIN only;
   - `PlayNotificationController` — real-time notifications;
+  - **App Store** (0112):
+    - `AppleJwsVerifier` checks the JWS chain up to the bundled Apple Root CA - G3, pinned by SHA-256.
+    - `AppStoreVerifier` handles the signed transaction, `checkNow`, and notifications.
+    - `AppStoreServerApi` is optional. It needs `APPLE_ISSUER_ID`, `APPLE_KEY_ID` and `APPLE_PRIVATE_KEY`;
+      unset means Apple is not asked, never a no.
+    - `AppleNotificationController`: `POST /v1/billing/apple/notifications`, public and signature-verified.
+    - Register and restore take `store`; absent means Google Play.
   - `BillingIntegrityCheck`;
   - `RetiredPlanRenewalCheck` — WARNING from 45 days before a retired-plan charge; CRITICAL, with a
     page, from 7;
@@ -110,6 +130,10 @@ Memory is dated observation. Verify any file:line against the code before relyin
      body that does not parse. Premium then stands on Play's word.
    - A final refusal takes back only a grant that was never confirmed, and a confirmed grant is never
      marked unconfirmed again (0070).
+   - **For the App Store** (0112), Apple's refusal is Apple's signed word or Apple's server's 400/404. The
+     signed word says refunded, revoked, expired, or another app's bundle.
+     - A message whose signature does not check out as Apple's is "could not ask", never a refusal.
+     - So is our key refused, Apple busy, or no answer.
 4. **Never register a restore that got no answer** — doing so moves the entitlement to whoever sent
    it. Store every restore answer.
 5. **A renewal changes the order id** (`…..0`, `…..1`). Key a purchase by `baseOrderId` and the
@@ -144,6 +168,35 @@ Memory is dated observation. Verify any file:line against the code before relyin
      first, and Google unreachable is a 503 `UNVERIFIED` (for a live row, a day instead).
    - Kill switch `account_premium_enabled` (default on). Off: nothing is asked, and a stored grant does not
      count.
+10. **An iPhone buys through the App Store by these same rules** (0112; the owner, 2026-09-15: *"kia premium
+    abhi nhi bana sakty ager haan to wo bana do"*).
+    - **Rules 1, 3 and 4 hold as on Android.** StoreKit's word decides premium on the iPhone. Every launch asks
+      the server who owns a purchase before registering it. `Transaction.updates` is never registered on its own.
+    - **A transaction is finished once handled.** Restore Purchases calls `AppStore.sync()`; a launch never does.
+    - **The server checks Apple's signature**, pinned to Apple Root CA - G3. There is no shared secret and no
+      `verifyReceipt`.
+    - **Same tables:**
+      - `provider = APPLE_APP_STORE`;
+      - `provider_purchase_id` = the original transaction id (rule 5's equivalent);
+      - `purchase_token` = the latest transaction id.
+    - **Sandbox is accepted,** because App Review buys there.
+    - **Apple's refund window is 14 days** (rule 9). Without the App Store Connect key, other devices hold an
+      App Store purchase a day at a time, and renewals and refunds arrive only by notification.
+    - **The paywall never dead-ends:** no plans means a retry line, never "Checking plans…" for ever.
+    - **The deploy order is server first.** A server without 0112 reads an iPhone's purchase as "could not ask".
+
+11. **A deleted account's premium is left alone while it is closed, and its grant goes with the erase** (0111; the
+    owner, 2026-09-15: *"Band foran, mitao 30 din baad"*).
+    - Closing never touches Google or Apple. The server answers `storeSubscriptionActive`, and the app tells the buyer to
+      cancel in the store.
+    - While closed, nobody holds a pass to the account, so no device reads its grant. A restore within 30 days brings it
+      back untouched.
+    - The erase (30 days on, switch off by default) deletes `entitlement` (the account's grant) and the
+      `purchase_restore_answer` rows it asked.
+    - `purchase_identity` and `entitlement_binding_log` stay, so the buyer can restore the purchase onto a new account.
+    - During the 30 days, a restore from another account answers `BELONGS_TO_ANOTHER_ACCOUNT`, naming the closed
+      account's Invotick ID.
+    - Backend `feat/account-deletion`; not deployed.
 
 ## Known gaps (2026-09-12, found while checking 1.4.5)
 
@@ -249,6 +302,14 @@ Memory is dated observation. Verify any file:line against the code before relyin
     setup → Real-time developer notifications is the owner's to check).
     - Without them, the server's copy of a renewal date moves only on the buying phone's launch restore,
       or when a device asks after the date has passed (then the server asks Google). Built into 0041.
+11. **The App Store cannot sell yet** (0112, 2026-09-15). The code is built on `feat/146-ios-storekit` (app) and
+    `feat/apple-purchases` (server); it is not merged or deployed. Still open:
+    - the App Store Connect products, the Paid Apps agreement, and the notification URL (the owner's);
+    - the optional In-App Purchase key, which goes in `.env.prod`;
+    - the paywall's "Terms & Conditions" link opened the privacy policy. Guideline 3.1.2 needs a Terms of Use.
+      `fix/146-app-store-review` (`05a8ee78`) points it at `LegalLinks.TERMS`, which must be a real Terms of
+      Use;
+    - prices on a device, which can be seen only in Sandbox or TestFlight (rule 7's equivalent).
 
 ## How you get at the data (read-only)
 

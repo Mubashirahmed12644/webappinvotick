@@ -772,6 +772,17 @@ Memory is dated observation. Verify any file:line against the code before relyin
     - Rejected: a nullable client on the server (the owner said no).
     - Guard: `ADraftWithNoClientStaysOnThePhoneTest`.
 
+32. **A deleted account syncs nothing, and its phone keeps nothing** (0111; the owner, 2026-09-15).
+    - The account's UserDetails are disabled, so the filter refuses every pass of it with 401 "This account was
+      deleted.", a drain pass too. Its listed sessions are revoked at closing.
+    - After the server's yes, the phone signs out and erases its copy through `AccountPurgeRepository.purge`,
+      unconditionally, not `purgeOrDefer` (0013). Unsent rows cannot reach a closed account, and a restore brings back
+      the server's copy.
+    - The erase after 30 days goes children before parents over the 21 synced tables.
+      - A row another account points at is held, never forced.
+      - A test fails on any account-naming column that is neither erased nor listed as kept.
+    - Backend `feat/account-deletion`; app `feat/146-delete-account`; neither deployed.
+
 ## Established 2026-09-12, while planning the receipt number
 
 The plan is `docs/SYNC-RECEIPT-NUMBER-PLAN.md`. Each line says how it is known.
