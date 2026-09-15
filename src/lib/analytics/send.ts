@@ -45,6 +45,8 @@ export async function sendWebAnalyticsEvent(args: {
   viewerPlatform: ViewerPlatform;
   /** ISO country from the edge, when the platform gives us one. Absent = unknown. */
   country?: string | null;
+  /** The share token of the page that sent it, as `iv_doc` (see `share-link.ts`). Absent = unknown. */
+  shareToken?: string | null;
 }): Promise<{ delivered: boolean; status: number | null }> {
   const body = {
     appInstanceId: `web_${args.sessionId}`,
@@ -59,6 +61,7 @@ export async function sendWebAnalyticsEvent(args: {
           ...args.params,
           surface: WEB_SURFACE,
           viewer_platform: args.viewerPlatform,
+          ...(args.shareToken ? { iv_doc: args.shareToken } : {}),
         },
       },
     ],
