@@ -4,6 +4,9 @@
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
 <!-- END:nextjs-agent-rules -->
 
+> **Handover (2026-09-15):** work continues from another Claude account on this Mac. Before anything else, read
+> [`docs/HANDOVER.md`](docs/HANDOVER.md) — live state, in-flight branches, deploy order, the owner's open actions.
+
 ---
 
 # Invotick — project constitution
