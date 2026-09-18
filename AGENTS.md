@@ -136,7 +136,7 @@ Rules:
   only locally, if at all. Do not describe a feature branch as "green" on CI's authority.
 - Flyway migrations have **no rollback**. Ship SQL and code separately (see `memory/deploy-safety-schema-changes.md`).
 - If a repo is not checked out locally, say so instead of guessing at its code.
-- **Worktrees live ONLY in `~/Documents/Invotick-worktrees/`** (`<repo>-<topic>`), never in `~/Documents` itself,
+- **Worktrees live ONLY in `~/Documents/Invotick-kaam/worktrees/`** (`<repo>-<topic>`), never in `~/Documents` itself,
   and are removed (`git worktree remove`) once their branch is pushed. *Owner, 2026-09-18:* 35 of them had piled
   up next to the repos. **Open Claude in `~/Documents/Webinvotick`** — a session opened in `~/Documents` never
   loads this file or the memory.

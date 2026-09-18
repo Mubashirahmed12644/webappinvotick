@@ -30,11 +30,13 @@ against git / production before acting on any single line** (the project's first
 | Sync policy / billing policy (domain owners) | `.claude/agents/sync.md`, `.claude/agents/billing.md`, `.claude/agents/user-journey.md` |
 | Memory (incidents, dated state, standing rules) | `~/.claude/projects/-Users-ahmedmubashir-Documents-Webinvotick/memory/` — index `MEMORY.md` |
 | **The full backlog, newest first** | `memory/pending-work-queue.md` (top sections = 2026-09-14/15) |
-| Deploy/build scripts of this week | **`~/Documents/invotick-ops-scripts/`** (copied from the old session): `batchNN-deploy.sh` (pattern: fast-forward push to `stage`, `watch_pipeline` by FULL sha — defined in `batch12-deploy.sh` —, prove from inside the box), `android-146-10x-release.sh`, `ios-146-20-build-and-upload.sh` (build 20, ready, not run). Paths inside still say the old scratchpad `S=` — change `S` to this folder before running. They read the GitLab token from the memory file; no secrets inside. |
+| Deploy/build scripts of this week | **`~/Documents/Invotick-kaam/ops-scripts/`** (copied from the old session): `batchNN-deploy.sh` (pattern: fast-forward push to `stage`, `watch_pipeline` by FULL sha — defined in `batch12-deploy.sh` —, prove from inside the box), `android-146-10x-release.sh`, `ios-146-20-build-and-upload.sh` (build 20, ready, not run). Paths inside still say the old scratchpad `S=` — change `S` to this folder before running. They read the GitLab token from the memory file; no secrets inside. |
 
 Repos (all under `~/Documents`): `Webinvotick` (web + docs), `invoice-kmp-app` (Android/iOS app), `invotick-apis`
-(backend; branch `stage` IS production), `invotick-admin-panel`, `invotick-exchange`. Many `*-<topic>` folders next
-to them are **git worktrees** of those repos, one per feature branch.
+(backend; branch `stage` IS production), `invotick-admin-panel`, `invotick-exchange`. Everything else lives in
+**`~/Documents/Invotick-kaam/`** (see its README): `releases/`, `ops-scripts/`, and `worktrees/` — the only place a
+worktree may be created. On 2026-09-18 the 34 old worktrees next to the repos were removed after every branch was
+pushed; the branches below are all on GitLab, so re-create a worktree from the remote branch when you need one.
 
 ## 2. Standing rules that bite (full list: MEMORY.md "Standing rules")
 
@@ -55,7 +57,7 @@ to them are **git worktrees** of those repos, one per feature branch.
 
 | Piece | State |
 |---|---|
-| Android on Play | 1.4.5 (101) live; **1.4.6 (105)** bundle built — the owner was creating the production release (screenshot 2026-09-15). File: `~/Documents/invotick-releases/invotick-1.4.6-105-release.aab` (sha256 `002a7a9d…e2ae`), code `invoice-kmp-app` `VC_102_VN_146` @ `d607e05e`. 102/103/104 files are superseded — never upload them. |
+| Android on Play | 1.4.5 (101) live; **1.4.6 (105)** bundle built — the owner was creating the production release (screenshot 2026-09-15). File: `~/Documents/Invotick-kaam/releases/invotick-1.4.6-105-release.aab` (sha256 `002a7a9d…e2ae`), code `invoice-kmp-app` `VC_102_VN_146` @ `d607e05e`. 102/103/104 files are superseded — never upload them. |
 | iOS | TestFlight build 19 (1.4.6). **Not on the App Store yet** — first submission blocked by the audit (§5). Next build = **20**. |
 | Backend (`stage`) | **`c289647` (batch24, live 12:21 UTC 09-15)**: the account-deletion migration on top of batch23 `df6f6a1` (correct sync refusals log WARN). |
 | Grafana alerts | batch22 `6b623a2`: `or vector(0)`, `last_over_time` bridges, new "Log Pipeline Silent" rule; 18/18 Normal. |
@@ -72,7 +74,7 @@ pg_map_id `a4c6522f…`). **Fix pushed on `VC_102_VN_146` @ `b7a02325`** (proper
 `data/src/androidUnitTest/.../ViewModelsDeclarePropertiesBeforeInitTest.kt` (red at `d607e05e`, green after;
 28 older cases grandfathered — a chip exists to audit them). **The owner said "Abhi nahi" to building 106 (2026-09-16)** —
 do not build it until he asks. When he does: versionCode 105 → **106** (name stays 1.4.6), clean release bundle
-(script pattern: `~/Documents/invotick-ops-scripts/android-146-105-release.sh`), and suggest pausing 105's rollout in
+(script pattern: `~/Documents/Invotick-kaam/ops-scripts/android-146-105-release.sh`), and suggest pausing 105's rollout in
 Play Console until 106 is up. Any later bundle from `VC_102_VN_146` carries the fix automatically.
 
 ### 4.1 batch24 — account-deletion migration, ALONE — ✅ DONE
