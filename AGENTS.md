@@ -106,11 +106,11 @@ The authoritative source is **GitLab**, group `invotick`. GitHub copies are clon
 
 | Piece | Repo (authoritative remote) | Local checkout | Deploy |
 |---|---|---|---|
-| **Web app** (this repo) | GitLab `invotick/ivotickwebapp` | `~/Documents/Webinvotick` | Vercel on push to `main` |
-| **Mobile app** (Kotlin Multiplatform) | GitLab `invotick/invoice-kmp-app` | `~/Documents/invoice-kmp-app` | Play Store |
-| **Backend** (Spring Boot) + admin API | GitLab `invotick/invotick-apis` | `~/Documents/invotick-apis` (default branch `stage`) | Docker → Hostinger VPS `:8085` |
-| **Admin panel** (Next.js) | GitHub `Mubashirahmed12644/invotick-admin-panel` | `~/Documents/invotick-admin-panel` | Vercel → `admin.invotick.com` |
-| **Exchange rates** (Spring/Kotlin) | GitLab `invotick/exchange-rate-service` | `~/Documents/invotick-exchange` | Docker on the same VPS |
+| **Web app** (this repo) | GitLab `invotick/ivotickwebapp` | `~/Documents/Invotick/Webinvotick` | Vercel on push to `main` |
+| **Mobile app** (Kotlin Multiplatform) | GitLab `invotick/invoice-kmp-app` | `~/Documents/Invotick/invoice-kmp-app` | Play Store |
+| **Backend** (Spring Boot) + admin API | GitLab `invotick/invotick-apis` | `~/Documents/Invotick/invotick-apis` (default branch `stage`) | Docker → Hostinger VPS `:8085` |
+| **Admin panel** (Next.js) | GitHub `Mubashirahmed12644/invotick-admin-panel` | `~/Documents/Invotick/invotick-admin-panel` | Vercel → `admin.invotick.com` |
+| **Exchange rates** (Spring/Kotlin) | GitLab `invotick/exchange-rate-service` | `~/Documents/Invotick/invotick-exchange` | Docker on the same VPS |
 
 ⚠️ **Decoy — do not touch:** `~/Documents/invotickapis` is a stale GitHub clone
 (`Touchpedia/invotickapis`, one "Initial commit"). The real backend is `invotick-apis`.
@@ -136,9 +136,9 @@ Rules:
   only locally, if at all. Do not describe a feature branch as "green" on CI's authority.
 - Flyway migrations have **no rollback**. Ship SQL and code separately (see `memory/deploy-safety-schema-changes.md`).
 - If a repo is not checked out locally, say so instead of guessing at its code.
-- **Worktrees live ONLY in `~/Documents/Invotick-kaam/worktrees/`** (`<repo>-<topic>`), never in `~/Documents` itself,
+- **Worktrees live ONLY in `~/Documents/Invotick/kaam/worktrees/`** (`<repo>-<topic>`), never in `~/Documents` itself,
   and are removed (`git worktree remove`) once their branch is pushed. *Owner, 2026-09-18:* 35 of them had piled
-  up next to the repos. **Open Claude in `~/Documents/Webinvotick`** — a session opened in `~/Documents` never
+  up next to the repos. **Open Claude in `~/Documents/Invotick/Webinvotick`** — a session opened in `~/Documents` never
   loads this file or the memory.
 
 ## 3. North star (the direction every decision must serve)
@@ -633,7 +633,7 @@ name `invoice_shared` on pre-release branches.
 - `AGENTS-EVENTS.md` — **event management constitution**: the rules, the incidents behind them, the
   verification standard, and the open suggestions. Read before adding, renaming or removing an event.
 - `docs/decisions/` — decision log (what was decided, why, what was rejected). **Read the index before planning.**
-- `~/.claude/projects/-Users-ahmedmubashir-Documents-Webinvotick/memory/` — per-topic memory files, indexed by `MEMORY.md`.
+- `~/.claude/projects/-Users-ahmedmubashir-Documents-Invotick-Webinvotick/memory/` — per-topic memory files, indexed by `MEMORY.md`.
 - `docs/MOBILE-APP-REQUIREMENTS.md`, `docs/SERVER-SIDE-CHANGES.md` — cross-repo contracts (this repo).
 - `invoice-kmp-app/PROJECT_RULES.md` — change rules + pre-push gates. The backend equivalent is
   `invotick-apis/CLAUDE.md` (there is no `invotick-apis/PROJECT_RULES.md`); it also holds the deploy rules.

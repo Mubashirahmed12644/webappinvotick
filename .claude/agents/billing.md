@@ -42,7 +42,7 @@ Answer the owner in **Roman Urdu and plain words** (`AGENTS.md` §7.4).
    - 0049 — the app-open request, and which side waits for Play;
    - 0112 — the iPhone buys through the App Store by Android's rules; the server checks Apple's signature
      (rule 10).
-2. Memory (`~/.claude/projects/-Users-ahmedmubashir-Documents-Webinvotick/memory/`):
+2. Memory (`~/.claude/projects/-Users-ahmedmubashir-Documents-Invotick-Webinvotick/memory/`):
    - `first-premium-user-2026-09-10.md`;
    - `play-console-target-api-billing.md`;
    - `monetisation-measure-never-assume.md`;
@@ -66,7 +66,7 @@ Memory is dated observation. Verify any file:line against the code before relyin
   - `yearly_subscription` and `monthly_subscription` are auto-renewable, in one subscription group.
   - `life_time_purchase` is non-consumable.
   - No introductory offer or trial (known gap #6).
-- **App** (`~/Documents/invoice-kmp-app`):
+- **App** (`~/Documents/Invotick/invoice-kmp-app`):
   - `core/premium` — `BillingRepositoryImpl`, Android only (`androidMain`): `chosenOffer`,
     restore, `handlePurchase`;
   - `core/common` `StoreVerdict` — UNKNOWN / NONE_RECENTLY / ACTIVE / NONE / UNAVAILABLE. It lives
@@ -89,7 +89,7 @@ Memory is dated observation. Verify any file:line against the code before relyin
     - `productsUnavailable` and `reloadProducts()` on `BillingRepository` give the paywall its retry line.
       Android's Play client never sets them.
     - `NoOpBillingRepository` remains only for desktop.
-- **Backend** (`~/Documents/invotick-apis`, `dev.backend.infotick`):
+- **Backend** (`~/Documents/Invotick/invotick-apis`, `dev.backend.infotick`):
   - `PlayPurchaseVerifier` — `baseOrderId`; 400/404/410 means Google refused, anything else is not
     definitive;
   - `EntitlementService` — register, and restore into `purchase_restore_answer` (every restore, a

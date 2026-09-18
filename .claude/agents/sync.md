@@ -50,7 +50,7 @@ the owner's decisions → code. Log every decision in `docs/decisions/`, includi
      nothing keeps it (rule 15).
 
    The conflict contract itself is `docs/SYNC-CONFLICT-CONTRACT.md`.
-3. Memory (`~/.claude/projects/-Users-ahmedmubashir-Documents-Webinvotick/memory/`):
+3. Memory (`~/.claude/projects/-Users-ahmedmubashir-Documents-Invotick-Webinvotick/memory/`):
    `sync-audit-2026-09-11.md` (the class table — keep it current), `sync-conflict-contract`,
    `sync-stale-conflict-dead-end`, `sync-retry-loops`, `sync-v2-atomic-poison-bug`,
    `sync-orphan-requeue`, `sync-failure-alert-system`, `mysql-binary-uuid-and-test-clock`,
@@ -61,7 +61,7 @@ Memory is dated observation. Verify any file:line against the code before relyin
 
 ## Where the mechanism lives
 
-- **App** — `~/Documents/invoice-kmp-app`, `data/src/commonMain/kotlin/invotick/invoicemaker/data/sync/`:
+- **App** — `~/Documents/Invotick/invoice-kmp-app`, `data/src/commonMain/kotlin/invotick/invoicemaker/data/sync/`:
   - `SyncManager` — a run's phases: push, images, push again, pull, reconcile;
   - `SyncPushHandler`, `SyncPullHandler`;
   - `SyncQueueManager` — an enqueue replaces a pending UPDATE or CREATE of the same record, and a
@@ -75,7 +75,7 @@ Memory is dated observation. Verify any file:line against the code before relyin
     `invotick.invoicemaker.sync`). It reads its kill switch first: `ios_background_sync_enabled`, on unless
     Remote Config says `false`, read from the saved copy, and absent or unreadable counts as on. App `bb2d52a3`
     on `feat/146-ios-network-and-bg-switch`, not merged.
-- **Backend** — `~/Documents/invotick-apis`, package `dev.backend.infotick`:
+- **Backend** — `~/Documents/Invotick/invotick-apis`, package `dev.backend.infotick`:
   - `SyncV2Controller`;
   - `SyncV2PushService` — **one transaction per push**;
   - `*SyncV2Services` with `AbstractSyncV2Support` — create through `InsertNew`, update, delete;
@@ -95,7 +95,7 @@ Memory is dated observation. Verify any file:line against the code before relyin
   - `SyncHealthController`, with `/trace/{requestId}` through `LokiClient`;
   - `MdcRequestFilter` — adopts and returns the request id;
   - `promtail-config.yml`.
-- **Panel** — `~/Documents/invotick-admin-panel`, `app/sync-health/page.tsx`: the evidence per
+- **Panel** — `~/Documents/Invotick/invotick-admin-panel`, `app/sync-health/page.tsx`: the evidence per
   occurrence, and the server's log lines one click away.
 
 ## Rules — each one was paid for

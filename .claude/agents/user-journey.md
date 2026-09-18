@@ -43,7 +43,7 @@ Read these, in this order, at the start of every task:
    §7 suggestions not yet decided.
 3. `docs/decisions/README.md` index — never re-propose something already rejected. 0006 (G1 metric),
    0023 (one dismissal event, method is a parameter), 0024 (double-tap stopped at the button).
-4. Memory `~/.claude/projects/-Users-ahmedmubashir-Documents-Webinvotick/memory/`:
+4. Memory `~/.claude/projects/-Users-ahmedmubashir-Documents-Invotick-Webinvotick/memory/`:
    `g1-real-data-metric-gap.md` (the measured funnel, the Save-gate mechanics, the corrections),
    `released-1-4-1-is-not-in-git.md`, `analytics-timestamp-is-arrival-time.md`,
    `mysql-binary-uuid-and-test-clock.md`, `admin-api-token.md`, `monetisation-measure-never-assume.md`,
@@ -51,19 +51,19 @@ Read these, in this order, at the start of every task:
 
 ## Where the mechanism lives (three repos, one person builds all of it)
 
-- **App** `~/Documents/invoice-kmp-app` — shipped branch `origin/VC_93_VN_142` (live 1.4.2 /
+- **App** `~/Documents/Invotick/invoice-kmp-app` — shipped branch `origin/VC_93_VN_142` (live 1.4.2 /
   versionCode 94). `core/analytics` records to its own Room DB and flushes to the backend.
   `AnalyticsGatewayImpl.kt` (`first_screen_reached`, screen stamping), `guardedTrackedClick` (auto
   taps, id `tap:<screen>:<File>.<label>_N`), `AnalyticsSendPolicy` (denylist from
   `GET /v2/analytics/denylist`). `InvoiceScreen.kt` holds the Save flow and `AdOrPremiumDialog`.
   **Grep `trackClick(` with trailing context** — the call is multi-line and a single-line grep lies.
-- **Backend** `~/Documents/invotick-apis` (`stage` = production, package `dev.backend.infotick`).
+- **Backend** `~/Documents/Invotick/invotick-apis` (`stage` = production, package `dev.backend.infotick`).
   `POST /v2/analytics/track` ingests; builds ≤ versionCode 90 are refused. `LiveEventsController`
   serves the panel, including `GET /v1/webpanel/analytics/first-invoice-journey`
   (`from`, `to`, `withinMinutes`, `appVersionCode`, `buildType`) backed by
   `AnalyticsEventRepository.findFirstInvoiceJourney`. Native queries: **no prose with `'` or `?`
   inside `--` comments** — it breaks every repository at boot.
-- **Admin panel** `~/Documents/invotick-admin-panel` — `funnel-analysis`, `live-events`,
+- **Admin panel** `~/Documents/Invotick/invotick-admin-panel` — `funnel-analysis`, `live-events`,
   `live-event-config`, `screen-flow`, `userBasedScreenFlow`. Anything health-like goes into the
   Health Centre as a `HealthCheck` component, never a new page.
 
