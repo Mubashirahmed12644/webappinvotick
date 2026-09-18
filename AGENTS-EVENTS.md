@@ -822,6 +822,21 @@ Full detail in `memory/mysql-binary-uuid-and-test-clock.md`. In native queries:
     - The same mistake read 7 old, future-dated `sync_failure` rows as a platform lookup that failed.
     - To ask "what arrived since X", use the arrival column (`created_at`), and bound the window with `BETWEEN`.
 
+
+15. **Compare builds on an equal window from each user's own first open. Never compare them by "invoices by the end
+    of the range".** *(decided 2026-09-19, decision
+    [0114](docs/decisions/0114-builds-are-compared-on-an-equal-window-from-each-users-first-open.md))*
+    - `first-invoice-journey` counts an invoice made at any time up to the end of the range. So an older build's users
+      have had days, and a new build's only hours.
+    - On 2026-09-19 that made 1.4.7 read 15 % against 1.4.6's 20 %. On the same first hour they were 13.5 % and 16.1 %
+      (z = -1.0).
+    - Use `journey-comparison`, or in SQL:
+      - read each device from its first-open `event_timestamp` for W;
+      - count only devices whose W has fully passed;
+      - show the rest as "not yet judged".
+    - A rollout is sequential, so two builds' cohorts usually came on different days. A gap can be the calendar (the
+      campaign, the country mix) as much as the build. Say so next to the number.
+
 ---
 
 ## 4. Admin panel rules
