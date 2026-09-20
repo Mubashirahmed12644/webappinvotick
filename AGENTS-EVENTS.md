@@ -837,6 +837,20 @@ Full detail in `memory/mysql-binary-uuid-and-test-clock.md`. In native queries:
     - A rollout is sequential, so two builds' cohorts usually came on different days. A gap can be the calendar (the
       campaign, the country mix) as much as the build. Say so next to the number.
 
+16. **`install_referrer` is stamped before the first open. Look for it from before, not from the first open.**
+    *(measured 2026-09-19, decision [0116](docs/decisions/0116-hold-everything-fixed-and-vary-one-thing.md))*
+    - The Application reads Play's referrer before the cold start is recorded. Of 961 first-open devices of 09-15..17,
+      322 had the referrer under a second BEFORE `app_cold_start`, and 597 had it after.
+    - So a device window that starts at the first open (`e.event_timestamp >= t0`, the shape of every 0114 read)
+      reports **38 % "no install referrer"**. The true figure is 3 %.
+    - Find a device's source from an hour before its first open to the end of its window. Read the referrers
+      through `(event_name, event_timestamp)`: 4,600 rows a month, under 0.1 s.
+    - **Meta's installs name no campaign in plain text.** Everything arriving through the Facebook or Instagram app
+      says `fb4a` / `ig4a`, whichever Ads Manager campaign paid for it. A second campaign added on 2026-09-16 changed
+      no plain value at all.
+    - The campaign is only inside Meta's encrypted `utm_content`, which is stored whole. `MetaInstallReferrer` opens it
+      with the owner's key. Never group Meta installs by `utm_campaign` and call the groups campaigns.
+
 ---
 
 ## 4. Admin panel rules

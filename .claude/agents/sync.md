@@ -783,6 +783,271 @@ Memory is dated observation. Verify any file:line against the code before relyin
       - A test fails on any account-naming column that is neither erased nor listed as kept.
     - Backend `feat/account-deletion`; app `feat/146-delete-account`; neither deployed.
 
+33. **One refusal is one row, and a call that never reached the server is still not a refusal** (0125; **the owner
+    confirmed all three parts on 2026-09-20** — do not reopen). App branch `fix/147-sync-failed-only-real-refusals`
+    off `VC_107_VN_147`, pushed; tests red first (9 of 11), `:data:testDebugUnitTest` 333/333; not merged, ships with
+    the next release. No schema change, no backend change, nothing to deploy.
+    - **A stale UPDATE is reported once, as `push_stale_divergence`.** `STALE_CONFLICT` is on the non-retryable list
+      too, so `NonRetryablePass.settle` stopped and reported the same answer a second time as `push_non_retryable`.
+      `resolveStaleConflicts` now returns what it settled and the loop skips it. This closes 0029's last open line.
+      - 30 days on builds ≥ 101 the pairs matched exactly: 206/206 products, 70/70 invoice lines, 21/21 invoices,
+        12/12 clients, 7/7 estimates, 1/1 template.
+    - **A stale CREATE that was queued again as an UPDATE is not reported at all.** Nothing was dropped: the record is
+      on the server and the update gets the fair comparison. 360 rows in 30 days, 319 of them one account's estimates.
+      A record already judged TERMINAL is not converted again, as before, and is not counted again either — its
+      verdict was reported when it was reached.
+    - **`guest_auth` asks the one rule.** It was the only report path that never did. `SyncManager`'s reporting moved
+      to `GuestAuthFailures`; `isNetworkFailure` now also reads the class `GuestSignInFailed` names in its evidence,
+      because 0065 stores it as a string rather than a cause, so the walk could never see `UnknownHostException`.
+      - 7 days to 2026-09-20 on builds ≥ 101: 364 of 379 `guest_auth` rows were "Network connection failed", from
+        118 phones.
+      - **Nothing about the recovery changes:** the attempt is counted, the sign-in is retried, and a guest still
+        without a server row after `GuestAuthFailures.ALERT_AFTER` (3) still raises the backup-blocked flag. A refusal
+        the server sent (403, 401, TLS) is still reported with its `request_id` and `http_status`.
+      - No harm, proved before switching it off: 113 of the 118 phones had a server row by the end of the window, and
+        the other 5 each sent their last event of any kind within four minutes of the failure.
+    - **A payment method keeps its owner.** `PaymentInstructionRepositoryImpl.updatePayment` rebuilt the row from the
+      screen's object, which carries no owner, and did not carry the stored one across — so the first edit set
+      `payment_instructions.userId` to NULL and the next queued its UPDATE ownerless. `SyncOrphanDao.orphanPaymentInstructions`
+      reads `userId` too, so a blanked row is invisible to the net as well. `softDeletePayment` used a hard-coded `""`;
+      it now uses `PaymentInstructionDao.ownerOf(id)`, as a product's delete does.
+      - 30 days: 6 rows on 5 phones — the only ownerless enqueue left on a current build. The product delete that
+        caused the other 135 (49 phones) was fixed in 1.4.5 (`7da77038`), and there are 0 such rows on 101+.
+    - **Open, agreed as a task of its own, NOT started: a payment method deleted on a phone never reaches the
+      server.** `deletePayment` and `deletePayments` (payment *instructions*) queue nothing and set no syncState, so
+      the orphan scan cannot catch them either. Production: 240 rows, **0 ever deleted**. Order matters — the backend
+      must first send, in a full pull, each deleted payment instruction that a sent row names
+      (`invoices.paymentMethodId`, `estimates.paymentMethodId`, `payments.payment_instruction_id`), the shape of
+      `f8a6722`; ship the app half alone and a second phone's full pull gets an invoice naming a payment method it
+      will never be sent (class P and the 0068 family). The full handover is the last section of 0125. It is **not**
+      under the Payments-form hold: that covers `payments` (receipts), this is `payment_instructions`.
+    - **Old builds (1.4.2, 1.4.4) keep sending their offline rows — the owner's word, 2026-09-20: leave them.**
+      6,506 a week from 807 phones until those phones update. Nothing is added server-side to suppress them: the
+      Device sync card already sets them aside (0029's addendum), and they answer "how often are our users offline
+      when they try to sync?". Rejected again: deleting them at ingest.
+    - Guards: `OneRefusalIsOneReportTest`, `AGuestSignInThatNeverReachedTheServerIsNotAFailureTest`,
+      `APaymentMethodKeepsItsOwnerTest`.
+
+34. **A payment method deleted on the phone reaches the server, and a full pull carries a deleted one that a live
+    document names** (0128, 2026-09-20). Backend `fix/full-pull-sends-deleted-payment-methods` @ `292dfb2` (from
+    `stage` `0fd4e3f`, 1233/1233); app `fix/147-a-deleted-payment-method-reaches-the-server` @ `f51d81ca` on
+    `fix/147-sync-failed-only-real-refusals` (350/350). Both pushed, **nothing deployed, nothing released**. No
+    migration, no version bump. Backend head is now `0e84fac`.
+    - **What was broken.** `PaymentInstructionRepositoryImpl.deletePayment(id)` and `deletePayments(ids)` — the
+      single and multi-select deletes the Payment methods sheet calls — soft-deleted the row and **queued nothing**,
+      and set no `syncState`, so `SyncOrphanDao.orphanPaymentInstructions` (PENDING_* rows only) could not catch them.
+      `softDeletePayment`, the one that does queue, had no caller.
+    - **Production, 2026-09-20 (read-only): 240 payment methods on the server, `is_deleted = 1` on none, ever.**
+      83 are in use (59 live invoices, 34 payments, 1 estimate); 152 are named by nothing; 31 accounts own more than
+      one. Exposed today: 2 accounts, 9 invoices. Exactly the client delete's shape before 0068.
+    - **The server half ships first, always.** `invoices.paymentMethodId`, `estimates.paymentMethodId` and
+      `payments.paymentInstructionId` are each a foreign key in the phone's Room schema, and the full pull sent live
+      payment methods only. Reversed, a second phone gets an invoice naming a payment method it can never be sent:
+      up to 1.4.5 it cannot store the invoice at all, on 1.4.6+ it is a missing-reference report on every pull.
+      - The full pull now also sends this account's deleted payment methods that an invoice, estimate or payment it
+        sends still names, as deleted rows, read from the rows being sent (`f8a6722`'s shape). It is computed before
+        the businesses block, so a deleted payment method brings its business too. Never another account's
+        (`findByUserAndIsDeletedTrueAndIdIn`). The delta pull is unchanged.
+      - Guard: 3 new cases in `AFullPullSendsTheDeletedParentsItsRowsNameTest` (2 red first).
+    - **The app half.** A soft delete **plus** a queued DELETE under the row's own owner, the read of that owner in
+      the same transaction (`PaymentInstructionDao.softDeleteHere`), the row left `PENDING_DELETE` so a lost queue
+      row is recoverable. A shared default is refused by the queue itself (`SEEDED_ID_PREFIX`).
+      - A **pulled** delete uses `markDeletedByServer` (SYNCED), or the phone sends the server its own delete back —
+        the bug `ClientDao.markDeletedByServer` fixed for clients.
+      - A deleted payment method this phone never held is kept, deleted and SYNCED
+        (`PaymentInstructionSyncHandler.applyServerDelete`), like a deleted business, client, product or terms.
+      - **Named behaviour change:** a delete made here and not yet sent is now unsent work, so a later edit on
+        another phone no longer silently revives the row and erases the delete. It travels, and the server decides.
+      - Guards: `ADeletedPaymentMethodReachesTheServerTest` (9; 6 red first, 1 did not compile) and 2 new cases in
+        `APulledTemplateOrPaymentMethodNeverDeletesItsRowTest`.
+    - **The owner, 2026-09-20 — SETTLED, do not reopen.** His words: *"Payment method ager kisi invoice per use hy
+      and usky baad delete krain to invoice my wo payment method delete nhi hona chahiye, and payment method bhi aik
+      soft delete ky tour per hoga."*
+      - A payment method **in use may be deleted**. It is **not** refused by name as a client is (0068). There is no
+        `PaymentMethodInUseException` and there must not be one. He was shown the numbers first: 83 of 240 in use,
+        152 free, 31 accounts owning more than one. **Do not re-propose refusing it.**
+      - The delete is **always soft**. Phone: `payment_instructions.isDeleted` + `dateDeleted` + `PENDING_DELETE`.
+        Server: `is_deleted` + `deleted_at`, `repository.save`. No `DELETE FROM payment_instructions` exists in the
+        backend, and the phone's DAO now has **no hard delete at all** — `delete(entity)` and `deleteByIds(ids)`
+        were declared and never called, and are removed. A hard delete fires `ON DELETE SET NULL` on
+        `invoices.paymentMethodId`, `estimates.paymentMethodId` and `payments.paymentInstructionId`, stripping the
+        payment method off every document that used it in silence. That is what broke client deletes before 0068.
+      - **A document that already carries it keeps showing it.** A list hides it; a document must not lose it.
+    - **Every render path, from the code (2026-09-20). One unfiltered lookup serves them all.**
+      - Saved-invoice screen, preview and edit (`SaveInvoiceViewModel:1010`, `PreviewInvoiceViewModel:688`,
+        `EditInvoiceViewModel:199`) all call `getInvoiceWithDetailsById` → `InvoiceDao.getInvoiceWithRelations` →
+        the `@Relation` on `paymentMethodId`, which has **no `isDeleted` filter** → `InvoiceWithRelationMapper`.
+      - The offline HTML bundle, the PDF and the share image are built from the snapshot those screens fill, so
+        they inherit it. Estimates are the same through `EstimateWithRelations`.
+      - The server's REST, webpanel and pull reads use `invoice.paymentInstruction`, a plain `@ManyToOne` with no
+        soft-delete filter.
+      - `/i/{token}` and `/embed/render` read the **frozen** `shared_invoice.snapshot`, written at share time and
+        never re-resolved — a later delete cannot reach an already-shared link (invariant 4).
+      - **The picker list alone filters** (`getAll`, `getPaymentInstructionsForBusiness`,
+        `searchPaymentInstructionsForBusiness`, `hasPayments` — all `isDeleted = 0`). That is correct and must stay.
+      - Guards: `anInvoiceStillCarriesThePaymentMethodAfterItIsDeleted` (through the relation **and** the mapper),
+        `anEstimateAndAPaymentStillCarryItToo`, `theDeleteIsSoftEverywhereTheRowIsNeverRemoved`,
+        `aDeletedPaymentMethodIsGoneFromThePickerList`,
+        `anInvoiceShowsAPaymentMethodThisPhoneOnlyEverReceivedDeleted`,
+        `aHardDeleteWouldStripThePaymentMethodOffItsInvoice`, and the backend's
+        `a deleted payment method keeps its row, and every document that used it keeps naming it`.
+      - These pin behaviour that was already right, so they pass before and after. They were proved to bite by
+        filtering the deleted row out in `InvoiceWithRelationMapper`; the probe was reverted.
+    - **Still open, and separate: deleted templates.** The full pull leaves them out too — the other half `f8a6722`
+      missed. Templates already set `PENDING_DELETE` and reach the server today, so it is the smaller task.
+    - **Not under the Payments hold.** `payment_instructions` is the payment method on an invoice;
+      `memory/payment-form-review-postponed.md` covers `payments`, the receipts on the Payments screen.
+
+35. **A phone that thought it was online and could not reach us is evidence, not weather** (0129; the owner's second
+    device, 2026-09-20). App `fix/147-a-phone-that-thought-it-was-online` off `VC_107_VN_147` (`dd5b408b`, `e31c98ba`,
+    332/332, both compiles pass); backend `fix/a-phone-that-could-not-reach-us-is-named` off `origin/stage` `0fd4e3f`
+    (`433775b`, suite 1233/1233). Both pushed, neither merged, neither deployed. No migration.
+    - **The network is asked, never remembered.** `networkStatus` is a cached flow that moves only when Android
+      mentions a change, and both the sync's offline gate and the `net_online` stamped on the row read a held value. A
+      process parked in the background answers with whatever it went to sleep holding — the phone in question had been
+      alive in the background for 1.8 hours (`ms_since_start` 6.6 million, `screen_ms` frozen at 1857 on the splash)
+      when it failed to resolve the host four times in seventy minutes, every row reading `net_online=true,
+      net_type=wifi`.
+      - `NetworkMonitorImpl.isCurrentlyConnected()` now asks the system **and corrects the flow**, so the live reading
+        is the only reading; `SyncManager`'s gate asks instead of reading the cache.
+    - **Offline is silent; online is reported.** `SyncQueueManager.reportRequestFailed` takes a fresh reading when a
+      call never reached the server. No network → nothing (0125, the owner's word). Online → `push_unreachable` /
+      `pull_unreachable`, carrying exactly `push_failed`'s and `pull_failed`'s columns (0050's table; its contract test
+      covers both). A cancellation is never reported whatever the network says, and a build with no reading to take
+      reports nothing.
+    - **The Health Centre names it.** `SyncFailureCheck` files those two stages on their own line, "Could not reach us
+      while the phone said it was online", with devices and occurrences, decided by the **stage** and never by the
+      message — so old builds' rows stay where they are. `app_stage` already holds it: no column, no migration. It is
+      **shown, never counted**: nothing was refused, because nothing arrived.
+    - **Before this, the owner could not see it at all.** The card decides "the device's surroundings" from the reason
+      text, and `Unable to resolve host "stage.invotick.com"` reads the same either way, so every such row went into
+      "Ignored — the device had no network" and out of the verdict; on the drill-down they name no phone (`device_id`
+      NULL on all 1,873); and from 1.4.5 the app stopped sending them at all.
+    - **The numbers (30 days to 2026-09-20).** Of the rows carrying that message, **14,716 on 1,270 phones read
+      `net_online=false` and 8,343 on 1,007 read `true`** (pull 6,671 / push 1,675; wifi 3,818, cellular 3,942, VPN
+      586; builds 91–100, none from 101).
+      - **Not an ISP or DNS block:** every day of the window, up to **70 countries in one day** (PK 1,727 / 105, then
+        IN, NP, ZA, MM, ZW, NG, DZ, MW, ST, PG…).
+      - **Not a phone cut off for good:** **993 of the 1,007 reached the server again** after their last such failure.
+      - **Not a naive flag:** both readings already require Android's `NET_CAPABILITY_VALIDATED`.
+    - **Card thresholds, for reference:** 7-day window, CRITICAL at 10 devices or at one device with 200+ retries,
+      counted from Android versionCode 94 and every iOS build.
+    - **The card goes red on it — the owner, 2026-09-20 — and red is a rate, not a count** (backend `3f9d4ee`, suite
+      1238/1238). Both must be passed: **25 phones or more** *and* **8 % or more** of the phones we heard from that
+      week.
+      - **8 % is measured:** 347 of the 4,292 phones we heard from in the week to 2026-09-20 — 8.1 % — and every one of
+        those readings came from a cache that could be hours old, so it is the worst the number can be. Once the phone
+        reads live it can only fall, which makes today's figure the line between an ordinary week and a worse one.
+      - **25 phones** is 0.6 % of an ordinary week: it decides nothing normally, and only stops a quiet day, when few
+        phones called in, from shouting (three of twenty is 15 % and is still three phones).
+      - Both are properties in `application.properties` —
+        `health.sync-failures.unreachable-red-share-percent` and `…-red-devices` — so a wrong first number is a config
+        change, **not a release**.
+      - **Denominator:** `LinkedDeviceRepository.countPhonesSeenSince`, one bounded `COUNT(DISTINCT device_id)` over
+        5,915 rows every half hour. **It answers only for a window ending now** — `last_seen_at` is the latest call,
+        not a history (4 phones for the week of 2026-08-17 against 4,292 for the week to 2026-09-20). No count →
+        share "not known" → nothing goes red.
+      - The card names phones, occurrences, the share and the **builds**. **Country and network are not claimed:** the
+        `sync_failure` row does not carry them, and adding them is a migration.
+      - **During the rollout the share reads low** (only 1.4.8+ can report, the denominator is every phone), so the
+        card under-reports rather than crying wolf.
+    - **Due one week after the app release: re-run 0129's four queries and set the number from them.** If it settles
+      well below 8 %, lower the setting to that figure plus about half again; if it stays at or above 8 % with a live
+      reading, the stale cache was **not** the cause and the case is open again. The figure to beat is **347 of
+      4,292 = 8.1 %**.
+    - Guards: `APhoneThatThoughtItWasOnlineIsNotSilentTest`, `TheNetworkIsReadWhenItIsAskedTest`,
+      `APhoneThatCouldNotReachUsIsNamedTest` (9 cases: an ordinary week green at 340/4,292, red at 500/4,292, a
+      handful never red, and no denominator at all).
+
+36. **One drift is one report, and it says how many were refused for good** (0130; the owner's Live Events
+    screenshot, 2026-09-20). App `fix/147-one-drift-one-report` off `VC_107_VN_147`, `c73b6da3`, pushed, not merged;
+    `:data:testDebugUnitTest` 329/329, both compiles pass. No schema change, no backend change.
+    - **`reconcile_drift` was the last report still fired on every pass.** `reportFailed` has had an interval guard
+      since 0050 and `queue_stuck_backlog` reports only when its count moves. Drift now says its sentence once and
+      again only when the sentence changes — `DriftReport`, remembered **per user and across process starts**
+      (`SyncMetadataRepository.lastReportedDrift`); a drift that clears and comes back is news again.
+    - **It carries how many operations the server has refused for good** (`sync_queue` `status='TERMINAL'`,
+      `SyncReconciliationDao.countRefusedForGood`). A drift standing still otherwise reads as records still on their
+      way. Counted, never matched row by row; `attempts` stays the missing count.
+    - **The phone that prompted it:** 145 `sync_failed` ever, **3 on 1.4.7**, all the same sentence —
+      "invoiceItems 18 missing, inventoryItems 4 missing" — unchanged since 2026-09-09, **23 reports in 7 days**. Its
+      real volume is `app_cold_start` 5,378, all from before the build number existed, none since 2026-08-23.
+    - **Why it can never fall, and the harm (G3):** all 22 were refused `OWNERSHIP_VIOLATION` — 4 products whose ids
+      belong on the server to **another guest** (`a3c112fb`, created 2026-05-02) and the 18 lines pointing at them.
+      **6 of that guest's 7 invoices sit on the server with zero lines.** Recovering them by re-issuing new ids is an
+      owner question, not built.
+    - **Fleet, 7 days:** 41 drift rows on 13 phones → **11 distinct facts**; 5 rows / 3 phones on 1.4.7. None of the
+      other three 1.4.7 branches touched drift.
+    - **A panel's jumping timestamps are not a clock fault.** Live Events lists by **arrival** and prints the phone's
+      own event time; arrival trails the stamp by 15–18 min (the analytics flush), and the rows were from different
+      days, PKT = UTC+5. Check that before reading a sequence.
+    - **"Users with no build type" are the web, not a hole.** 7 days: 280 rows / 187 ids, **every one
+      `platform=Web`** — the share-link page sends no build and no version code by 0045. One panel filter; left to
+      whoever is in the panel.
+    - **Open: 76 of the week's 4,326 phones use their own guest user id as the device id** (1.8%). On those a new
+      guest reads as a new phone, so per-device counts are slightly wrong and "was this the same handset under an
+      older guest" is unanswerable from our data.
+    - Guard: `OneDriftIsOneReportTest` (7 cases; did not compile first).
+
+37. **A record the server already holds is not created again** (0133; the owner, 2026-09-20: *"isko permanently fix
+    kia hy kia tm ny?"*). App `fix/147-a-record-the-server-already-holds-is-not-created-again` off `VC_107_VN_147`,
+    `d2f35deb`, pushed, not merged; 327/327, both compiles pass. **App only, no server change, no migration.**
+    - **No id ever collided.** Every id is a random UUID. One id is **offered twice, under two owners**: a phone's
+      offline guest registers, the server returns its own user id, `AuthenticateGuestUseCase.migrateUserId` re-owns
+      every local row **keeping its primary key**, and `prepareForSyncAfterMigration` resets all 21 tables to
+      `PENDING_CREATE` and queues a fresh CREATE — on the written assumption *"the real server account has no
+      knowledge of any of these records"*. True the first time only: a database that survives a change of identity
+      (a second offline guest, a restored backup) still holds rows the server accepted under the previous owner.
+    - **The fix: the 21 reset statements ask `lastSyncedAt IS NULL`.** Never-seen rows are queued exactly as before;
+      already-acknowledged rows stay SYNCED, so neither this step nor the orphan scan sends them, nothing is refused,
+      and the other owner's data is never touched (G3).
+    - **Not silent:** `UserMigrationDao.countRowsTheServerAlreadyHolds` counts what stays and `migrateUserId` reports
+      it once as `sync_failed stage=queue_previous_identity` (0050's table: a count and nothing else).
+    - **One change covers all 14 affected entity types** — the statements are identical per table.
+    - **Measured 2026-09-20:** 75 records on 30 phones, 293 refusals, first seen 2026-07-19, **still arriving on
+      1.4.7**; 19 of 22 refused invoice ids exist on the server under **17 other owners**, 12 of 15 line ids under 12.
+      Stranded work: 9 empty invoices across 3 accounts, 6 of them one guest — **6-of-7 is the worst case, not
+      typical**. Context, not this defect's doing: 1,341 of 8,774 live invoices (467 accounts) have no lines.
+    - **Recovery of the already-stranded 75 is NOT built** — re-issue ids, re-point children, one transaction; the
+      owner's word, after the release. It never reads or writes the other owner's rows.
+    - **The audit table of every sync class** is 0133 §2, with measured sizes. Order recommended there: deploy 0056
+      (44,226 refusals from 17 estimates) → re-measure `INVALID_REFERENCE` once 1.4.7 is wide (27,831 from 51 lines)
+      → the 2 invoices whose body cannot be read (70,241) → the receipt number → the recovery.
+    - **Open: nothing records that a phone changed identity**, so "was this the same handset" is unanswerable.
+    - Guard: `ARecordTheServerAlreadyHoldsIsNotCreatedAgainTest` (5 cases, Robolectric, the real statements on the
+      real schema; did not compile first).
+    - **The recovery is built and ships with it** — rule 38.
+
+38. **A stranded record gets a new number, so the work can be sent** (0136; the owner, 2026-09-20: *"Abhi bana
+    do"* — in the **same release** as 0133's prevention). App `fix/147-a-stranded-record-gets-a-new-number`
+    `65b6d9c2` on `d2f35deb`; 334/334, both compiles pass. App only, no server change, no schema change.
+    - **The state is exact:** the queue's `TERMINAL` verdict **with** the server's `OWNERSHIP_VIOLATION` on it.
+      Never a record merely unsent, quarantined, or failing for another reason; never a guest's record waiting for
+      its work to join an account (rule 24), which resolves itself and where a new number is the wrong answer.
+    - **Safe to interrupt by construction, not by a marker** (`StrandedRecordDao`): one Room `@Transaction` per
+      record, in the order the foreign keys demand — insert the copy under the new id, move the children onto it,
+      delete the old row **last**. No line ever points at an id that does not exist; anything that throws rolls the
+      record back. **Safe to run again:** the old id is gone afterwards.
+    - **The copy is the entity's own `copy(id = …)`**, so a column added later comes across by itself. Only the id
+      and the three columns that say what the server knows differ.
+    - **The other owner's row is never read, written or looked up**, and the server is never asked.
+    - **Duplicates:** a pull only sends this account's rows, so the old record cannot come back here. If it ever
+      did it would be one account's own visible duplicate, never another account's data.
+    - **Reports once per run:** `sync_failed stage=queue_renumbered`, count in `attempts`, kinds in the reason.
+    - **It rescues 52 of the 75** (invoices 22, lines 15, clients 9, products 2, payments 2, estimates 1, estimate
+      lines 1). **23 are out of reach and said so:** stamps 6, templates 5, signatures 4, headers 3, payment
+      methods 3, terms 1, businesses 1 — their ids also live inside `invoices.presentationJson`, so moving one
+      means rewriting JSON; a business is named by nearly every table.
+    - **Boundary:** freeing a document does not free a reference it makes to one of those 23, so an invoice naming
+      another account's template or stamp can still be refused for that reference. Most carry the seeded template
+      id, which is never in this state.
+    - **Measure after the release:** `queue_renumbered` by phone and count, then re-run 0133's `OWNERSHIP_VIOLATION`
+      count — it should stop growing and start falling.
+    - Guard: `AStrandedRecordGetsANewNumberTest` (7 cases on the real schema under Robolectric; 4 red first, and
+      the 3 that passed are what must not change — another failure state, a kind it cannot move, an interrupted
+      run).
+
+
 ## Established 2026-09-12, while planning the receipt number
 
 The plan is `docs/SYNC-RECEIPT-NUMBER-PLAN.md`. Each line says how it is known.
