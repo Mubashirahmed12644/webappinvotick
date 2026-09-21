@@ -1108,14 +1108,19 @@ Memory is dated observation. Verify any file:line against the code before relyin
       other file cannot be opened, everything goes back. **An unsent write stays in its own file and goes only under
       its own account.** A held guest comes back with its own pass and no question (0144's proof only for a guest the
       phone lost). **A switch never restores, registers or moves a purchase** (0143).
-    - **Stage 1 limits, on the list:** only the open account syncs; the push token follows the open account (not yet
-      every account in the register); received invoices stay in the file they arrived in; a sign-out inside an added
-      account is today's sign-out in that file. **Release blocker for 1.4.9: every pass moves to the Keystore /
-      Keychain** (parked passes sit in the settings file in stage 1).
+    - **Passes live in the vault** (Keystore / Keychain), never in the settings file; a failing vault never signs anyone
+      out (stage 2, `f27e3ad4`). **A parked account's work goes in the background under its own pass**
+      (`ParkedAccountPush`), and **a push for any account that is not the open one never moves the open account's
+      pull cursor** (`faec959e`: every drain used to). A notice names its account; the token stays on every account
+      the phone holds (backend `52dea8c`). Remove-from-phone never while anything is unsent.
+    - **Open:** received invoices stay in the file they arrived in; a sign-out inside an added account is today's
+      sign-out in that file; stage 3 (guests inside the legacy file) waits for the owner.
     - Guards: `EachAccountKeepsItsOwnPlaceTest` (8), `SwitchingAccountsTest` (9), `ASwitchRebuildsOnlyTheAccountsObjectsTest`
       (2), `ThePhoneAndTheAccountDoNotShareAnObjectTest` (3), `NoRowCrossesAccountsTest` (2, real Room: none of the 21
-      tables nor the queue of one account is in the other's file), `OnePromptAtATimeTest` (6), and the account cases in
-      `PremiumMoveAsksOnceTest`.
+      tables nor the queue of one account is in the other's file), `OnePromptAtATimeTest` (6), the account cases in
+      `PremiumMoveAsksOnceTest`, `APassLivesInTheVaultTest` (7), `ADrainNeverMovesTheOpenAccountsCursorTest` (2),
+      `AParkedAccountSendsItsWorkUnderItsOwnPassTest` (4), `RemovingAnAccountNeverLosesItsWorkTest` (3); backend
+      the four multi-account cases in `APushTokenSpeaksForOneAccountTest` and `ANoticeNamesItsAccountTest`.
 
 ## Established 2026-09-12, while planning the receipt number
 

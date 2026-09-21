@@ -340,3 +340,28 @@ karein? (Recommended: ginti ke baad.)
   (**blocks 1.4.9**); stage 2 (every account's outbox sent in the background, the push token on every account in the
   register, notices naming their account, "Pehle wale accounts", remove from phone); stage 3 (guests inside the legacy
   file moved out, on the owner's go).
+
+### Stage 2 — built and green (2026-09-21), app `VC_108_VN_149` @ `b8427160`, backend `feat/push-token-for-each-account-on-a-phone` @ `52dea8c`
+
+- **The release blocker is built:** every pass — the open account's, every parked account's, the drain passes — lives
+  in the vault (Android Keystore AES-GCM, file `invotick_passes` left out of backups; iOS Keychain "this device only,
+  after first unlock"), never in the settings file. An updated phone keeps its session and the pass moves; a vault
+  that fails keeps the pass where it was and never signs anybody out. Restored from a backup onto a new phone, a guest
+  keeps its id and is signed in again by the existing recovery, a signed-in account signs in again. **Still to do
+  before 1.4.9 ships: run it on a real phone of each platform** (Robolectric has no Keystore).
+- **Parked accounts send their work in the background**, each under its own pass (push worker, background entry, iOS
+  background pass); the open account's bookkeeping is untouched; one without a pass waits for its next opening.
+- **Found and fixed on the way:** every drain push (a signed-out account's last work, a guest kept apart) moved the
+  *open* account's pull cursor, so its next delta pull skipped what other phones had written meanwhile. Only the open
+  account's own push moves it now (`faec959e`).
+- **Notices:** the server sends each token with `accountId`; a notice for another account on the phone asks to switch.
+  The token registration names the phone and its other accounts; the server keeps the token on each that already
+  shares it from this very phone (`linked_device`). Builds up to 1.4.8 are unchanged. **Deploy order:** the backend
+  branch sits on `fix/a-push-token-speaks-for-one-account` (`877f3dc`, not deployed) and goes with it or after it; no
+  migration. The one-time token cleanup of that branch keeps each token only on the phone's last-used account, so run
+  it before 1.4.9 spreads, or a multi-account phone's other accounts miss notices until each is opened again.
+- **"Pehle wale accounts":** after "Start as a new guest", 0144's list is offered as after a reinstall; an account
+  already on the phone goes to its own place.
+- **Remove from this phone** (not the open account, not the one in `invotick_v2.db`): its work is sent first; while
+  any is unsent nothing is removed; then it is signed out on the server with its own pass and the phone's token.
+- **Stage 3 waits for the owner's go:** guests kept inside the legacy file moved out into files of their own.
