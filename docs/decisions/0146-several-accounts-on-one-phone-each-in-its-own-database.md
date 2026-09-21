@@ -1,9 +1,10 @@
 # 0146 — Several accounts on one phone, each in its own database, switched from the drawer
 
 **Date:** 2026-09-21
-**Status:** **APPROVED 2026-09-21 — build now, ship in 1.4.8.** The owner: *"abhi — aur live version 1.4.7 hai to tum
+**Status:** **APPROVED 2026-09-21 — build now; ships in 1.4.9** (was 1.4.8 until the owner's footer hotfix took that
+number the same day; see "The release number" at the end). The owner: *"abhi — aur live version 1.4.7 hai to tum
 1.4.8 hi consider karo, wo hamara next live version hoga"*; shown that this holds the ready fixes back, he chose *"sab
-1.4.8 mein, 4 hafte baad"*. Being built on app branch `VC_107_VN_148` (see "The owner's decision" at the end).
+1.4.8 mein, 4 hafte baad"*. Being built on app branch `VC_108_VN_149` (see "The owner's decision" at the end).
 **Tier 1** where a switch could mix or lose data (the local database, the outbox, a guest's only copy), Tier 2 for
 sync. Owned by the sync agent (0051).
 **Related:** 0053 (a guest's work joins an account only on a yes), 0143 (a purchase follows its phone's newest account,
@@ -294,8 +295,8 @@ karein? (Recommended: ginti ke baad.)
 ### Settled while building (the coordinator, 2026-09-21)
 
 - **Release blocker, not a nice-to-have: every account's pass moves to the Android Keystore / iOS Keychain before
-  1.4.8 ships.** Stage 1 keeps the parked accounts' passes in the app's own settings file (DataStore, where today's
-  active pass already lives) as a step on the branch only. 1.4.8 is not released while any pass sits there, and the
+  the release that carries the switcher (1.4.9) ships.** Stage 1 keeps the parked accounts' passes in the app's own settings file (DataStore, where today's
+  active pass already lives) as a step on the branch only. 1.4.9 is not released while any pass sits there, and the
   Android backup rules must leave the register out.
 - **The app's own questions come one at a time** (`OnePromptAtATime`, app `8efce603`): the returning-accounts list
   (0144), the guest-work question (0053), the removed-phone notice (0099), then the premium question (0143). The one on
@@ -308,3 +309,14 @@ karein? (Recommended: ginti ke baad.)
   `feat/146-premium-never-taken-back` `a56d8071` (a confirmed grant is never unconfirmed, only Google's named refusal
   is final, billing calls send `X-Device-Id`, no blank-price plan). Nothing of either was merged; both are dead, and
   deleting them is the owner's word.
+
+### The release number (the owner, 2026-09-21, later the same day)
+
+- An urgent hotfix — premium users must not see the Invotick footer on their invoices — ships first, alone, as **1.4.8**
+  (versionCode 107) from the live base.
+- So everything collected here, the ready fixes and the switcher, is **1.4.9**, versionCode ≥ 108. The integration
+  branch is **`VC_108_VN_149` (canonical)**, cut from `VC_107_VN_147` `64106a7f`. The same work was first pushed as
+  `VC_107_VN_148` (left at `2af037ac`, not deleted: deleting a branch is the owner's word). The hotfix must not reuse
+  that name, or the owner deletes it first.
+- The hotfix's footer change is ported onto `VC_108_VN_149` by its own agent (renderer bundle and snapshot mapper).
+- The pass-to-Keystore/Keychain blocker above now blocks **1.4.9**.
