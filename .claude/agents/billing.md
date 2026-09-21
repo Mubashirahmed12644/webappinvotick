@@ -73,7 +73,7 @@ Memory is dated observation. Verify any file:line against the code before relyin
     in `core/common` because billing produces it and the ads module acts on it;
   - `core/ads` `AdEligibility` (`adVerdictOf`), and `composeApp` `StoreAwareAdEligibility`;
   - `PremiumRepository` — the interface is in `domain`, `PremiumRepositoryImpl` in `core/premium`.
-    Its DataStore keys: `is_premium`, `premium_unverified`, `store_said_none_at`;
+    Its DataStore keys: `is_premium`, `premium_unverified`, `store_said_none_at`, `store_none_since` (rule 16);
   - `data/billing` `ServerPurchaseVerification` — a 503 means unknown; `currentEntitlement()` reads the
     account's premium, and only a 200 is an answer;
   - `domain/billing` `AccountPremium` (`shownPremium`, `accountGrantHolds`) and `AccountPremiumRefresh`
@@ -110,14 +110,15 @@ Memory is dated observation. Verify any file:line against the code before relyin
   - `RetiredPlanRenewalCheck` — WARNING from 45 days before a retired-plan charge; CRITICAL, with a
     page, from 7;
   - the billing-health summary.
-- **Tables:** `purchase_identity` (with `purchase_token`), `entitlement`, `purchase_restore_answer`.
+- **Tables:** `purchase_identity` (with `purchase_token` and `test_purchase`, rule 15), `entitlement`,
+  `purchase_restore_answer`.
 
 ## Rules — each one was paid for
 
 1. **Play's answer decides premium on a device**, guest or signed in (0047).
    - Ads stop the moment Play reports a purchase.
    - "Not premium" needs Play's confirmation before any ad is shown — at most 1.5 s from the
-     splash's start.
+     splash's start. On a phone Play had called premium, one empty answer is not that confirmation (rule 16).
    - An ad *request* never waits (0049).
 2. **The paywall prints Google's price, period and saving, taken from the offer actually bought** —
    never from a product id. The "Yearly" product was a monthly base plan for four months. The first
@@ -230,6 +231,41 @@ Memory is dated observation. Verify any file:line against the code before relyin
       screen take the footer off on `false`, and never put it back on.
     - Free users keep the footer unchanged: it is the growth surface. Weakening it for anyone else is a monetisation
       question for the owner, never a finding.
+
+15. **A test purchase is named by the store, and every premium count leaves it out** (0156; the owner, 2026-09-22).
+    Built on `invotick-apis` `migration/purchase-test-flag` + `feat/purchase-test-flag`, not deployed.
+    - **The store's word, never ours.** `purchase_identity.test_purchase`: TRUE when Google puts `testPurchase` on a
+      `subscriptionsv2` answer, or `purchaseType = 0` on a one-time product (the product answer has no `testPurchase`);
+      TRUE when Apple signs `environment = Sandbox`. FALSE when the store answered without it. NULL = not asked since the
+      column existed. Never from `app_instance_id`, a test-phone list or how long a grant lasted.
+    - **Written wherever an answer already arrives:** register, restore, a device's check, a Play notification, the daily
+      check (in its dry run too: it is a label on the purchase, not a write to any grant), the admin defer's re-read, and
+      Apple's check or notification. No extra call to Google. "Could not ask" leaves it as it was.
+    - **It never decides premium.** No grant, date, restore answer or move reads it. A tester's purchase works exactly as
+      a buyer's does, on the phone and on the server.
+    - **Counts leave out TRUE by default; NULL counts as real,** so a real buyer can never drop out of a count before
+      the store is asked. `includeTest=true` on `GET /v1/webpanel/billing-health/summary` puts them back; the summary
+      and the `billing-integrity` card always say how many were left out and how many are not yet asked. Every listed
+      purchase and the support view's entitlements carry `testPurchase`.
+    - **Backfill:** `POST /v2/admin/billing/purchases/test-flag` (ADMIN), dry by default. It asks the store about every
+      purchase still NULL and lists what it would mark; `{"apply": true}` writes that column only. Applying is the
+      owner's word.
+
+16. **One empty answer from the store never takes premium from a phone the store called premium** (0157; found on the
+    1.4.9 build 110 release test, reported 2026-09-22). Built on app `VC_108_VN_149` (`3feadaa5`, `82b0a374`), not released.
+    - **Why.** The store's list of what a phone holds is its copy on the phone, and at the moment a subscription renews
+      it can be empty: a relaunch 8 s after the period's end got "0 subs", premium went off and a splash ad showed, and
+      Play said "1 sub" 95 s later. A paying monthly customer can meet the same gap at every renewal.
+    - **The rule** (`StoreSaidNothing`, `domain/billing`, shared by Android and iOS): an empty answer on a phone whose
+      own store flag (`hasStoreGrant`) is off is acted on at once, exactly as before — no ad changes for a free user.
+      On a phone whose flag is on, the first empty answer starts a watch (`store_none_since`, kept on disk), premium
+      stays, and the store is asked again at 30 s, 2, 5, 10, 20 and 30 minutes. Any answer that holds a purchase ends
+      the watch. Only an empty answer 30 minutes or more after the first one takes premium off (`recordStoreSaidNone`).
+    - **Its cost.** Someone whose subscription truly ended keeps premium, and sees no ads, for at most 30 minutes
+      more, once. The window is the owner's to change.
+    - Kill switch `store_nothing_watch_enabled` (Remote Config, default on). Off: every empty answer is acted on at
+      once, as up to 1.4.8.
+    - "Could not ask" still leaves premium untouched (rule 3). The server's grant (rule 9) is unchanged.
 
 ## Known gaps (2026-09-12, found while checking 1.4.5)
 
