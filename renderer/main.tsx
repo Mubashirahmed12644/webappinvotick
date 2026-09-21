@@ -74,7 +74,7 @@ import qrCode from "./qr_code.jpg";
 
 declare global {
   interface Window {
-    __setInvoice?: (json: string) => void;
+    __setInvoice?: (json: string, optsJson?: string | null) => void;
     /**
      * Show the document in another language: `{ data, labels, dir }` as JSON.
      *
@@ -86,13 +86,36 @@ declare global {
      * Passing dir="rtl" mirrors the page, which is why the whole payload arrives together rather
      * than labels alone: text, direction and data have to change in the same frame.
      */
-    __setTranslatedInvoice?: (json: string) => void;
+    __setTranslatedInvoice?: (json: string, optsJson?: string | null) => void;
     __INVOICE__?: InvoiceRenderData;
   }
 }
 
 type Translation = { labels?: typeof LABELS; dir?: "ltr" | "rtl" };
 let currentTranslation: Translation = {};
+
+/**
+ * The footer's Remove / Edit button (decision 0151), for the app's own preview only.
+ *
+ * It arrives as the SECOND argument of `__setInvoice`, never inside the document: the document is what
+ * gets shared, and this button must never be part of it. Every `__setInvoice` replaces it, so a warm
+ * page reused by another screen (a received invoice's PDF, say) is drawn without it unless that screen
+ * asks. An old app passes one argument and gets no button; an old bundle ignores the second.
+ */
+type FooterControlOpts = { kind: "remove" | "edit"; label: string } | null;
+let currentFooterControl: FooterControlOpts = null;
+
+function parseFooterControl(optsJson?: string | null): FooterControlOpts {
+  if (!optsJson) return null;
+  try {
+    const o = JSON.parse(optsJson) as { footerControl?: { kind?: string; label?: string } | null };
+    const c = o?.footerControl;
+    if (!c || (c.kind !== "remove" && c.kind !== "edit")) return null;
+    return { kind: c.kind, label: (c.label ?? "").trim() || (c.kind === "edit" ? "Edit" : "Remove") };
+  } catch {
+    return null;
+  }
+}
 
 const root = createRoot(document.getElementById("root")!);
 
@@ -135,6 +158,15 @@ function render(data: InvoiceRenderData | null) {
           w.AndroidStamp?.onSignatureRemoved?.();
           w.__onSignatureRemoved?.();
         }}
+        footerControl={currentFooterControl}
+        onFooterControl={() => {
+          // The app decides what the press means: the paywall for a free account, the footer sheet
+          // for a premium one. The page only reports it.
+          const w = window as unknown as { AndroidStamp?: { onFooterAction?: (kind: string) => void }; __onFooterAction?: (kind: string) => void };
+          const kind = currentFooterControl?.kind ?? "remove";
+          w.AndroidStamp?.onFooterAction?.(kind);
+          w.__onFooterAction?.(kind);
+        }}
         onAtTopChange={(atTop) => {
           // Lets the host decide who owns a downward drag: the invoice scrolls until it can't, then
           // the sheet takes over. Native can't work this out itself — the scrolling happens on a div
@@ -148,21 +180,25 @@ function render(data: InvoiceRenderData | null) {
   );
 }
 
-window.__setInvoice = (json: string) => {
+window.__setInvoice = (json: string, optsJson?: string | null) => {
   try {
     // A fresh document arrives untranslated — the app re-asks for a translation if it wants one.
     // Keeping a stale translation here would leave the previous language's labels on a new invoice.
     currentTranslation = {};
+    currentFooterControl = parseFooterControl(optsJson);
     render(JSON.parse(json) as InvoiceRenderData);
   } catch {
     render(null);
   }
 };
 
-window.__setTranslatedInvoice = (json: string) => {
+window.__setTranslatedInvoice = (json: string, optsJson?: string | null) => {
   try {
     const payload = JSON.parse(json) as { data: InvoiceRenderData; labels?: typeof LABELS; dir?: "ltr" | "rtl" };
     currentTranslation = { labels: payload.labels, dir: payload.dir };
+    // A translated document can be the first one a warm page is given, so it carries the footer
+    // button too. An app before 1.4.9 passes nothing, which keeps whatever `__setInvoice` set.
+    if (optsJson !== undefined) currentFooterControl = parseFooterControl(optsJson);
     render(payload.data);
   } catch {
     // Leave whatever is on screen. A document that fails to translate should stay readable in its

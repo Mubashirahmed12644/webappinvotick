@@ -1,4 +1,5 @@
 import "server-only";
+import type { OwnFooter } from "@/lib/invotick-footer";
 import { cache } from "react";
 import { config } from "./config";
 import { backendFetch } from "./backend";
@@ -462,6 +463,13 @@ export interface InvoiceRenderData {
    * (`withOwnersFooterRule`).
    */
   hideInvotickFooter?: boolean | null;
+  /**
+   * The business's own footer (decision 0151): what goes in each slot of the footer band when the
+   * Invotick footer is off. Absent on every snapshot from before 1.4.9, which then keeps 0147's rule
+   * (premium = no footer). Carried on free documents too, so a link sent before the owner paid shows
+   * the owner's footer once the server says the owner is premium (`withOwnersFooterRule`).
+   */
+  ownFooter?: OwnFooter | null;
 }
 
 export async function getInvoiceRenderData(id: string): Promise<InvoiceRenderData | null> {
