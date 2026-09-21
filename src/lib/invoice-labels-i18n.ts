@@ -41,7 +41,8 @@ export const LABEL_TRANSLATIONS: Record<string, Partial<InvoiceLabels>> = {
     "authorizedSignature": "授权签字",
     "footerGenerated": "使用 Invotick 生成的发票",
     "footerTagline": "在几秒钟内创建专业发票",
-    "footerScan": "扫描下载Invotic"
+    "footerScan": "扫描下载Invotic",
+    "footerContact": "联系我们"
   },
   "fr": {
     "invoice": "Facture",
@@ -74,7 +75,8 @@ export const LABEL_TRANSLATIONS: Record<string, Partial<InvoiceLabels>> = {
     "authorizedSignature": "Signature autorisée",
     "footerGenerated": "Facture générée avec Invotick",
     "footerTagline": "Créez des factures professionnelles en quelques secondes",
-    "footerScan": "Scannez pour télécharger Invotick"
+    "footerScan": "Scannez pour télécharger Invotick",
+    "footerContact": "Contactez-nous"
   },
   "ar": {
     "invoice": "الفاتورة",
@@ -107,7 +109,8 @@ export const LABEL_TRANSLATIONS: Record<string, Partial<InvoiceLabels>> = {
     "authorizedSignature": "التوقيع المعتمد",
     "footerGenerated": "الفاتورة التي تم إنشاؤها باستخدام Invotick",
     "footerTagline": "أنشئ فواتير احترافية في ثوانٍ",
-    "footerScan": "قم بالمسح لتنزيل Invotick"
+    "footerScan": "قم بالمسح لتنزيل Invotick",
+    "footerContact": "اتصل بنا"
   },
   "fa": {
     "invoice": "فاکتور",
@@ -140,7 +143,8 @@ export const LABEL_TRANSLATIONS: Record<string, Partial<InvoiceLabels>> = {
     "authorizedSignature": "امضای مجاز",
     "footerGenerated": "فاکتور با استفاده از Invotick ایجاد شد",
     "footerTagline": "ایجاد فاکتورهای حرفه ای در چند ثانیه",
-    "footerScan": "برای دانلود Invotick اسکن کنید"
+    "footerScan": "برای دانلود Invotick اسکن کنید",
+    "footerContact": "تماس با ما"
   },
   "es": {
     "invoice": "factura",
@@ -173,7 +177,8 @@ export const LABEL_TRANSLATIONS: Record<string, Partial<InvoiceLabels>> = {
     "authorizedSignature": "Firma autorizada",
     "footerGenerated": "Factura generada usando Invotick",
     "footerTagline": "Crea facturas profesionales en segundos",
-    "footerScan": "Escanee para descargar Invotick"
+    "footerScan": "Escanee para descargar Invotick",
+    "footerContact": "Contáctenos"
   },
   "pt": {
     "invoice": "Fatura",
@@ -206,7 +211,8 @@ export const LABEL_TRANSLATIONS: Record<string, Partial<InvoiceLabels>> = {
     "authorizedSignature": "Assinatura autorizada",
     "footerGenerated": "Fatura gerada usando Invotick",
     "footerTagline": "Crie faturas profissionais em segundos",
-    "footerScan": "Digitalize para baixar o Invotick"
+    "footerScan": "Digitalize para baixar o Invotick",
+    "footerContact": "Fale conosco"
   },
   "id": {
     "invoice": "Faktur",
@@ -239,7 +245,8 @@ export const LABEL_TRANSLATIONS: Record<string, Partial<InvoiceLabels>> = {
     "authorizedSignature": "Tanda tangan resmi",
     "footerGenerated": "Faktur dibuat menggunakan Invotick",
     "footerTagline": "Buat faktur profesional dalam hitungan detik",
-    "footerScan": "Pindai untuk mengunduh Invotick"
+    "footerScan": "Pindai untuk mengunduh Invotick",
+    "footerContact": "Hubungi kami"
   },
   "km": {
     "invoice": "វិក្កយបត្រ",
@@ -272,7 +279,8 @@ export const LABEL_TRANSLATIONS: Record<string, Partial<InvoiceLabels>> = {
     "authorizedSignature": "ហត្ថលេខាដែលមានការអនុញ្ញាត",
     "footerGenerated": "វិក្កយបត្រត្រូវបានបង្កើតដោយប្រើ Invotick",
     "footerTagline": "បង្កើតវិក្កយបត្រវិជ្ជាជីវៈក្នុងរយៈពេលប៉ុន្មានវិនាទី",
-    "footerScan": "ស្កេនដើម្បីទាញយក Invotick"
+    "footerScan": "ស្កេនដើម្បីទាញយក Invotick",
+    "footerContact": "ទាក់ទងមកយើង"
   },
   "th": {
     "invoice": "ใบแจ้งหนี้",
@@ -305,7 +313,8 @@ export const LABEL_TRANSLATIONS: Record<string, Partial<InvoiceLabels>> = {
     "authorizedSignature": "ลายเซ็นผู้มีอำนาจ",
     "footerGenerated": "ใบแจ้งหนี้ที่สร้างโดยใช้ Invotick",
     "footerTagline": "สร้างใบแจ้งหนี้แบบมืออาชีพในไม่กี่วินาที",
-    "footerScan": "สแกนเพื่อดาวน์โหลด Invotic"
+    "footerScan": "สแกนเพื่อดาวน์โหลด Invotic",
+    "footerContact": "ติดต่อเรา"
   },
   "hi": {
     "invoice": "चालान",
@@ -338,7 +347,8 @@ export const LABEL_TRANSLATIONS: Record<string, Partial<InvoiceLabels>> = {
     "authorizedSignature": "अधिकृत हस्ताक्षर",
     "footerGenerated": "इनवोटिक का उपयोग करके चालान तैयार किया गया",
     "footerTagline": "सेकंडों में पेशेवर चालान बनाएं",
-    "footerScan": "इनवोटिक डाउनलोड करने के लिए स्कैन करें"
+    "footerScan": "इनवोटिक डाउनलोड करने के लिए स्कैन करें",
+    "footerContact": "संपर्क करें"
   },
   "am": {
     "invoice": "ደረሰኝ",
@@ -371,7 +381,8 @@ export const LABEL_TRANSLATIONS: Record<string, Partial<InvoiceLabels>> = {
     "authorizedSignature": "የተፈቀደ ፊርማ",
     "footerGenerated": "ኢንቮቲክን በመጠቀም ደረሰኝ የመነጨ",
     "footerTagline": "በሰከንዶች ውስጥ ሙያዊ ደረሰኞችን ይፍጠሩ",
-    "footerScan": "Invotick ለማውረድ ይቃኙ"
+    "footerScan": "Invotick ለማውረድ ይቃኙ",
+    "footerContact": "ያግኙን"
   },
   "my": {
     "invoice": "ပြေ",
@@ -404,7 +415,8 @@ export const LABEL_TRANSLATIONS: Record<string, Partial<InvoiceLabels>> = {
     "authorizedSignature": "လုပ်ပိုင်ခွင့်လက်မှတ်",
     "footerGenerated": "Invotick ကို အသုံးပြု၍ ငွေတောင်းခံလွှာထုတ်ပေးသည်။",
     "footerTagline": "စက္ကန့်ပိုင်းအတွင်း ပရော်ဖက်ရှင်နယ် ငွေတောင်းခံလွှာများကို ဖန်တီးပါ။",
-    "footerScan": "Invotick ကို ဒေါင်းလုဒ်လုပ်ရန် စကန်ဖတ်ပါ။"
+    "footerScan": "Invotick ကို ဒေါင်းလုဒ်လုပ်ရန် စကန်ဖတ်ပါ။",
+    "footerContact": "ဆက်သွယ်ရန်"
   },
   "sw": {
     "invoice": "Ankara",
@@ -437,7 +449,8 @@ export const LABEL_TRANSLATIONS: Record<string, Partial<InvoiceLabels>> = {
     "authorizedSignature": "Sahihi iliyoidhinishwa",
     "footerGenerated": "Ankara inayotolewa kwa kutumia Invotick",
     "footerTagline": "Unda ankara za kitaalamu kwa sekunde",
-    "footerScan": "Changanua ili kupakua Invotick"
+    "footerScan": "Changanua ili kupakua Invotick",
+    "footerContact": "Wasiliana nasi"
   },
   "de": {
     "invoice": "Rechnung",
@@ -470,7 +483,8 @@ export const LABEL_TRANSLATIONS: Record<string, Partial<InvoiceLabels>> = {
     "authorizedSignature": "Autorisierte Unterschrift",
     "footerGenerated": "Mit Invotick erstellte Rechnung",
     "footerTagline": "Erstellen Sie in Sekundenschnelle professionelle Rechnungen",
-    "footerScan": "Scannen Sie, um Invotick herunterzuladen"
+    "footerScan": "Scannen Sie, um Invotick herunterzuladen",
+    "footerContact": "Kontakt"
   },
   "ja": {
     "invoice": "請求書",
@@ -503,7 +517,8 @@ export const LABEL_TRANSLATIONS: Record<string, Partial<InvoiceLabels>> = {
     "authorizedSignature": "承認された署名",
     "footerGenerated": "Invotickを使用して生成された請求書",
     "footerTagline": "プロフェッショナルな請求書を数秒で作成",
-    "footerScan": "スキャンして Invotick をダウンロード"
+    "footerScan": "スキャンして Invotick をダウンロード",
+    "footerContact": "お問い合わせ"
   },
   "lo": {
     "invoice": "ໃບເກັບເງິນ",
@@ -536,7 +551,8 @@ export const LABEL_TRANSLATIONS: Record<string, Partial<InvoiceLabels>> = {
     "authorizedSignature": "ລາຍເຊັນທີ່ໄດ້ຮັບອະນຸຍາດ",
     "footerGenerated": "ໃບເກັບເງິນທີ່ສ້າງຂຶ້ນໂດຍໃຊ້ Invotick",
     "footerTagline": "ສ້າງໃບແຈ້ງໜີ້ແບບມືອາຊີບໃນວິນາທີ",
-    "footerScan": "ສະແກນເພື່ອດາວໂຫລດ Invotick"
+    "footerScan": "ສະແກນເພື່ອດາວໂຫລດ Invotick",
+    "footerContact": "ຕິດຕໍ່ພວກເຮົາ"
   },
   "ru": {
     "invoice": "Счет",
@@ -569,7 +585,8 @@ export const LABEL_TRANSLATIONS: Record<string, Partial<InvoiceLabels>> = {
     "authorizedSignature": "Авторизованная подпись",
     "footerGenerated": "Счет выставлен с помощью Invotick",
     "footerTagline": "Создавайте профессиональные счета за считанные секунды",
-    "footerScan": "Сканируйте, чтобы скачать Invotick"
+    "footerScan": "Сканируйте, чтобы скачать Invotick",
+    "footerContact": "Связаться с нами"
   },
   "sv": {
     "invoice": "Faktura",
@@ -602,7 +619,8 @@ export const LABEL_TRANSLATIONS: Record<string, Partial<InvoiceLabels>> = {
     "authorizedSignature": "Auktoriserad signatur",
     "footerGenerated": "Faktura genererad med Invotick",
     "footerTagline": "Skapa professionella fakturor på några sekunder",
-    "footerScan": "Skanna för att ladda ner Invotick"
+    "footerScan": "Skanna för att ladda ner Invotick",
+    "footerContact": "Kontakta oss"
   },
   "et": {
     "invoice": "Arve",
@@ -635,7 +653,8 @@ export const LABEL_TRANSLATIONS: Record<string, Partial<InvoiceLabels>> = {
     "authorizedSignature": "Volitatud allkiri",
     "footerGenerated": "Invoticki abil genereeritud arve",
     "footerTagline": "Looge professionaalseid arveid sekunditega",
-    "footerScan": "Invoticki allalaadimiseks skannige"
+    "footerScan": "Invoticki allalaadimiseks skannige",
+    "footerContact": "Võtke meiega ühendust"
   },
   "bn": {
     "invoice": "চালান",
@@ -668,7 +687,8 @@ export const LABEL_TRANSLATIONS: Record<string, Partial<InvoiceLabels>> = {
     "authorizedSignature": "অনুমোদিত স্বাক্ষর",
     "footerGenerated": "ইনভটিক ব্যবহার করে ইনভয়েস তৈরি করা হয়েছে",
     "footerTagline": "সেকেন্ডের মধ্যে পেশাদার চালান তৈরি করুন",
-    "footerScan": "Invotick ডাউনলোড করতে স্ক্যান করুন"
+    "footerScan": "Invotick ডাউনলোড করতে স্ক্যান করুন",
+    "footerContact": "যোগাযোগ করুন"
   },
   "nl": {
     "invoice": "Factuur",
@@ -701,7 +721,8 @@ export const LABEL_TRANSLATIONS: Record<string, Partial<InvoiceLabels>> = {
     "authorizedSignature": "Geautoriseerde handtekening",
     "footerGenerated": "Factuur gegenereerd met Invotick",
     "footerTagline": "Maak binnen enkele seconden professionele facturen",
-    "footerScan": "Scannen om Invotic te downloaden"
+    "footerScan": "Scannen om Invotic te downloaden",
+    "footerContact": "Neem contact op"
   },
   "gu": {
     "invoice": "ભરતિયું",
@@ -734,7 +755,8 @@ export const LABEL_TRANSLATIONS: Record<string, Partial<InvoiceLabels>> = {
     "authorizedSignature": "અધિકૃત હસ્તાક્ષર",
     "footerGenerated": "ઇનવોટિકનો ઉપયોગ કરીને ઇન્વૉઇસ જનરેટ કરવામાં આવે છે",
     "footerTagline": "સેકન્ડોમાં વ્યાવસાયિક ઇન્વૉઇસ બનાવો",
-    "footerScan": "Invotick ડાઉનલોડ કરવા માટે સ્કેન કરો"
+    "footerScan": "Invotick ડાઉનલોડ કરવા માટે સ્કેન કરો",
+    "footerContact": "અમારો સંપર્ક કરો"
   },
   "ms": {
     "invoice": "Invois",
@@ -767,7 +789,8 @@ export const LABEL_TRANSLATIONS: Record<string, Partial<InvoiceLabels>> = {
     "authorizedSignature": "Tandatangan yang dibenarkan",
     "footerGenerated": "Invois dijana menggunakan Invotik",
     "footerTagline": "Buat invois profesional dalam beberapa saat",
-    "footerScan": "Imbas untuk memuat turun Invotick"
+    "footerScan": "Imbas untuk memuat turun Invotick",
+    "footerContact": "Hubungi kami"
   },
   "ne": {
     "invoice": "बीजक",
@@ -800,7 +823,8 @@ export const LABEL_TRANSLATIONS: Record<string, Partial<InvoiceLabels>> = {
     "authorizedSignature": "अधिकृत हस्ताक्षर",
     "footerGenerated": "Invotic प्रयोग गरेर उत्पन्न बीजक",
     "footerTagline": "सेकेन्डमा व्यावसायिक इनभ्वाइसहरू सिर्जना गर्नुहोस्",
-    "footerScan": "Invotick डाउनलोड गर्न स्क्यान गर्नुहोस्"
+    "footerScan": "Invotick डाउनलोड गर्न स्क्यान गर्नुहोस्",
+    "footerContact": "हामीलाई सम्पर्क गर्नुहोस्"
   }
 };
 
