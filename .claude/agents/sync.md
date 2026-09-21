@@ -1079,9 +1079,15 @@ Memory is dated observation. Verify any file:line against the code before relyin
       replaced by its first (`DefaultBusiness.choose`).
     - **The claim names its phone** (`deviceId`), so the server records it and re-admits a removed phone approved
       again. An iPhone asks as `IOS`.
-    - **Open:** the linking phone's own earlier guest work is left hidden (owner's question); one of two guest phones
-      creating an account retires the guest and strands the other with no notice; 0086's bookmark between phones.
-    - Guards: `DeviceLinkClaimRegistersDeviceTest` (2 new cases), `ALinkedPhoneJoinsTheAccountAsWhatItIsTest` (7).
+    - **A phone's own work is asked about before the link completes** (the owner's answer (a), 2026-09-21): yes joins it
+      through the one claim (`GuestWorkCoordinator.afterDeviceLink`, `POST /v2/guest-work`); no keeps it under its
+      guest and Linked Devices offers to add it later. A same-name business is named in the question; both are kept.
+      The server lets a guest account take it only on the app's own decision and only from a phone linked to both
+      (backend `fix/linked-guest-merge`, 1322/1322; **server first**). App `c287b4cf`, data 337/337.
+    - **Open:** one of two guest phones creating an account retires the guest and strands the other with no notice;
+      0086's bookmark between phones.
+    - Guards: `DeviceLinkClaimRegistersDeviceTest` (2 new cases), `ALinkedPhoneJoinsTheAccountAsWhatItIsTest` (7),
+      `APhoneJoiningAnAccountIsAskedAboutItsOwnWorkTest` (8), 3 cases in `AGuestsWorkMovesInOneStepTest`.
 
 ## Established 2026-09-12, while planning the receipt number
 

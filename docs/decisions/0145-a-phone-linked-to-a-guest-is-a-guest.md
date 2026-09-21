@@ -1,7 +1,8 @@
 # 0145 — A phone linked to a guest by QR is a guest, with the same Invotick ID
 
 **Date:** 2026-09-21
-**Status:** built (backend `fix/linked-guest-phone`, app `fix/147-linked-guest-phone`); not deployed, not released.
+**Status:** built (backend `fix/linked-guest-phone` and `fix/linked-guest-merge`, app `fix/147-linked-guest-phone`); not
+deployed, not released. The owner answered the open question on 2026-09-21: **(a)**.
 **Tier 1** (identity; a guest has no password to come back with). Owned by the sync agent (0051).
 **Related:** 0041 (an account's premium reaches every device), 0053 (a guest's work joins an account), 0086 (the pull
 bookmark), 0099 / rule 28 (a removed phone), 0144 (a reinstalled phone's account picker — built alongside, compatible).
@@ -69,8 +70,7 @@ bookmark), 0099 / rule 28 (a removed phone), 0144 (a reinstalled phone's account
 
 ## Still open
 
-- **A linking phone's own earlier guest work** is left behind, hidden and unsent, under its old guest (the Pixel's
-  `76031c98`: 1 business, 1 invoice, 1 client). No question is asked. The owner's question (below).
+- ~~A linking phone's own earlier guest work is left behind, hidden~~ — answered (a) and built, below.
 - **One guest on two phones, and one of them creates an account:** the claim moves the work and retires the guest
   (`is_active = 0`), and the other phone's guest pass stops working with nothing to tell it. Existed before this change
   (from either phone). Needs its own decision.
@@ -80,6 +80,56 @@ bookmark), 0099 / rule 28 (a removed phone), 0144 (a reinstalled phone's account
   is 0143's question, the billing agent's.
 - **Browsers linked to a guest** (24 of 29): the web's own handling was not checked here.
 
-## The owner's question
+## The owner's question, and his answer (2026-09-21)
 
 What should happen to a phone's own earlier work when it joins another account by QR?
+
+- **(a) Ask before linking, and on "yes" merge the phone's own work into the linked account. — CHOSEN.**
+- (b) Keep it hidden on the phone. — rejected: that is the defect.
+- (c) Refuse to link until the person decides elsewhere. — rejected: a question on the spot is the same decision
+  without sending the person away.
+
+## Built for (a)
+
+- **Asked before the link completes** (`LinkedPhoneWork.prepare`, app). After the claim, before the phone signs in
+  with the pass it collected: a guest phone with any work of its own (a business, a product, an invoice, anything
+  that syncs) sees "This phone already has its own work — 1 business, 1 invoice, 1 client. Add it to this account?"
+  with **Add it** / **No, just link**. The screen is English, as the rest of it is; the owner's words were
+  "Mila dein" / "Nahi, sirf jor dein".
+- **One claim, not a copy** (`GuestWorkCoordinator.afterDeviceLink`). Yes is the move a "yes" after a sign-in makes:
+  rows re-owned on the phone at once, nothing queued again, `POST /v2/guest-work` MOVE, pushes held until the server
+  moves its copy; idempotent, resumed at every start, refusals named (`NO_PROOF`, `NOT_AN_ACCOUNT`, …, reported as
+  `sync_failed stage=guest_claim`).
+- **The server lets a guest account take it only here** (`GuestWorkClaim.claim`, backend `fix/linked-guest-merge`):
+  the app's own yes or no, and only when the calling phone is linked to both the old guest and the account (the
+  device-link claim records that). An old build's push and the repair still take work into a registered account
+  alone. Suite 1322/1322; 3 of 3 new cases failed first.
+- **No is not hidden.** The work stays under its guest; its unsent part is sent under its own pass (0053's keep);
+  the confirmation says so, and Linked Devices shows "Work kept apart on this phone … Add it to this account", which
+  runs the same claim (`addKeptWork`).
+- **Same-name business.** The phone reads the account's business names with the linked pass (`GET /v1/businesses`,
+  existing) and names each of its own businesses with the same name: "both are kept, so you will see two businesses
+  with that name; you can remove one in Manage Business". When the list cannot be read, the question says it could
+  not check. Businesses are never merged into one: each carries its own invoices.
+- **Premium** is not touched: a purchase follows its phone's accounts by 0143's rules.
+- **The choice's event:** the two buttons are auto-captured taps, `DeviceLinkScreen.add_own_work_12` and
+  `DeviceLinkScreen.keep_own_work_13`, plus `add_kept_work_14` (AGENTS-EVENTS §1.3: the automatic channel, switchable
+  from the panel; no coded twin, §1.11). The server counts each move in `guest_work_claims_total{path="app"}`.
+- **Only a guest's work is asked about:** the claim takes a guest's work and nothing else. A registered phone's work is
+  on the server under its own account already.
+- Guards: `APhoneJoiningAnAccountIsAskedAboutItsOwnWorkTest` (8; did not compile first, 15 errors), the 3 new cases in
+  `AGuestsWorkMovesInOneStepTest`.
+
+### Deploy order
+
+**Server first** (`fix/linked-guest-merge`). An app with this change against today's server gets `NOT_AN_ACCOUNT` for a
+guest account: the work would show under the account on the phone while the server keeps it under the old guest.
+
+### Boundaries
+
+- The claimed link waits for the answer in memory. If the app dies before the answer, the phone stays its own guest and
+  must be linked again (the code is spent).
+- The phone holds one pending decision. A later sign-in that asks its own question replaces a "no" kept here; the work
+  stays on the phone under its guest, but the Linked Devices line goes.
+- A registered phone that links elsewhere leaves its unsent work queued under its account until it signs in there
+  again.
