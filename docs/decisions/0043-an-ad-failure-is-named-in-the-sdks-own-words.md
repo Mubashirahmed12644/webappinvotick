@@ -48,7 +48,7 @@ the integer keeps `unknown_<n>` and `error_domain` / `cause_domain` say whose in
   first one anybody forgets lowers the number silently. It would also split the failure's history in
   two for no gain, since `ad_load_failed` already fires at exactly the right moment with exactly the
   right scope.
-- **Sending `error.message`.** It is free-text from the SDK and from every mediation adapter: not
+- **Sending `error.message`.** *(Reversed 2026-09-21 by [0150](0150-a-failed-ad-says-the-sdks-sentence-and-the-banner-joins-our-pipeline.md): capped, query strings dropped, beside `reason` and never instead of it.)* It is free-text from the SDK and from every mediation adapter: not
   groupable, unbounded in length, versioned by a third party, and the one field most likely to
   carry an id or a URL into `analytics_events`. The pair (`reason`, `code`) is the same fact in a
   form that can be counted. The message stays in logcat, where a person reads it once.

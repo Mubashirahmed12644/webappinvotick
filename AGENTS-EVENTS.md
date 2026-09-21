@@ -588,6 +588,32 @@ On 2026-09-15 the share → install chain was audited. Every step had rows, but 
 A hash, a second name for the same value, or a new event were each rejected. Decision
 [0110](docs/decisions/0110-the-share-loop-events-name-their-link-and-their-door.md).
 
+### 1.22 A vendor's sentence rides beside the vendor's word, never in its place. *(decided 2026-09-21)*
+
+`reason` names the integer the SDK sent, and for `internal_error` (86 % of app-open failures on 1.4.7) the integer
+says nothing more. The SDK's message and the answers from the ad networks it tried were in logcat and nowhere else.
+
+**The rule.**
+- Free text from a vendor may be stored only **beside** a closed-vocabulary key that still does the counting.
+  Here that is `message` beside `reason`.
+- It is cleaned first: query strings are dropped, whitespace is collapsed, and it is capped at 200 characters,
+  ending in `…` when cut.
+- When the vendor lists several answers, report **one**, chosen by a stated rule (the first network in the SDK's
+  order that answered with an error), plus the list's length. A list inside a params row cannot be grouped.
+- The chosen network's code is named only in its own code space (§1.15).
+- A count is sent only when the vendor gave a list. No list means absent, never `0` (§1.7).
+
+Also decided with it: **a format joins the pipeline under the events that already exist.** The banner sends
+`ad_request → ad_loaded | ad_load_failed | ad_load_crashed → ad_shown → ad_impression_value` with `type=banner`,
+not a `banner_*` family. The format is a parameter (§1.1).
+
+⚠️ **The panel's Event detail reads a limited number of keys** (30, and 40 from backend `04ae889`). They are
+taken commonest shape first, so the keys a new build adds come last and are the first to be cut, with nothing on
+the page to say so. Count an event's keys before adding more.
+
+This reverses 0043's rejection of `error.message`. Decision
+[0150](docs/decisions/0150-a-failed-ad-says-the-sdks-sentence-and-the-banner-joins-our-pipeline.md).
+
 ### 1.10 Layers
 
 `intent.screen` · `intent.action` · `response.outcome` · `response.gate` · `response.interruption` ·

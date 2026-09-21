@@ -487,6 +487,25 @@ the list is wrong, not the app.**
   ⚠️ **`app_open_ad_loaded` is gone from the app** — 4 firings on 1 device, and `ad_loaded` carries
   everything it did plus `type`, `ad_request_id` and `ad_source`. Old rows keep the name; nothing
   new arrives under it, so a query that still reads it is measuring history only.
+- **Ads, from 1.4.9 (decision [0150](docs/decisions/0150-a-failed-ad-says-the-sdks-sentence-and-the-banner-joins-our-pipeline.md)).**
+  No new event.
+  - **`ad_load_failed` on every format** gains:
+    - `message` and `cause_message`: the SDK's own sentence, capped at 200 characters, with query strings dropped;
+    - `adapter_count`: how many ad networks the SDK's response lists; absent when there was no response, never `0`;
+    - `adapter_source`, `adapter_reason`, `adapter_domain` and `adapter_message`: the first network in the
+      SDK's order that answered with an error.
+    - On iOS, only `message`, because the Swift bridge does not pass the list of networks yet.
+  - **The banner joins the pipeline, with `type=banner` and `placement` = the slot's tag** (`main_shell`,
+    `invoice_screen`, `save_screen`, `preview_screen`, `estimate_screen`, `received_invoice`):
+    - `ad_request` with `trigger` = `new_view|reattach|refresh`;
+    - then `ad_loaded`, `ad_load_failed` (with `ever_loaded`: `true` = the old ad stayed on screen) or
+      `ad_load_crashed`;
+    - then `ad_shown` (the SDK's impression) and `ad_impression_value`.
+    - `ad_request_id` is on every row. An impression or a paid row joins to the ad on screen.
+  - Until then the banner had **0 rows ever**: Firebase and Meta only.
+  - Expect about **+10.5k rows/day** (about +24 %; +46 % at most). These are coded events, so the denylist
+    cannot switch them off.
+  - **Filter on `type` before reading any ad total**, or banner volume swamps app-open and interstitial.
 - **Notifications:** `notification_permission_shown` / `_allowed` / `_denied`
 - **Parameters added 2026-09-04 (release after 1.4.2, branch `VC_93_VN_142`):** `app_cold_start.prev_exit`
   (`crash|anr|crash_native|user_request|low_memory|…|unknown`, API ≥ 30 only) + `prev_exit_ms_ago`;
