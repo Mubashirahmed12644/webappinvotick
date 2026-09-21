@@ -1049,7 +1049,7 @@ Memory is dated observation. Verify any file:line against the code before relyin
 39. **A phone joined to an account by QR becomes what the account is: a guest stays a guest** (0145; the owner's test
     on 1.4.7, 2026-09-21). Backend `fix/linked-guest-phone` (test `8d64b62`, fix `f78a390`, suite 1301/1301); app
     `fix/147-linked-guest-phone` on `VC_107_VN_147` (test `0627befc`, 13 compile errors first; fix `0e8227af`; restore
-    test `0f0d...`, red first; fix `650e2efb`; iOS platform `03330f05`), data 329/329, domain 58/58. Not deployed.
+    test `8f46f029`, red first; fix `650e2efb`; iOS platform `03330f05`), data 329/329, domain 58/58. Not deployed.
     - **Found:** 1.4.7 signed every link in as a registered account. A phone linked to guest 922440441 showed "User",
       no Invotick ID, Sign Out, and "Add Business" over the account's business. 29 of 41 links ever joined a guest.
     - **The claim's answer says `role`** (and a registered account's `email`, `displayName`; never a guest's internal
