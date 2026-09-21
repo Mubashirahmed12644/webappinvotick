@@ -573,6 +573,11 @@ the list is wrong, not the app.**
   `NO_PROOF`, `JOINED_ANOTHER_ACCOUNT`, `NOT_A_GUEST`, `NOT_AN_ACCOUNT` — or `HTTP_<n>`) and
   `exception_class`. No answer at all is not reported (0029). `guest_data_merged` now fires only where a
   move is decided: a sign-up, or a "yes" to the one question.
+- **Accounts on one phone, from 1.4.9:** **`legacy_guest_move`** — a guest still inside `invotick_v2.db` moved into
+  a file of its own, or left where it is, or a failed attempt (decision
+  [0153](docs/decisions/0153-a-guest-inside-the-legacy-file-moves-into-a-file-of-its-own.md)). `outcome`
+  (`moved|skipped|failed`), `reason`, `guest_id` (a join key), `rows`, `queue_rows`, `removed_rows`, `left_in_legacy`,
+  `attempt`, `elapsed_ms`, `exception_class` on a failure. Coded, because nothing is pressed; each outcome once per guest.
 - **Shipped images, from 1.4.6:** **`bundled_image_unavailable`** — an image a row names (a seeded
   header, template or background) that this build cannot produce. `image` (our asset name),
   `stored_ext` (`png` on rows written up to 1.4.4, `webp` after), `failure`

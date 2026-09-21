@@ -1114,7 +1114,7 @@ Memory is dated observation. Verify any file:line against the code before relyin
       pull cursor** (`faec959e`: every drain used to). A notice names its account; the token stays on every account
       the phone holds (backend `52dea8c`). Remove-from-phone never while anything is unsent.
     - **Open:** received invoices stay in the file they arrived in; a sign-out inside an added account is today's
-      sign-out in that file; stage 3 (guests inside the legacy file) waits for the owner.
+      sign-out in that file. Stage 3 (guests inside the legacy file) is built: rule 43.
     - Guards: `EachAccountKeepsItsOwnPlaceTest` (8), `SwitchingAccountsTest` (9), `ASwitchRebuildsOnlyTheAccountsObjectsTest`
       (2), `ThePhoneAndTheAccountDoNotShareAnObjectTest` (3), `NoRowCrossesAccountsTest` (2, real Room: none of the 21
       tables nor the queue of one account is in the other's file), `OnePromptAtATimeTest` (6), the account cases in
@@ -1140,6 +1140,32 @@ Memory is dated observation. Verify any file:line against the code before relyin
     - Guards: backend `ABusinessFooterFollowsTheBusinessTest` (5), and the new field in
       `ACopyThatChangesNothingKeepsItsNumberTest`. App `ABusinessFooterFollowsTheBusinessTest` (8, real Room) and
       `AnUpdateToV6KeepsEveryBusinessTest`.
+
+43. **A guest inside `invotick_v2.db` moves into a file of its own only as copy, check, switch, then remove** (0153,
+    0146 stage 3; the owner, 2026-09-22). App `VC_108_VN_149`: test `a8f819b1` (red: 153 compile errors, all in the
+    two new test files), code `501026fc`; 1034/1034, Android debug, iOS simulator. Not released, not run on a phone.
+    - **Who:** any owner of rows in the legacy file, other than its account, whose `users` row is a guest: a guest kept
+      apart (0053 "No"), or the guest a phone was before a QR link (0145). A signed-out account waiting to be erased
+      is `AccountDataPurger`'s and is never moved.
+    - **What goes** (`LegacyGuestMovePlan`, from the file's own schema, never a table list): the guest's rows, its
+      `users` row, and ownerless rows that name them (a line with no owner, its images, reminders). Shared defaults
+      (`00000000-0000-0000-…`) and ownerless parents are copied and stay; in the legacy file the guest's defaults are
+      handed to its account, whose invoices may name them.
+    - **The order:** copy parents first into `invotick_acct_g<guest id>.db`; check every table (count, ids, values, and
+      nothing else in any table); one register write (`addMovedGuest`: parked, a guest session, its pass asked for
+      again when the vault holds none); then remove in one transaction only rows the new file holds, and never a row
+      a kept row names. The guest's `users` row goes last, only when nothing names it.
+    - **Never removed before the check and the register write.** Before them, a failure deletes the half-made file;
+      retried after 1 h, 6 h, 24 h, then daily, 6 attempts. Dying after them, the next run only removes.
+    - **Refused, nothing moves, said once:** another account's row names a guest row, a guest row names another
+      account's, a default names a guest row, or a named row is missing. Never cut a link to make a move possible.
+    - **When:** only while the legacy file is open (its account's settings are then the live ones), holding
+      `AccountFileLock` per guest, off the main thread, 30 s after the app or an account opens. Kill switch
+      `legacy_guest_move_enabled` (with `account_switcher_enabled`).
+    - **Evidence:** `legacy_guest_move` — `outcome` `moved|skipped|failed`, `reason`, `guest_id`, `rows`,
+      `queue_rows`, `removed_rows`, `left_in_legacy`, `attempt`, `elapsed_ms`, `exception_class`.
+    - **Open:** removing the legacy account once it is alone (received invoices live in its file); a real-phone run.
+    - Guards: `AGuestInTheLegacyFileMovesOutWholeTest` (10, real Room), `AMovedGuestGetsAPlaceOfItsOwnTest` (4).
 
 ## Established 2026-09-12, while planning the receipt number
 

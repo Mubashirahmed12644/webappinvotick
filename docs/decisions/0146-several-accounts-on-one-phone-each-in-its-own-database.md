@@ -365,3 +365,16 @@ karein? (Recommended: ginti ke baad.)
 - **Remove from this phone** (not the open account, not the one in `invotick_v2.db`): its work is sent first; while
   any is unsent nothing is removed; then it is signed out on the server with its own pass and the phone's token.
 - **Stage 3 waits for the owner's go:** guests kept inside the legacy file moved out into files of their own.
+
+### Stage 3 — built and green (2026-09-22), app `VC_108_VN_149` @ `501026fc` (decision 0153)
+
+- **The owner's go:** *"finish every pending 1.4.9 item before release"* (2026-09-22).
+- Each guest still inside `invotick_v2.db` beside its account moves into `invotick_acct_g<guest id>.db`: copy, check
+  (counts and checksums per table), one register write, then removal from the legacy file in one transaction. Nothing
+  is removed before the check passed and the place is registered.
+- It runs only while the legacy file is open, 30 s after the app or an account opens. Kill switch
+  `legacy_guest_move_enabled`. One event, `legacy_guest_move`.
+- Proven on the real schema: `AGuestInTheLegacyFileMovesOutWholeTest` (10), `AMovedGuestGetsAPlaceOfItsOwnTest` (4);
+  1034/1034, Android debug build, iOS simulator compile. No server change.
+- **Not done:** removing the legacy file's own account once it is alone (0153, question 1); a run on a real phone of
+  each platform.
