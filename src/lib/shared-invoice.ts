@@ -2,6 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { config } from "./config";
 import type { InvoiceRenderData } from "./data";
+import { withOwnersFooterRule } from "./invotick-footer";
 
 // Public (no-login) shared invoice, read from the Spring backend by its opaque
 // token. `snapshot` is the exact InvoiceRenderData the mobile app produced, so
@@ -27,6 +28,17 @@ export interface PublicSharedInvoice {
   approvalStatus?: "PENDING" | "APPROVED" | "REJECTED";
   approvedAt?: string | null;
   decisionNote?: string | null;
+  /**
+   * False when the document's owner is premium right now: the page draws no Invotick footer
+   * (decision 0147). Absent on servers before 0147, which changes nothing. Applied through
+   * `renderDataOf`, never read on its own.
+   */
+  showInvotickFooter?: boolean;
+}
+
+/** The snapshot as the page renders it — the footer rule applied (decision 0147). */
+export function renderDataOf(shared: PublicSharedInvoice): InvoiceRenderData {
+  return withOwnersFooterRule(shared.snapshot, shared.showInvotickFooter);
 }
 
 /**

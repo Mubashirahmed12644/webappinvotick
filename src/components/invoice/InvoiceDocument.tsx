@@ -1,4 +1,5 @@
 /* eslint-disable @next/next/no-img-element */
+import { showsInvotickFooter } from "@/lib/invotick-footer";
 import type { InvoiceRenderData } from "@/lib/data";
 import { formatMoney, formatDate, hexToRgba, contrastText, onTint, blendOnWhite } from "@/lib/format";
 import { imageProxyUrl } from "@/lib/image";
@@ -258,7 +259,7 @@ export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hide
 
         {/* Footer — pinned to the bottom of the sheet (mt-auto). Hidden when the paging frame
             renders one footer per A4 page instead (multi-page invoices). */}
-        {!hideFooter && (
+        {!hideFooter && showsInvotickFooter(data) && (
           <div className="mt-auto">
             <InvoiceFooter qrDataUrl={qrDataUrl} labels={labels} />
           </div>

@@ -454,6 +454,14 @@ export interface InvoiceRenderData {
   // company stamp above.
   paymentStampImage?: string | null;
   items: RenderItem[];
+  /**
+   * True when the Invotick footer (logo, "generated with…", link and QR) is left off every page — a
+   * premium account's document (decision 0147). Absent means false, which is what every snapshot from
+   * before 0147 and every free user's says, so the footer stays for them. The app's InvoiceSnapshot
+   * carries the same field; the share page also sets it when the owner is premium now
+   * (`withOwnersFooterRule`).
+   */
+  hideInvotickFooter?: boolean | null;
 }
 
 export async function getInvoiceRenderData(id: string): Promise<InvoiceRenderData | null> {

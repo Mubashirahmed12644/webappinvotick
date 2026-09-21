@@ -1,5 +1,6 @@
 "use client";
 
+import { showsInvotickFooter } from "@/lib/invotick-footer";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import { InvoiceDocument, InvoiceFooter } from "./InvoiceDocument";
@@ -311,6 +312,8 @@ export function A4PagedFrame({
   dir?: "ltr" | "rtl";
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
+  // False for a premium account's document: no Invotick footer on any page (decision 0147).
+  const branded = showsInvotickFooter(data);
 
   // Report a pull past the top, so a host that has a sheet below can close it.
   //
@@ -432,7 +435,9 @@ export function A4PagedFrame({
       const ch = container.clientHeight;
       if (cw <= 0 || ch <= 0) return;
 
-      const footerHMeasured = footerMeasureRef.current?.offsetHeight ?? 100;
+      // A premium document has no footer band (decision 0147): its content area runs down to the
+      // bottom margin, where "Page X of Y" still sits.
+      const footerHMeasured = branded ? footerMeasureRef.current?.offsetHeight ?? 100 : 0;
       setFooterH(footerHMeasured);
       const usableH = SHEET_H - footerHMeasured - FOOTER_BOTTOM_MARGIN - 10;
 
@@ -466,7 +471,7 @@ export function A4PagedFrame({
     if (containerRef.current) ro.observe(containerRef.current);
     if (withTotalsRef.current) ro.observe(withTotalsRef.current);
     return () => ro.disconnect();
-  }, [data, qrDataUrl, totalItems]);
+  }, [data, qrDataUrl, totalItems, branded]);
 
   // Align the payment stamp's TOP edge to the totals box's top line (native parity — the auto stamp
   // sits over the totals). Measured from the rendered summary page so it tracks the totals wherever
@@ -565,11 +570,13 @@ export function A4PagedFrame({
       <div ref={noTotalsRef} className="a4-measure" style={{ position: "absolute", left: -99999, top: 0, width: SHEET_W, visibility: "hidden", pointerEvents: "none" }} aria-hidden>
         <InvoiceDocument data={data} qrDataUrl={qrDataUrl} hideFooter hideSummary labels={labels} dir={dir} />
       </div>
-      <div ref={footerMeasureRef} className="a4-measure" style={{ position: "absolute", left: -99999, top: 0, width: SHEET_W, visibility: "hidden", pointerEvents: "none" }} aria-hidden>
-        {/* Band only — the "Page X of Y" line lives inside FOOTER_BOTTOM_MARGIN, so it must NOT add
-            to the measured footer height (else multi-page invoices reserve extra space for it). */}
-        <InvoiceFooter qrDataUrl={qrDataUrl} labels={docLabels} />
-      </div>
+      {branded && (
+        <div ref={footerMeasureRef} className="a4-measure" style={{ position: "absolute", left: -99999, top: 0, width: SHEET_W, visibility: "hidden", pointerEvents: "none" }} aria-hidden>
+          {/* Band only — the "Page X of Y" line lives inside FOOTER_BOTTOM_MARGIN, so it must NOT add
+              to the measured footer height (else multi-page invoices reserve extra space for it). */}
+          <InvoiceFooter qrDataUrl={qrDataUrl} labels={docLabels} />
+        </div>
+      )}
 
       {(() => {
         const stack = (
@@ -616,9 +623,11 @@ export function A4PagedFrame({
                     </div>
                     {/* Footer band pinned FOOTER_BOTTOM_MARGIN above the sheet's bottom edge (equal to
                         its 32px side inset). No pageLabel here — it sits in the margin below. */}
-                    <div style={{ position: "absolute", left: 0, right: 0, bottom: FOOTER_BOTTOM_MARGIN, background: "#fff", paddingLeft: 32, paddingRight: 32 }}>
-                      <InvoiceFooter qrDataUrl={qrDataUrl} labels={docLabels} />
-                    </div>
+                    {branded && (
+                      <div style={{ position: "absolute", left: 0, right: 0, bottom: FOOTER_BOTTOM_MARGIN, background: "#fff", paddingLeft: 32, paddingRight: 32 }}>
+                        <InvoiceFooter qrDataUrl={qrDataUrl} labels={docLabels} />
+                      </div>
+                    )}
                     {/* "Page X of Y" printed INSIDE the bottom margin (centred in the FOOTER_BOTTOM_MARGIN
                         gap between the band and the sheet edge) — so multi-page invoices reserve no
                         extra space for it. */}
