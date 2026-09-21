@@ -184,3 +184,43 @@ tests green; `:composeApp:assembleDebug` and `compileKotlinIosSimulatorArm64` bo
   would touch the sheet's UI and its stored `OwnFooterSettings` shape for a case (typing a custom email while
   keeping the profile's phone) the owner did not ask for. The existing override already satisfies "always wins,
   clearing it falls back" as a whole line.
+
+## Addendum, 2026-09-21 (late) — the 1.4.9 device test: an icon-only button, and the WhatsApp country
+
+**1. The Remove / Edit button is an icon only (owner).** The "Remove ×" / "Edit" pill's words covered the QR and the
+"Scan to download" line. Now a round × (free, `#374151`) or pencil (premium, `#0D4DC0`), white glyph, white ring. No
+words are drawn. The words are the accessible name: "Remove footer" / "Edit footer" / "Add footer".
+**Neither the icon nor its touch target may touch the QR or the text, not even partly (owner).** Sheet px on the 794 px
+sheet, from the band's top-right corner:
+
+| | where | clearance |
+|---|---|---|
+| QR tile | x −81…−19, y 16.5…78.5 (62 px, 19 px padding, centred in the 95 px band) | — |
+| text | starts at y ≥ 19.3 (tallest: two-line contact line) | — |
+| icon | centre (15, 0) in the 32 px right margin, radius ≤ 16 (≈16dp at the phone's 0.494 scale) | 34.8 px to the QR, 19.2 px to the document above, 17 px to the sheet edge |
+| touch target | 48dp square, right edge on the sheet edge, **bottom edge at y 16** | above the QR's top and every text line, at any scale |
+
+- The target sits at z 19, under the draggable signature/stamp (z 20).
+- Measured in a browser on the built bundle, 412 px wide, free and premium: target 48 × 48, 0.25 px above the QR's top,
+  no overlap with the QR or any text line.
+- Web: `renderer/149-own-footer` `b80a3b9`, `feat/premium-own-footer` `2a0f518`. App: `dcf13909`, bundle sha1
+  `b58dac5d`.
+- Rejected: the icon centred on the band's corner. That was the first try of this fix. Its 48dp target still lay
+  over the top of the QR.
+
+**2. The WhatsApp QR's country is where the phone is, not its language.** An "English (UK)" phone in Lahore printed
+`wa.me/443001234567`. The fallback region was `Locale.getDefault().country`, the region half of the language setting.
+The ladder is now:
+
+1. the business's country;
+2. the SIM's (`TelephonyManager.simCountryIso`, no permission);
+3. the network's (`networkCountryIso`);
+4. the locale's.
+
+A `+92…` / `0092…` number is kept as dialled. `0300…` drops its 0. With no country anywhere there is no QR. A number
+with no trunk 0 used to be printed as typed, which was a guess; it now gets no QR either.
+- iOS returns no SIM or network country: `CTCarrier` is deprecated and answers "--". Its locale region is the separate
+  Region setting, so the fault does not arise there.
+- App `9a7716a4`, `WhatsAppQrCountryTest` 6/6.
+- Rejected: reading the SIM for the **currency** too (`offlineCurrency`). It is the same kind of fault, but it is a
+  different feature with its own trade-offs, so it is left for a decision of its own.

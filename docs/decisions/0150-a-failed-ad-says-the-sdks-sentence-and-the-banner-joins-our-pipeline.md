@@ -110,3 +110,38 @@ without it the "unknown" row cannot shrink.
    over). Fix it in 1.4.9?
 3. On Android, a `loadAd` that throws stops that banner slot for the rest of the screen's life. Fix
    it? It means more requests, so it counts as an ad change.
+
+## Addendum, 2026-09-21 (late) — the banner is refreshed twice: an open question for the owner
+
+**Nothing was changed.** A change here changes ad requests and impressions, so it is the owner's decision.
+
+**What the rows show.** `analytics_events`, `type=banner`, 2026-09-21 17:57–18:29 UTC. These are the 1.4.9 device
+tests: 37 requests from a debug build (Google's test unit `…/6300978111`) and 9 from the 1.4.9 release build (our unit
+`…/2035355170`).
+- Our 30 s timer's `ad_request` rows are followed by more `ad_loaded` / `ad_load_failed` rows that no request of ours
+  asked for.
+- They arrive under the previous request's id, 5–187 s after it.
+- In the half hour there were 46 requests of ours and 63 answers: **about 17 of the answers came from the SDK's own
+  refresh.**
+- Their rhythm is fixed per AdView and does not reset when we load. On the test unit it is every ~72 s, for example
+  save_screen 18:11:53 and 18:13:05 (the 23:11:53 / 23:13:05 PKT of the device logs), and invoice_screen 17:59:27,
+  18:00:39.
+- Our own unit shows the same thing at ~61–70 s: 18:27:09, 18:28:10 and 18:29:11 after a load at 18:25:59.
+- Each SDK refresh that loads also counts an impression (`ad_shown` = `ad_loaded` = 53).
+- So the unit's own refresh (set in the AdMob console) runs as well as ours. A creative is sometimes replaced 5–12 s
+  after ours loaded, which is well under the 30 s AdMob allows between refreshes.
+- Google's guidance: when the app refreshes in code, turn refresh off for that ad unit in AdMob.
+
+**Options** (at about 60 s for the unit's refresh and 30 s for ours; today about 3 loads a minute per visible banner):
+
+| | what | requests / impressions | cost |
+|---|---|---|---|
+| **A — recommended** | AdMob console: refresh **off** for the banner unit(s). Keep our 30 s timer. | about −33 % (3 → 2 a minute) | Every ad stays up ≥ 30 s. Our timer already pauses under a full-screen ad and when the screen is hidden, is set from Remote Config, and is measured (`trigger=refresh`). No release. |
+| B | Remote Config `enableAutoRefresh=false`, and the console refresh stays on | about −67 % at 60 s (3 → 1). With the console set to 30 s, about −33 %. | No release, but the SDK's loads have no `ad_request` row, so fill rate reads wrong until the app writes one. |
+| C | Leave both | unchanged | Some ads shown < 30 s: policy exposure and likely weaker viewability and eCPM. |
+
+Fewer requests are not simply fewer money. Each ad stays up longer, so viewability and eCPM per impression may rise.
+Measure revenue per session before and after (`ad_impression_value`) against impressions, not impressions alone.
+Also seen: a debug AdView kept refreshing by itself for 3 minutes (`main_shell`, 18:24–18:27) after our timer had
+stopped. Whatever held it was not a paused AdView. This is worth a look with option A or B.
+
