@@ -1,7 +1,9 @@
 # 0146 — Several accounts on one phone, each in its own database, switched from the drawer
 
 **Date:** 2026-09-21
-**Status:** proposed — awaiting the owner. Design only; nothing built.
+**Status:** **APPROVED 2026-09-21 — build now, ship in 1.4.8.** The owner: *"abhi — aur live version 1.4.7 hai to tum
+1.4.8 hi consider karo, wo hamara next live version hoga"*; shown that this holds the ready fixes back, he chose *"sab
+1.4.8 mein, 4 hafte baad"*. Being built on app branch `VC_107_VN_148` (see "The owner's decision" at the end).
 **Tier 1** where a switch could mix or lose data (the local database, the outbox, a guest's only copy), Tier 2 for
 sync. Owned by the sync agent (0051).
 **Related:** 0053 (a guest's work joins an account only on a yes), 0143 (a purchase follows its phone's newest account,
@@ -274,3 +276,17 @@ a switch never moves a purchase; events recorded before a switch keep their acco
 
 Numbers ke baad: abhi banayein (1.4.9, ~4 hafte ka kaam), ya 0144 ke 4 hafte live rehne ke baad ginti dekh kar faisla
 karein? (Recommended: ginti ke baad.)
+
+## The owner's decision (2026-09-21)
+
+- **Build it now**, not after 0144 has been live four weeks (the recommendation above was not taken). His words:
+  *"abhi — aur live version 1.4.7 hai to tum 1.4.8 hi consider karo, wo hamara next live version hoga"*.
+- **Everything ships together in 1.4.8, about four weeks out.** Shown that waiting holds back fixes that are ready
+  today (0124, 0125, 0128, 0129, 0130, 0133, 0136, 0143, 0144, 0145), he chose: *"sab 1.4.8 mein, 4 hafte baad"*.
+  Rejected by him: releasing the ready fixes first as a 1.4.8 and the switcher later.
+- **The integration branch** is `VC_107_VN_148` (Android 1.4.7 is live as versionCode 106; 1.4.8 takes 107, the first
+  code not yet used). Cut from `VC_107_VN_147` `64106a7f` on 2026-09-21 with every ready app branch merged.
+- **Stage 0 changes shape:** 0143, 0144 and 0145 no longer precede the switcher by a release; they ride in the same
+  1.4.8. The 0143 guard ("newest" = the account most recently joined to the phone) is on its backend branch already.
+- Everything else in this design stands: model (a), no rename or split of `invotick_v2.db`, a held guest re-opened
+  without proof, stages 1–3, and re-opening an account already on this phone is not a new move under 0143.
