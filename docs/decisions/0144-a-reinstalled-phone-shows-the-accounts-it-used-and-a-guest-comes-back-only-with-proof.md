@@ -1,7 +1,7 @@
 # 0144 — A reinstalled phone shows the accounts it used before, and a guest comes back only with proof
 
 **Date:** 2026-09-21
-**Status:** decided by the owner 2026-09-21 — the proof is a **choice from a list**, not typing (section 3b). Being built.
+**Status:** decided by the owner 2026-09-21 — the proof is a **choice from a list**, not typing (section 3b). Built on branches (below); nothing merged or deployed.
 **Tier 1** (identity and a guest's only copy of their work, goal G3). Owned by the sync agent (0051).
 **Related:** 0053 (a guest's work joins an account only on a yes), 0111 (a deleted account), 0143 (a purchase follows
 its phone's newest account), rule 11 and rule 28 of `.claude/agents/sync.md` (proof of a phone; a removed phone).
@@ -231,13 +231,39 @@ session that wrote this).
 **App (both platforms, on `VC_107_VN_147`):** the background ask on the first open, the picker screen and sheet, the
 card, the question, the switch to the old guest with a full pull, and the iOS Keychain id with its copy-over.
 
-**Events** (through the user-journey agent, per `AGENTS-EVENTS.md`; one action, one event, parameters not names):
-- `returning_accounts_shown`: `surface` = `picker|card`, `guests`, `signed_in`, `wait_ms`.
-- The choice is the press. The picker's rows and buttons carry their own auto-captured ids, with `kind` =
-  `guest|google|apple|email` on a row, so no coded twin fires beside them (the 1.4.3 lesson).
-- `returning_guest_answered`: `outcome` = `ok|wrong_answer|too_many_tries|no_longer_available|http_<n>|exception_<Class>`,
-  `attempt`. It is coded, because the outcome is the server's, not a press.
-- A dismissal is the screen's own close id with `method`, as 0023 says.
+**Events** (per `AGENTS-EVENTS.md`: one action, one event, parameters not names). As built, the picker's buttons are
+plain, not auto-tracked, so no tap id fires beside a coded event:
+- `returning_accounts_shown`: `surface` = `picker|card`, `guests`, `signed_in`;
+- `returning_accounts_answered`: `choice` = `guest|google|apple|email|another_account|start_new|dismissed`, `surface`;
+- `returning_guest_answered`: `outcome` = `returned|wrong_answer|too_many_tries|no_longer_available|cannot_ask|caller_has_work|<failure>`,
+  `attempt`.
+
+The user-journey agent reviews these before the release.
+
+## Built, 2026-09-21
+
+| Repo | Branch | Head | Tests |
+|:--|:--|:--|:--|
+| `invotick-apis` | `migration/returning-accounts-tables` (from `stage` `c79976b`) | `b4950ca` | `V20260921_03`: the index on `linked_device (device_id, last_seen_at)` and `returning_guest_tries`. **Ships alone and first, on the owner's word.** |
+| `invotick-apis` | `feat/returning-accounts` (on the migration) | `ae68527` | `AReturningGuestsQuestionGivesNothingAwayTest` 13 and `APhoneShowsTheAccountsItUsedTest` 9 (real MySQL); **both failed to compile first** (`5da5dc7`, `a499fb5`). Full suite **1,321/1,321**. |
+| `invoice-kmp-app` | `feat/148-returning-accounts` (from `VC_107_VN_147` `64106a7f`) | `2485b6cf` | `AReinstalledPhoneOffersItsAccountsTest` 8, `AnIPhoneKeepsItsIdAcrossAReinstallTest` 6; **both failed to compile first** (`02e54e4e`, `96300263`). data 336/336, domain 58/58, composeApp 19/19, splash 15/15, core:remote 5/5; Android and iOS (simulator) compile. Not run on a device. |
+
+- **Server:** `GET /v1/devices/this/accounts`, `POST …/question`, `POST …/return`, all `@RequireRole(GUEST)`; refusals are
+  409 with `data.outcome`. The row's `ref` is sealed (AES-GCM, key derived from `jwt.secret`) to the account, the phone
+  and the caller, for 15 minutes. Counter `returning_accounts_total{step, outcome}`.
+- **App:** the splash asks in the background after the fresh guest's server pass, only on a fresh install
+  (`Unauthenticated && isFirstOpen`); `AppNavHost` calls the hand-off after the ad gate on the first-open path. The
+  picker and the card are drawn above every screen (`ReturningAccountsHost`, beside 0053's question). A right answer:
+  the guest's pass is stored as a guest sign-in is, the session switches, a full pull runs, and the app goes home.
+- **Kill switch:** Remote Config `returning_accounts_enabled`, on unless `false`; off, the phone never asks.
+- **The card lives for the first open only** (the refs last 15 minutes); "at most 3 opens" in section 1 is not built.
+- **iOS id:** Keychain "after first unlock, this device only"; the install's id wins and is copied in (`KeptDeviceId`).
+
+**Deploy order:** the migration alone → the server code → the app with the next release. An app on a server without the
+code gets a 404 on the list and shows nothing.
+
+**Still open:** a Health Centre line reading `returning_accounts_total`; a support tool to give a locked guest its tries
+back; the events' review by the user-journey agent; a device check at font scale 1.5, light and dark.
 
 ## Rejected
 
