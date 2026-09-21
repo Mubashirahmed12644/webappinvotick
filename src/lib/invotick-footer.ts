@@ -31,3 +31,50 @@ export function showsInvotickFooter(data: FooterFlag | null | undefined): boolea
 export function withOwnersFooterRule<T extends FooterFlag>(snapshot: T, showInvotickFooter?: boolean | null): T {
   return showInvotickFooter === false ? { ...snapshot, hideInvotickFooter: true } : snapshot;
 }
+
+/**
+ * The business's own footer — decision 0151 ("apna footer").
+ *
+ * The owner, 2026-09-21: the footer's layout never changes. For a premium account each Invotick item is
+ * replaced IN THE SAME SLOT by the business's own item — logo tile, message, name line, "Contact us",
+ * contact line, QR tile. The app resolves every slot (settings + business profile + fallbacks) and ships
+ * the result in the snapshot, so the four surfaces (app preview, offline bundle, online render, share
+ * page) draw the same thing from the same data and none of them re-derives it.
+ *
+ * A slot that is null is drawn EMPTY — its space is kept, so the band never reflows.
+ */
+export interface OwnFooter {
+  /** The owner removed the whole footer: no band at all, as in 0147. */
+  removed?: boolean | null;
+  /** Draw the business logo (`business.logo`) on the tile; without a logo, [initials] go there. */
+  showLogo?: boolean | null;
+  /** Letters for the tile when there is no logo. Null with no logo = an empty tile slot. */
+  initials?: string | null;
+  /** Where "Invoice generated using Invotick" was. */
+  message?: string | null;
+  /** Where the tagline was: the business name, and its address when it has one. */
+  businessLine?: string | null;
+  /** Where the Invotick link was: phone · email. Null = the whole "Contact us" block is empty. */
+  contactLine?: string | null;
+  /** What the QR encodes (WhatsApp or website). Null = the QR slot stays empty. */
+  qrText?: string | null;
+}
+
+export interface OwnFooterFlag extends FooterFlag {
+  ownFooter?: OwnFooter | null;
+}
+
+export type FooterMode = "invotick" | "own" | "none";
+
+/**
+ * Which footer a document carries.
+ * - A free document (or any snapshot from before 0147): the Invotick footer, unchanged.
+ * - A premium document with the business's own footer: that, in the same band.
+ * - A premium document without one (a 1.4.8 snapshot, or the owner removed it): no footer (0147).
+ */
+export function footerMode(data: OwnFooterFlag | null | undefined): FooterMode {
+  if (showsInvotickFooter(data)) return "invotick";
+  const own = data?.ownFooter;
+  if (own && own.removed !== true) return "own";
+  return "none";
+}

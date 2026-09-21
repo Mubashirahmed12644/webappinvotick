@@ -1,9 +1,9 @@
 "use client";
 
-import { showsInvotickFooter } from "@/lib/invotick-footer";
+import { footerMode } from "@/lib/invotick-footer";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
-import { InvoiceDocument, InvoiceFooter } from "./InvoiceDocument";
+import { FooterControlButton, InvoiceDocument, InvoiceFooter, ownFooterProps } from "./InvoiceDocument";
 import { labelsFor, type InvoiceLabels } from "@/lib/invoice-labels";
 import { imageProxyUrl } from "@/lib/image";
 import type { InvoiceRenderData } from "@/lib/data";
@@ -311,6 +311,8 @@ export function A4PagedFrame({
   onStampRemove,
   onSignatureRemove,
   onAtTopChange,
+  footerControl,
+  onFooterControl,
   labels,
   dir,
 }: {
@@ -330,13 +332,20 @@ export function A4PagedFrame({
   // host has to be told because the scrolling happens on a div inside the WebView, so the native
   // view's own canScrollVertically() would always say "no" and break multi-page scrolling.
   onAtTopChange?: (atTop: boolean) => void;
+  // The app preview's button on the footer (decision 0151): "remove" for a free account, "edit" for a
+  // premium one, with its words. Only the app's own preview passes it — never the share page, its
+  // print, or a PDF — so no copy of the document that leaves the phone can carry it.
+  footerControl?: { kind: "remove" | "edit"; label: string } | null;
+  onFooterControl?: () => void;
   // Localised invoice labels + reading direction (shared invoice → receiver's language).
   labels?: InvoiceLabels;
   dir?: "ltr" | "rtl";
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  // False for a premium account's document: no Invotick footer on any page (decision 0147).
-  const branded = showsInvotickFooter(data);
+  // Whether the pages carry a footer band at all: the Invotick one (free), the business's own one in the
+  // same band (premium, decision 0151), or none (premium without one, decision 0147).
+  const branded = footerMode(data) !== "none";
+  const ownProps = ownFooterProps(data);
 
   // Report a pull past the top, so a host that has a sheet below can close it.
   //
@@ -680,7 +689,7 @@ export function A4PagedFrame({
         <div ref={footerMeasureRef} className="a4-measure" style={{ position: "absolute", left: -99999, top: 0, width: SHEET_W, visibility: "hidden", pointerEvents: "none" }} aria-hidden>
           {/* Band only — the "Page X of Y" line lives inside FOOTER_BOTTOM_MARGIN, so it must NOT add
               to the measured footer height (else multi-page invoices reserve extra space for it). */}
-          <InvoiceFooter qrDataUrl={qrDataUrl} labels={docLabels} />
+          <InvoiceFooter qrDataUrl={qrDataUrl} labels={docLabels} {...ownProps} />
         </div>
       )}
 
@@ -731,7 +740,20 @@ export function A4PagedFrame({
                         its 32px side inset). No pageLabel here — it sits in the margin below. */}
                     {branded && (
                       <div style={{ position: "absolute", left: 0, right: 0, bottom: FOOTER_BOTTOM_MARGIN, background: "#fff", paddingLeft: 32, paddingRight: 32 }}>
-                        <InvoiceFooter qrDataUrl={qrDataUrl} labels={docLabels} />
+                        <InvoiceFooter
+                          qrDataUrl={qrDataUrl}
+                          labels={docLabels}
+                          {...ownProps}
+                          control={footerControl && onFooterControl && s > 0 ? { ...footerControl, scale: s, onPress: onFooterControl } : null}
+                        />
+                      </div>
+                    )}
+                    {/* No band (a premium owner removed their footer, decision 0151): the Edit button still
+                        needs a place, or the footer could never be brought back. It sits where the band's
+                        top-right corner would be, and only in the app's own preview. */}
+                    {!branded && footerControl && onFooterControl && s > 0 && (
+                      <div style={{ position: "absolute", left: 32, right: 32, bottom: FOOTER_BOTTOM_MARGIN + 95, height: 24 }}>
+                        <FooterControlButton control={{ ...footerControl, scale: s, onPress: onFooterControl }} />
                       </div>
                     )}
                     {/* "Page X of Y" printed INSIDE the bottom margin (centred in the FOOTER_BOTTOM_MARGIN

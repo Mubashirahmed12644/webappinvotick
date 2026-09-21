@@ -36,6 +36,8 @@ export type InvoiceLabels = {
   footerGenerated: string;
   footerTagline: string;
   footerScan: string;
+  /** Decision 0151: the heading over the business's own contact line, where footerScan sits. */
+  footerContact: string;
 };
 
 export const LABELS: InvoiceLabels = {
@@ -70,6 +72,7 @@ export const LABELS: InvoiceLabels = {
   footerGenerated: "Invoice generated using Invotick",
   footerTagline: "Create professional invoices in seconds",
   footerScan: "Scan to download Invotick",
+  footerContact: "Contact us",
 };
 
 /**

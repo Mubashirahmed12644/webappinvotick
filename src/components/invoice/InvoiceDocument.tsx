@@ -1,11 +1,12 @@
 /* eslint-disable @next/next/no-img-element */
-import { showsInvotickFooter } from "@/lib/invotick-footer";
+import { footerMode, type OwnFooter } from "@/lib/invotick-footer";
 import type { InvoiceRenderData } from "@/lib/data";
 import { formatMoney, formatDate, hexToRgba, contrastText, onTint, blendOnWhite } from "@/lib/format";
 import { imageProxyUrl } from "@/lib/image";
 import { BRAND_LOGO } from "@/lib/givens";
 import { LABELS, labelsFor, type InvoiceLabels } from "@/lib/invoice-labels";
 import { SummaryLeftFitted } from "./SummaryLeftFitted";
+import { QrSvg } from "./QrSvg";
 
 // Faithful invoice document — mirrors the mobile app's rendered PDF:
 // full-bleed header image + logo + title, decorative themed background,
@@ -259,9 +260,9 @@ export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hide
 
         {/* Footer — pinned to the bottom of the sheet (mt-auto). Hidden when the paging frame
             renders one footer per A4 page instead (multi-page invoices). */}
-        {!hideFooter && showsInvotickFooter(data) && (
+        {!hideFooter && footerMode(data) !== "none" && (
           <div className="mt-auto">
-            <InvoiceFooter qrDataUrl={qrDataUrl} labels={labels} />
+            <InvoiceFooter qrDataUrl={qrDataUrl} labels={labels} {...ownFooterProps(data)} />
           </div>
         )}
       </div>
@@ -271,14 +272,26 @@ export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hide
 
 // Invotick branding footer — rendered at the bottom of every A4 page (see A4PagedFrame).
 // `pageLabel` ("Page 1 of 3") is the multi-page pagination line, shown centred under the band.
-export function InvoiceFooter({ qrDataUrl, pageLabel, labels = LABELS }: { qrDataUrl?: string | null; pageLabel?: string; labels?: InvoiceLabels }) {
+//
+// `own` (decision 0151) draws the business's own footer in the SAME band: every size, gap, colour and
+// position below is shared, and only what sits in each slot changes — logo tile, message, name line,
+// "Contact us", contact line, QR tile. An empty slot keeps its space, so the band never reflows.
+// `control` is the app preview's Remove / Edit button; no other caller passes it, so the share page,
+// its print and every image of the document are drawn without it.
+export function InvoiceFooter({ qrDataUrl, pageLabel, labels = LABELS, own, businessLogo, accent = "#0D4DC0", control }: { qrDataUrl?: string | null; pageLabel?: string; labels?: InvoiceLabels; own?: OwnFooter | null; businessLogo?: string | null; accent?: string; control?: FooterControl | null }) {
   // Pixel-parity with the native promotional footer (SharedComponents.drawPromotionalFooter), whose
   // sizes are all fractions of the sheet width. On the 794px A4 sheet those resolve to:
   //   band height 0.12·W ≈ 95, icon/QR 0.65·band ≈ 62, inner pad 0.6·32 ≈ 19, line gap 0.35·32 ≈ 11.
   // Font sizes: generated 0.016·W, tagline 0.011·W, scan 0.0144·W, link 0.0168·W (bold).
   const tile = 62;
+  const tileStyle = { width: tile, height: tile, borderRadius: tile * 0.15, background: "#fff", overflow: "hidden", flex: "none" } as const;
+  const emptySlot = { width: tile, height: tile, flex: "none" } as const;
+  const logoUrl = own && own.showLogo !== false ? imageProxyUrl(businessLogo) : null;
+  const initials = own && own.showLogo !== false && !logoUrl ? own.initials?.trim() || null : null;
+  // Two lines at most for what the business typed: the band's height is fixed (it is the layout).
+  const clamp2 = { display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", overflowWrap: "anywhere" } as const;
   return (
-    <div>
+    <div style={control ? { position: "relative" } : undefined}>
       {/* #E0E0E0 divider, an 11px gap, then the flat #F5F5F5 band (square corners, no shadow). */}
       <div style={{ borderTop: "1px solid #E0E0E0" }} />
       <div
@@ -286,32 +299,136 @@ export function InvoiceFooter({ qrDataUrl, pageLabel, labels = LABELS }: { qrDat
         style={{ backgroundColor: "#F5F5F5", height: 95, marginTop: 11, paddingLeft: 19, paddingRight: 19 }}
       >
         {/* LEFT — app icon on a white rounded tile (native draws a white round-rect then the icon), + text. */}
-        <div className="flex items-center" style={{ gap: 19 }}>
-          <div style={{ width: tile, height: tile, borderRadius: tile * 0.15, background: "#fff", overflow: "hidden", flex: "none" }}>
-            <img src={BRAND_LOGO} alt="Invotick" style={{ width: tile, height: tile, objectFit: "contain" }} />
-          </div>
-          <div>
-            <p style={{ fontSize: 12.7, fontWeight: 700, color: "#212121", lineHeight: 1.2 }}>{labels.footerGenerated}</p>
-            <p style={{ fontSize: 8.7, color: "#666666", lineHeight: 1.2, marginTop: 2 }}>{labels.footerTagline}</p>
+        <div className="flex items-center" style={own ? { gap: 19, minWidth: 0 } : { gap: 19 }}>
+          {!own ? (
+            <div style={tileStyle}>
+              <img src={BRAND_LOGO} alt="Invotick" style={{ width: tile, height: tile, objectFit: "contain" }} />
+            </div>
+          ) : logoUrl ? (
+            <div style={tileStyle}>
+              <img src={logoUrl} alt="" style={{ width: tile, height: tile, objectFit: "contain" }} />
+            </div>
+          ) : initials ? (
+            <div style={{ ...tileStyle, display: "flex", alignItems: "center", justifyContent: "center", color: accent, fontSize: 22, fontWeight: 800, letterSpacing: 0.5 }}>
+              {initials}
+            </div>
+          ) : (
+            <div style={emptySlot} />
+          )}
+          <div style={own ? { minWidth: 0, maxWidth: 330 } : undefined}>
+            {!own ? (
+              <>
+                <p style={{ fontSize: 12.7, fontWeight: 700, color: "#212121", lineHeight: 1.2 }}>{labels.footerGenerated}</p>
+                <p style={{ fontSize: 8.7, color: "#666666", lineHeight: 1.2, marginTop: 2 }}>{labels.footerTagline}</p>
+              </>
+            ) : (
+              <>
+                {own.message && <p style={{ fontSize: 12.7, fontWeight: 700, color: "#212121", lineHeight: 1.2, ...clamp2 }}>{own.message}</p>}
+                {own.businessLine && <p style={{ fontSize: 8.7, color: "#666666", lineHeight: 1.2, marginTop: 2, ...clamp2 }}>{own.businessLine}</p>}
+              </>
+            )}
           </div>
         </div>
         {/* RIGHT — "Scan…" over a fading gradient rule over the bold primary link, then a rounded QR tile. */}
-        <div className="flex items-center" style={{ gap: 12 }}>
-          <div style={{ textAlign: "end" }}>
-            <p style={{ fontSize: 11.4, color: "#666666", lineHeight: 1.3 }}>{labels.footerScan}</p>
-            <div style={{ height: 1, margin: "3px 0", background: "linear-gradient(to right, transparent, #DDDDDD 20%, #DDDDDD 80%, transparent)" }} />
-            <p style={{ fontSize: 13.3, fontWeight: 700, color: "#0D4DC0", lineHeight: 1.3 }}>https://gw.invotick.com/r/2/RefCode</p>
-          </div>
-          {qrDataUrl && (
-            <div style={{ width: tile, height: tile, borderRadius: tile * 0.15, background: "#fff", overflow: "hidden", flex: "none" }}>
-              <img src={qrDataUrl} alt="QR" style={{ width: tile, height: tile, objectFit: "contain" }} />
+        <div className="flex items-center" style={own ? { gap: 12, minWidth: 0 } : { gap: 12 }}>
+          {!own ? (
+            <div style={{ textAlign: "end" }}>
+              <p style={{ fontSize: 11.4, color: "#666666", lineHeight: 1.3 }}>{labels.footerScan}</p>
+              <div style={{ height: 1, margin: "3px 0", background: "linear-gradient(to right, transparent, #DDDDDD 20%, #DDDDDD 80%, transparent)" }} />
+              <p style={{ fontSize: 13.3, fontWeight: 700, color: "#0D4DC0", lineHeight: 1.3 }}>https://gw.invotick.com/r/2/RefCode</p>
             </div>
+          ) : own.contactLine ? (
+            <div style={{ textAlign: "end", minWidth: 0, maxWidth: 360 }}>
+              <p style={{ fontSize: 11.4, color: "#666666", lineHeight: 1.3 }}>{labels.footerContact ?? LABELS.footerContact}</p>
+              <div style={{ height: 1, margin: "3px 0", background: "linear-gradient(to right, transparent, #DDDDDD 20%, #DDDDDD 80%, transparent)" }} />
+              <p style={{ fontSize: 13.3, fontWeight: 700, color: "#0D4DC0", lineHeight: 1.3, ...clamp2 }}>{own.contactLine}</p>
+            </div>
+          ) : null}
+          {!own ? (
+            qrDataUrl && (
+              <div style={tileStyle}>
+                <img src={qrDataUrl} alt="QR" style={{ width: tile, height: tile, objectFit: "contain" }} />
+              </div>
+            )
+          ) : own.qrText ? (
+            <div style={tileStyle}>
+              <QrSvg text={own.qrText} size={tile} />
+            </div>
+          ) : (
+            <div style={emptySlot} />
           )}
         </div>
       </div>
       {pageLabel && <div className="pb-1 text-center text-[11px] font-medium text-gray-400">{pageLabel}</div>}
+      {control && <FooterControlButton control={control} />}
     </div>
   );
+}
+
+/**
+ * The app preview's button on the footer (decision 0151): "Remove" with a round grey × for a free
+ * account (it opens the paywall), "Edit" with a pencil for a premium one (it opens the footer sheet).
+ *
+ * It sits on the band's top-right corner. The sheet is drawn at a scale (≈0.45 on a phone), so every
+ * size is divided by it: the button is the same 48dp to the finger, and the pill the same 26dp to the
+ * eye, at any zoom.
+ */
+export type FooterControl = {
+  kind: "remove" | "edit";
+  /** Its words, from the app (translated there). */
+  label: string;
+  /** How much the sheet is scaled on screen (screen px per sheet px). */
+  scale: number;
+  onPress: () => void;
+};
+
+export function FooterControlButton({ control }: { control: FooterControl }) {
+  const k = 1 / Math.max(control.scale || 1, 0.05);
+  const edit = control.kind === "edit";
+  const pill = 26 * k;
+  return (
+    <button
+      type="button"
+      aria-label={control.label}
+      data-footer-control={control.kind}
+      onPointerDown={(e) => e.stopPropagation()}
+      onClick={(e) => { e.stopPropagation(); control.onPress(); }}
+      style={{
+        position: "absolute", right: 4 * k, top: 12, transform: "translateY(-50%)",
+        minWidth: 48 * k, minHeight: 48 * k, padding: `0 ${4 * k}px`, border: 0, background: "transparent",
+        display: "flex", alignItems: "center", justifyContent: "flex-end", cursor: "pointer", zIndex: 30,
+        touchAction: "manipulation", WebkitTapHighlightColor: "transparent",
+      }}
+    >
+      <span
+        style={{
+          display: "flex", alignItems: "center", gap: 6 * k, height: pill, borderRadius: pill / 2,
+          paddingLeft: 10 * k, paddingRight: edit ? 10 * k : 3 * k,
+          background: edit ? "#0D4DC0" : "#FFFFFF", color: edit ? "#FFFFFF" : "#374151",
+          border: edit ? "none" : `${1 * k}px solid #D1D5DB`, boxShadow: `0 ${1 * k}px ${4 * k}px rgba(0,0,0,0.18)`,
+          fontSize: 12.5 * k, fontWeight: 700, lineHeight: 1, whiteSpace: "nowrap", fontFamily: "inherit",
+        }}
+      >
+        {edit && (
+          <svg width={13 * k} height={13 * k} viewBox="0 0 24 24" aria-hidden fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+          </svg>
+        )}
+        {control.label}
+        {!edit && (
+          <span style={{ width: 20 * k, height: 20 * k, borderRadius: "50%", background: "#9CA3AF", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 * k, fontWeight: 700 }} aria-hidden>
+            ×
+          </span>
+        )}
+      </span>
+    </button>
+  );
+}
+
+/** The props that switch [InvoiceFooter] to the business's own footer, when the document carries one. */
+export function ownFooterProps(data: InvoiceRenderData): { own?: OwnFooter | null; businessLogo?: string | null; accent?: string } {
+  if (footerMode(data) !== "own") return {};
+  return { own: data.ownFooter, businessLogo: data.business?.logo, accent: data.color || "#0D4DC0" };
 }
 
 function TotalRow({ label, value, tint, rowKey }: { label: string; value: string; tint: string; rowKey?: string }) {
