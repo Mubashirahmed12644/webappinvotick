@@ -1046,24 +1046,6 @@ Memory is dated observation. Verify any file:line against the code before relyin
     - Guard: `AStrandedRecordGetsANewNumberTest` (7 cases on the real schema under Robolectric; 4 red first, and
       the 3 that passed are what must not change — another failure state, a kind it cannot move, an interrupted
       run).
-39. **A phone joined to an account by QR becomes what the account is: a guest stays a guest** (0145; the owner's test
-    on 1.4.7, 2026-09-21). Backend `fix/linked-guest-phone` (test `8d64b62`, fix `f78a390`, suite 1301/1301); app
-    `fix/147-linked-guest-phone` on `VC_107_VN_147` (test `0627befc`, 13 compile errors first; fix `0e8227af`; restore
-    test `8f46f029`, red first; fix `650e2efb`; iOS platform `03330f05`), data 329/329, domain 58/58. Not deployed.
-    - **Found:** 1.4.7 signed every link in as a registered account. A phone linked to guest 922440441 showed "User",
-      no Invotick ID, Sign Out, and "Add Business" over the account's business. 29 of 41 links ever joined a guest.
-    - **The claim's answer says `role`** (and a registered account's `email`, `displayName`; never a guest's internal
-      email). The phone adopts it (`AdoptLinkedSession`), falling back to the pass's own `role` claim; keeps the
-      Invotick ID at once; restores a 1.4.7-stored guest link as a guest (`SessionManager.asThePassSays`).
-    - **The selected business is per phone and outlives an account switch;** a stored one the account does not hold is
-      replaced by its first (`DefaultBusiness.choose`).
-    - **The claim names its phone** (`deviceId`), so the server records it and re-admits a removed phone approved
-      again. An iPhone asks as `IOS`.
-    - **Open:** the linking phone's own earlier guest work is left hidden (owner's question); one of two guest phones
-      creating an account retires the guest and strands the other with no notice; 0086's bookmark between phones.
-    - Guards: `DeviceLinkClaimRegistersDeviceTest` (2 new cases), `ALinkedPhoneJoinsTheAccountAsWhatItIsTest` (7).
-
-
 39. **A reinstalled phone is offered the accounts it used, and a guest comes back only with proof** (0144; the owner,
     2026-09-21: "saboot mangain … selection ki soorat main"). Built on branches, not deployed: backend
     `migration/returning-accounts-tables` `b4950ca` (alone, first) and `feat/returning-accounts` `ae68527` (1,321/1,321);
@@ -1083,6 +1065,23 @@ Memory is dated observation. Verify any file:line against the code before relyin
     - **iPhone id:** Keychain, this device only; the install's id wins and is copied in, so no iPhone loses its id.
     - Guards: `AReturningGuestsQuestionGivesNothingAwayTest`, `APhoneShowsTheAccountsItUsedTest`,
       `AReinstalledPhoneOffersItsAccountsTest`, `AnIPhoneKeepsItsIdAcrossAReinstallTest`.
+
+40. **A phone joined to an account by QR becomes what the account is: a guest stays a guest** (0145; the owner's test
+    on 1.4.7, 2026-09-21). Backend `fix/linked-guest-phone` (test `8d64b62`, fix `f78a390`, suite 1301/1301); app
+    `fix/147-linked-guest-phone` on `VC_107_VN_147` (test `0627befc`, 13 compile errors first; fix `0e8227af`; restore
+    test `8f46f029`, red first; fix `650e2efb`; iOS platform `03330f05`), data 329/329, domain 58/58. Not deployed.
+    - **Found:** 1.4.7 signed every link in as a registered account. A phone linked to guest 922440441 showed "User",
+      no Invotick ID, Sign Out, and "Add Business" over the account's business. 29 of 41 links ever joined a guest.
+    - **The claim's answer says `role`** (and a registered account's `email`, `displayName`; never a guest's internal
+      email). The phone adopts it (`AdoptLinkedSession`), falling back to the pass's own `role` claim; keeps the
+      Invotick ID at once; restores a 1.4.7-stored guest link as a guest (`SessionManager.asThePassSays`).
+    - **The selected business is per phone and outlives an account switch;** a stored one the account does not hold is
+      replaced by its first (`DefaultBusiness.choose`).
+    - **The claim names its phone** (`deviceId`), so the server records it and re-admits a removed phone approved
+      again. An iPhone asks as `IOS`.
+    - **Open:** the linking phone's own earlier guest work is left hidden (owner's question); one of two guest phones
+      creating an account retires the guest and strands the other with no notice; 0086's bookmark between phones.
+    - Guards: `DeviceLinkClaimRegistersDeviceTest` (2 new cases), `ALinkedPhoneJoinsTheAccountAsWhatItIsTest` (7).
 
 ## Established 2026-09-12, while planning the receipt number
 
