@@ -312,11 +312,31 @@ karein? (Recommended: ginti ke baad.)
 
 ### The release number (the owner, 2026-09-21, later the same day)
 
-- An urgent hotfix — premium users must not see the Invotick footer on their invoices — ships first, alone, as **1.4.8**
-  (versionCode 107) from the live base.
+- An urgent hotfix — premium users must not see the Invotick footer on their invoices, plus one crash and two ANRs —
+  ships first as **1.4.8** (versionCode 107), built separately from `VC_102_VN_146`; its authors port the fixes onto
+  `VC_108_VN_149`.
 - So everything collected here, the ready fixes and the switcher, is **1.4.9**, versionCode ≥ 108. The integration
   branch is **`VC_108_VN_149` (canonical)**, cut from `VC_107_VN_147` `64106a7f`. The same work was first pushed as
   `VC_107_VN_148` (left at `2af037ac`, not deleted: deleting a branch is the owner's word). The hotfix must not reuse
   that name, or the owner deletes it first.
 - The hotfix's footer change is ported onto `VC_108_VN_149` by its own agent (renderer bundle and snapshot mapper).
 - The pass-to-Keystore/Keychain blocker above now blocks **1.4.9**.
+
+### Stage 1 — built and green (2026-09-21), app `VC_108_VN_149` @ `c91225c6`
+
+- **Built:** the register (one file, session and settings per account, one write per switch), the Koin split
+  (`accountModules` rebuilt, `phoneWideModules` kept, no type on both sides), `AccountSwitcher` (send what is owed for
+  5 s at most, screens let go, sync closes for good, background work stops, analytics session ends, rebuild, adopt the
+  session; roll back if the other file cannot open), the drawer row and sheet, "Add an account" (sign in, new guest,
+  go back), one wait screen, per-account start without the splash, the kill switch `account_switcher_enabled`, the
+  one-prompt-at-a-time queue.
+- **Proven by tests (889/889 unit, Android debug build, iOS simulator compile):** no row of one account in another's
+  file through the 21 tables and the queue (real Room); an unsent write waits in its own file and goes only under its
+  own account; an offline switch does not wait; a held guest comes back with its pass and no question; a sync built
+  for one account never runs after the switch; the push token is registered for each account opened; a switch never
+  moves a purchase; a premium question for one account goes when another is opened.
+- **Server:** stage 1 needed none. 0143's "newest to join the phone" guard is on its own backend branch.
+- **Not yet done, on the list:** run on a device in both themes at font scale 1.5; Keystore/Keychain for passes
+  (**blocks 1.4.9**); stage 2 (every account's outbox sent in the background, the push token on every account in the
+  register, notices naming their account, "Pehle wale accounts", remove from phone); stage 3 (guests inside the legacy
+  file moved out, on the owner's go).
