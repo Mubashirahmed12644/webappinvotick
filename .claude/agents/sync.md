@@ -1046,7 +1046,43 @@ Memory is dated observation. Verify any file:line against the code before relyin
     - Guard: `AStrandedRecordGetsANewNumberTest` (7 cases on the real schema under Robolectric; 4 red first, and
       the 3 that passed are what must not change — another failure state, a kind it cannot move, an interrupted
       run).
+39. **A phone joined to an account by QR becomes what the account is: a guest stays a guest** (0145; the owner's test
+    on 1.4.7, 2026-09-21). Backend `fix/linked-guest-phone` (test `8d64b62`, fix `f78a390`, suite 1301/1301); app
+    `fix/147-linked-guest-phone` on `VC_107_VN_147` (test `0627befc`, 13 compile errors first; fix `0e8227af`; restore
+    test `0f0d...`, red first; fix `650e2efb`; iOS platform `03330f05`), data 329/329, domain 58/58. Not deployed.
+    - **Found:** 1.4.7 signed every link in as a registered account. A phone linked to guest 922440441 showed "User",
+      no Invotick ID, Sign Out, and "Add Business" over the account's business. 29 of 41 links ever joined a guest.
+    - **The claim's answer says `role`** (and a registered account's `email`, `displayName`; never a guest's internal
+      email). The phone adopts it (`AdoptLinkedSession`), falling back to the pass's own `role` claim; keeps the
+      Invotick ID at once; restores a 1.4.7-stored guest link as a guest (`SessionManager.asThePassSays`).
+    - **The selected business is per phone and outlives an account switch;** a stored one the account does not hold is
+      replaced by its first (`DefaultBusiness.choose`).
+    - **The claim names its phone** (`deviceId`), so the server records it and re-admits a removed phone approved
+      again. An iPhone asks as `IOS`.
+    - **Open:** the linking phone's own earlier guest work is left hidden (owner's question); one of two guest phones
+      creating an account retires the guest and strands the other with no notice; 0086's bookmark between phones.
+    - Guards: `DeviceLinkClaimRegistersDeviceTest` (2 new cases), `ALinkedPhoneJoinsTheAccountAsWhatItIsTest` (7).
 
+
+39. **A reinstalled phone is offered the accounts it used, and a guest comes back only with proof** (0144; the owner,
+    2026-09-21: "saboot mangain … selection ki soorat main"). Built on branches, not deployed: backend
+    `migration/returning-accounts-tables` `b4950ca` (alone, first) and `feat/returning-accounts` `ae68527` (1,321/1,321);
+    app `feat/148-returning-accounts` `2485b6cf` (data 336/336).
+    - **Data (read-only, 2026-09-21):** 192 of 6,054 phones used 2+ accounts; 32 open guests with 212 live invoices,
+      on 24 phones, were never used again after the phone moved on (31 to a fresh guest).
+    - **The list** is `linked_device` by the phone's id, masked: kind, method, last 3 of the Invotick ID, masked email,
+      invoice count, last day. Never a name, full email or account id. Never the caller, a removed phone (rule 28), a
+      closed or deleted account (0111), a joined guest, or a guest with no work.
+    - **The proof:** two rounds of six (business, then client; fallbacks item, then first invoice's currency and month);
+      made-up choices from fixed lists, the same for the same guest; judged only after both; **3 wrong ever**, then
+      support. 1/36 a try, about 8% for three guesses.
+    - **After the splash, never on it:** looked up in the background after the fresh guest's server pass; picker at the
+      hand-off if it has arrived, else only a card. Kill switch `returning_accounts_enabled`.
+    - **Nothing moves between accounts (0053):** the phone signs in as the returned guest and runs a full pull; a guest row
+      is never offered once the fresh guest has work, and the server refuses it (`CALLER_HAS_WORK`).
+    - **iPhone id:** Keychain, this device only; the install's id wins and is copied in, so no iPhone loses its id.
+    - Guards: `AReturningGuestsQuestionGivesNothingAwayTest`, `APhoneShowsTheAccountsItUsedTest`,
+      `AReinstalledPhoneOffersItsAccountsTest`, `AnIPhoneKeepsItsIdAcrossAReinstallTest`.
 
 ## Established 2026-09-12, while planning the receipt number
 
