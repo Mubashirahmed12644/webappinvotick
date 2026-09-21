@@ -278,6 +278,12 @@ export function InvoiceFooter({ qrDataUrl, pageLabel, labels = LABELS, own, busi
   const tile = 62;
   const tileStyle = { width: tile, height: tile, borderRadius: tile * 0.15, background: "#fff", overflow: "hidden", flex: "none" } as const;
   const emptySlot = { width: tile, height: tile, flex: "none" } as const;
+  // The QR's finder-pattern corners sat under the tile's own rounded clip (radius tile*0.15 ≈ 9.3px)
+  // and got cut. Same outer tile, but the QR is inset by at least that radius so no module is clipped —
+  // this padding never touches the logo tile, which keeps its own look.
+  const qrPad = Math.ceil(tile * 0.15);
+  const qrTileStyle = { ...tileStyle, padding: qrPad, boxSizing: "border-box" } as const;
+  const qrInner = tile - 2 * qrPad;
   const logoUrl = own && own.showLogo !== false ? imageProxyUrl(businessLogo) : null;
   const initials = own && own.showLogo !== false && !logoUrl ? own.initials?.trim() || null : null;
   // Two lines at most for what the business typed: the band's height is fixed (it is the layout).
@@ -338,13 +344,13 @@ export function InvoiceFooter({ qrDataUrl, pageLabel, labels = LABELS, own, busi
           ) : null}
           {!own ? (
             qrDataUrl && (
-              <div style={tileStyle}>
-                <img src={qrDataUrl} alt="QR" style={{ width: tile, height: tile, objectFit: "contain" }} />
+              <div style={qrTileStyle}>
+                <img src={qrDataUrl} alt="QR" style={{ width: qrInner, height: qrInner, objectFit: "contain" }} />
               </div>
             )
           ) : own.qrText ? (
-            <div style={tileStyle}>
-              <QrSvg text={own.qrText} size={tile} />
+            <div style={qrTileStyle}>
+              <QrSvg text={own.qrText} size={qrInner} />
             </div>
           ) : (
             <div style={emptySlot} />
