@@ -6,7 +6,7 @@
  */
 import { renderToStaticMarkup } from "react-dom/server";
 import { A4PagedFrame } from "@/components/invoice/A4PagedFrame";
-import { InvoiceDocument, InvoiceFooter } from "@/components/invoice/InvoiceDocument";
+import { FOOTER_CONTROL_GEOMETRY, InvoiceDocument, InvoiceFooter, footerControlLayout } from "@/components/invoice/InvoiceDocument";
 import type { InvoiceRenderData } from "@/lib/data";
 import { footerMode, withOwnersFooterRule, type OwnFooter } from "@/lib/invotick-footer";
 
@@ -93,12 +93,47 @@ check("share page: a free-era link of a premium owner shows the owner's own foot
 
 // The Remove / Edit button: only when the app's preview asks for it.
 let pressed = 0;
-const withRemove = renderToStaticMarkup(<InvoiceFooter qrDataUrl="/qr.jpg" control={{ kind: "remove", label: "Remove", scale: 0.45, onPress: () => pressed++ }} />);
-check("control: a free preview gets 'Remove' with the round ×", withRemove.includes('data-footer-control="remove"') && withRemove.includes("Remove") && withRemove.includes("×"));
-const withEdit = renderToStaticMarkup(<InvoiceFooter own={own} control={{ kind: "edit", label: "Edit", scale: 0.45, onPress: () => pressed++ }} />);
-check("control: a premium preview gets 'Edit'", withEdit.includes('data-footer-control="edit"') && withEdit.includes("Edit"));
-const hit = /min-width:([\d.]+)px;min-height:([\d.]+)px/.exec(withRemove);
-check("control: the touch target is 48dp on screen", !!hit && Math.abs(parseFloat(hit[1]) * 0.45 - 48) < 0.5 && Math.abs(parseFloat(hit[2]) * 0.45 - 48) < 0.5);
+const withRemove = renderToStaticMarkup(<InvoiceFooter qrDataUrl="/qr.jpg" control={{ kind: "remove", label: "Remove footer", scale: 0.45, onPress: () => pressed++ }} />);
+const withEdit = renderToStaticMarkup(<InvoiceFooter own={own} control={{ kind: "edit", label: "Edit footer", scale: 0.45, onPress: () => pressed++ }} />);
+// Icon only (the owner, 2026-09-21): the words are the accessible name and nothing else. The button's
+// markup, taken on its own, must carry no visible text at all — only the aria-label.
+const buttonOf = (h: string) => /<button[\s\S]*?<\/button>/.exec(h)?.[0] ?? "";
+const visibleText = (h: string) => h.replace(/<[^>]*>/g, "").trim();
+check("control: a free preview gets the × icon, named 'Remove footer', with no words drawn",
+  withRemove.includes('data-footer-control="remove"') && buttonOf(withRemove).includes('aria-label="Remove footer"') && visibleText(buttonOf(withRemove)) === "" && buttonOf(withRemove).includes("M6 6l12 12"));
+check("control: a premium preview gets the pencil icon, named 'Edit footer', with no words drawn",
+  withEdit.includes('data-footer-control="edit"') && buttonOf(withEdit).includes('aria-label="Edit footer"') && visibleText(buttonOf(withEdit)) === "" && buttonOf(withEdit).includes("M16.5 3.5"));
+const box = /width:([\d.]+)px;height:([\d.]+)px;padding:0/.exec(buttonOf(withRemove));
+check("control: the touch target is 48 × 48dp on screen", !!box && Math.abs(parseFloat(box[1]) * 0.45 - 48) < 0.5 && Math.abs(parseFloat(box[2]) * 0.45 - 48) < 0.5);
+// Neither the icon nor its touch target covers the QR or any text — not even partly (the owner,
+// 2026-09-21) — nor the document above the footer, at every scale a phone or tablet uses. Band
+// coordinates: origin at the band's top-right corner, x rightwards, y downwards (sheet px).
+{
+  const g = FOOTER_CONTROL_GEOMETRY;
+  const qrTop = (g.bandHeight - g.qrTile) / 2;
+  const QR = { x0: -g.qrRightPad - g.qrTile, y0: qrTop, x1: -g.qrRightPad, y1: qrTop + g.qrTile };
+  // Every text line of both footers starts at or below the QR's top: the Invotick "Scan… / link" block
+  // and the owner's "Contact us / two-line contact" block (14.8 + 7 + 2 × 17.3 ≈ 56.4 px, the tallest) are
+  // centred in the band. The browser measurement in the 1.4.9 fix confirmed it on the rendered bundle.
+  const TEXT_TOP = (g.bandHeight - 57) / 2;
+  check(`geometry: the QR spans x ${QR.x0}…${QR.x1}, y ${QR.y0}…${QR.y1}; text starts at y ≥ ${TEXT_TOP}`, QR.y0 === 16.5 && TEXT_TOP >= QR.y0);
+  for (const scale of [0.3, 0.38, 0.45, 0.494, 0.5, 0.62, 0.8, 1, 1.4, 2]) {
+    const L = footerControlLayout(scale);
+    const cx = L.cx, cy = L.cy - g.bandTop, r = L.radius;
+    const box = { x0: L.boxLeft, y0: L.boxTop - g.bandTop, x1: L.boxLeft + L.touch, y1: L.boxTop - g.bandTop + L.touch };
+    const distToRect = (R: { x0: number; y0: number; x1: number; y1: number }) =>
+      Math.hypot(Math.max(R.x0 - cx, 0, cx - R.x1), Math.max(R.y0 - cy, 0, cy - R.y1));
+    const qr = distToRect(QR);
+    const above = distToRect({ x0: -1e4, y0: -1e4, x1: 0, y1: -g.bandTop });
+    const edgeRoom = g.sheetEdge - cx;
+    check(`control @${scale}: icon r=${r.toFixed(1)} at (${cx}, ${cy}) clears the QR (${qr.toFixed(1)}), the document (${above.toFixed(1)}) and the sheet's edge (${edgeRoom})`,
+      qr > r && above > r && edgeRoom > r && cy + r <= QR.y0);
+    check(`control @${scale}: the 48dp target (${box.x0.toFixed(0)}…${box.x1}, ${box.y0.toFixed(0)}…${box.y1}) ends above the QR and the text, inside the sheet`,
+      Math.abs(L.touch * scale - 48) < 0.01 && box.y1 < QR.y0 && box.y1 < TEXT_TOP && box.x1 <= g.sheetEdge);
+    check(`control @${scale}: the icon is inside its own target`,
+      cx - r >= box.x0 && cx + r <= box.x1 && cy - r >= box.y0 && cy + r <= box.y1);
+  }
+}
 check("control: never on a page nobody asked it for (share page, print)", !html(free).includes("data-footer-control") && !html(premium).includes("data-footer-control"));
 // The free footer is pixel-identical to 1.4.8's: this is its markup, captured from InvoiceFooter as it was
 // on web main at 3cb90e5 (the 0147 commit). Any change to the free footer must fail here first.

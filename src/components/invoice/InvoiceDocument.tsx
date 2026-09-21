@@ -366,26 +366,84 @@ export function InvoiceFooter({ qrDataUrl, pageLabel, labels = LABELS, own, busi
 }
 
 /**
- * The app preview's button on the footer (decision 0151): "Remove" with a round grey × for a free
- * account (it opens the paywall), "Edit" with a pencil for a premium one (it opens the footer sheet).
+ * The app preview's button on the footer (decision 0151): a round × for a free account (it opens the
+ * paywall), a round pencil for a premium one (it opens the footer sheet). ICON ONLY — the owner,
+ * 2026-09-21, on the 1.4.9 device test: the "Remove ×" / "Edit" pill sat on the QR and the "Scan to
+ * download" line. The words stay as the button's accessible name (`aria-label`), which TalkBack and
+ * VoiceOver read, and nowhere on the page.
  *
- * It sits on the band's top-right corner. The sheet is drawn at a scale (≈0.45 on a phone), so every
- * size is divided by it: the button is the same 48dp to the finger, and the pill the same 26dp to the
- * eye, at any zoom.
+ * **Neither the icon nor its touch target may touch the QR or the text, not even partly** (the owner).
+ * The geometry, in sheet px on the 794 px sheet, measured from the band's top-right corner (x to the
+ * right, y down). The band is 95 tall. The QR tile is 62 square, 19 in from the band's right edge and
+ * centred in the band, so it spans x −81…−19, y 16.5…78.5. The text sits left of the QR and starts
+ * lower: a two-line contact line starts at y 19.5. The page's right margin is x 0…32. The document above
+ * the footer ends at y −12 (1 px rule + 11 px gap).
+ *
+ * - **The icon:** centre (15, 0), on the band's top edge in the right margin, radius at most 16. So it
+ *   spans x −1…31, y −16…16. That is 17 px clear of the sheet's edge, 19.2 px from the document's
+ *   corner (0, −12) and 34.8 px from the QR's corner (−19, 16.5).
+ * - **The touch target:** 48dp square, its bottom edge at y 16 — above the QR's top edge (16.5) and
+ *   above every line of text. Its right edge is the sheet's edge, which clips. So at any scale it lies
+ *   over the right margin, the empty top strip of the band and the empty space above the band, never
+ *   over the QR or the text. It sits just under the draggable signature and stamp (z 19 against their
+ *   20), so a signature dragged into that corner still answers its own finger.
+ *
+ * On screen the icon is 24dp, capped at those 16 px (≈16dp at a phone's ≈0.49 scale), and the target is
+ * 48dp to the finger at any zoom.
+ *
+ * The page is paper: `#fff` in the app's light and dark themes alike, so the colours are fixed. White on
+ * #0D4DC0 is 7.3:1 and white on #374151 is 10.3:1; a white ring and a soft shadow lift both off the band.
  */
 export type FooterControl = {
   kind: "remove" | "edit";
-  /** Its words, from the app (translated there). */
+  /** Its accessible name, from the app (translated there): "Remove footer" / "Edit footer". Never drawn. */
   label: string;
   /** How much the sheet is scaled on screen (screen px per sheet px). */
   scale: number;
   onPress: () => void;
 };
 
+/** The numbers above, for the check that proves the icon and its target cover nothing. Sheet px. */
+export const FOOTER_CONTROL_GEOMETRY = {
+  /** The band's top edge below the footer box's top: the 1 px rule plus the 11 px gap. */
+  bandTop: 12,
+  bandHeight: 95,
+  /** The QR tile: its side and the band's padding to its right. */
+  qrTile: 62,
+  qrRightPad: 19,
+  /** The icon's centre, from the band's top-right corner: right, and down. */
+  dx: 15,
+  dy: 0,
+  /** The largest icon radius that touches nothing drawn (see the note on [FooterControl]). */
+  maxRadius: 16,
+  /** The touch target's bottom edge, below the band's top: above the QR's top edge (16.5). */
+  targetBottom: 16,
+  /** The page's right margin: the sheet's edge, from the band's right edge. */
+  sheetEdge: 32,
+  /** The icon, and the finger, in screen dp. */
+  iconDp: 24,
+  touchDp: 48,
+} as const;
+
+/** Where the icon and its touch target go, in sheet px relative to the footer box's top-right corner. */
+export function footerControlLayout(scale: number) {
+  const g = FOOTER_CONTROL_GEOMETRY;
+  const k = 1 / Math.max(scale || 1, 0.05);
+  const radius = Math.min(g.maxRadius, (g.iconDp / 2) * k);
+  const touch = g.touchDp * k;
+  const cx = g.dx; // from the band's right edge, rightwards
+  const cy = g.bandTop + g.dy; // from the footer box's top, downwards
+  // Right edge on the sheet's edge, bottom edge above the QR: the target grows left and up only.
+  const boxLeft = g.sheetEdge - touch;
+  const boxTop = g.bandTop + g.targetBottom - touch;
+  return { k, radius, touch, cx, cy, boxLeft, boxTop };
+}
+
 export function FooterControlButton({ control }: { control: FooterControl }) {
-  const k = 1 / Math.max(control.scale || 1, 0.05);
   const edit = control.kind === "edit";
-  const pill = 26 * k;
+  const { k, radius, touch, cx, cy, boxLeft, boxTop } = footerControlLayout(control.scale);
+  const d = radius * 2;
+  const glyph = d * 0.56;
   return (
     <button
       type="button"
@@ -394,31 +452,29 @@ export function FooterControlButton({ control }: { control: FooterControl }) {
       onPointerDown={(e) => e.stopPropagation()}
       onClick={(e) => { e.stopPropagation(); control.onPress(); }}
       style={{
-        position: "absolute", right: 4 * k, top: 12, transform: "translateY(-50%)",
-        minWidth: 48 * k, minHeight: 48 * k, padding: `0 ${4 * k}px`, border: 0, background: "transparent",
-        display: "flex", alignItems: "center", justifyContent: "flex-end", cursor: "pointer", zIndex: 30,
+        position: "absolute", left: `calc(100% + ${boxLeft}px)`, top: boxTop, width: touch, height: touch,
+        padding: 0, margin: 0, border: 0, background: "transparent", cursor: "pointer", zIndex: 19,
         touchAction: "manipulation", WebkitTapHighlightColor: "transparent",
       }}
     >
       <span
+        aria-hidden
+        data-footer-control-icon=""
         style={{
-          display: "flex", alignItems: "center", gap: 6 * k, height: pill, borderRadius: pill / 2,
-          paddingLeft: 10 * k, paddingRight: edit ? 10 * k : 3 * k,
-          background: edit ? "#0D4DC0" : "#FFFFFF", color: edit ? "#FFFFFF" : "#374151",
-          border: edit ? "none" : `${1 * k}px solid #D1D5DB`, boxShadow: `0 ${1 * k}px ${4 * k}px rgba(0,0,0,0.18)`,
-          fontSize: 12.5 * k, fontWeight: 700, lineHeight: 1, whiteSpace: "nowrap", fontFamily: "inherit",
+          position: "absolute", left: cx - boxLeft - radius, top: cy - boxTop - radius, width: d, height: d,
+          borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
+          background: edit ? "#0D4DC0" : "#374151", color: "#FFFFFF",
+          boxShadow: `0 0 0 ${1.5 * k}px #FFFFFF, 0 ${1 * k}px ${3 * k}px rgba(0,0,0,0.25)`,
         }}
       >
-        {edit && (
-          <svg width={13 * k} height={13 * k} viewBox="0 0 24 24" aria-hidden fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+        {edit ? (
+          <svg width={glyph} height={glyph} viewBox="0 0 24 24" aria-hidden fill="none" stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round">
             <path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
           </svg>
-        )}
-        {control.label}
-        {!edit && (
-          <span style={{ width: 20 * k, height: 20 * k, borderRadius: "50%", background: "#9CA3AF", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 * k, fontWeight: 700 }} aria-hidden>
-            ×
-          </span>
+        ) : (
+          <svg width={glyph} height={glyph} viewBox="0 0 24 24" aria-hidden fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round">
+            <path d="M6 6l12 12" /><path d="M18 6L6 18" />
+          </svg>
         )}
       </span>
     </button>
