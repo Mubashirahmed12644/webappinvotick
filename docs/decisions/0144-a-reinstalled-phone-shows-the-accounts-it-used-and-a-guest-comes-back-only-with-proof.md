@@ -1,7 +1,7 @@
 # 0144 — A reinstalled phone shows the accounts it used before, and a guest comes back only with proof
 
 **Date:** 2026-09-21
-**Status:** designed; **one question open for the owner** (the guest's proof, below). Nothing built.
+**Status:** decided by the owner 2026-09-21 — the proof is a **choice from a list**, not typing (section 3b). Being built.
 **Tier 1** (identity and a guest's only copy of their work, goal G3). Owned by the sync agent (0051).
 **Related:** 0053 (a guest's work joins an account only on a yes), 0111 (a deleted account), 0143 (a purchase follows
 its phone's newest account), rule 11 and rule 28 of `.claude/agents/sync.md` (proof of a phone; a removed phone).
@@ -116,7 +116,7 @@ Weighed:
 
 | Option | Protects against | Does not protect against | Cost |
 |:--|:--|:--|:--|
-| **(a) Same phone's id + one question the real owner knows** — "Is account ke business ya kisi client ka naam likhein" | a sold phone (a reset makes a new id: nothing shown); a phone handed on unreset (the stranger does not know the names); a faked id (it still needs the answer) | someone who knows the owner's business name and holds the unreset phone — a family member, in practice | a small server check, a tries limit; works offline-to-server with no Google or Apple account |
+| **(a) Same phone's id + a question the real owner knows** (built as a choice, 3b) | a sold phone (a reset makes a new id: nothing shown); a phone handed on unreset (the stranger does not know the names); a faked id (it still needs the answer) | someone who knows the owner's business name and holds the unreset phone — a family member, in practice | a small server check, a tries limit; works offline-to-server with no Google or Apple account |
 | (a′) Same phone's id alone | a sold phone that was reset | any phone handed on unreset: the next holder gets the old owner's invoices and clients with one tap | none |
 | (b) Google Block Store / iCloud Keychain hold the guest's own key | a sold phone (a different Google/Apple account); **also brings the work to a new phone** | a user with no Google/Apple account on the phone, or sync off | a new library on Android; on iOS a synced Keychain item; the key sits in the user's cloud |
 | (c) Turn the guest into a signed-in account | everything, once done | nothing after the phone is lost — it must happen before | exists today (a sign-up moves the work, 0053) |
@@ -127,14 +127,43 @@ on a phone passed on unreset would hand over a stranger's invoices, and G3 outra
 
 How (a) works:
 - The picker never holds a guest's UUID. Each row carries a short-lived reference the server signed for this phone.
-- The user types a business or client name of that guest. The server compares it, ignoring case, spaces and
-  punctuation, with the guest's live businesses and clients.
-- **5 wrong answers per guest per phone in 24 hours,** then "Kal dobara koshish karein". Tries are stored, not held
-  in memory.
+- The user picks the guest's business and one of its clients from two short lists (3b).
 - On a right answer the server hands the phone that guest's pass. The phone signs in as the guest and runs a full
   pull, which brings back every record the server holds. Work the old install never sent is gone with it; the
   screen says so in one line.
 - The empty guest this install made is left alone: it has nothing to move.
+
+### 3b. The owner's answer: the proof is a choice, not typing (2026-09-21)
+
+> "saboot mangain, likhny ki soorat main nahi, selection ki soorat main — ky list main sy sahi wala chuny."
+
+Picking one of several is easier to guess than typing, so the choice is built to stay a real proof:
+
+- **Two rounds, one screen each, two taps in the good case.**
+  1. "Is account ka business kaunsa hai?": the guest's business (the one with the most invoices) among **5 decoys**.
+  2. "In mein se aap ka client kaunsa hai?": the client on the guest's latest invoice among **5 decoys**.
+- **The answer is judged only after both rounds**, and a wrong answer never says which round was wrong. Otherwise
+  each round could be guessed on its own (6 + 6 tries instead of 36).
+- **Odds for a guess: 1/6 × 1/6 = 1/36 per try.**
+- **3 wrong tries in total per guest, from any phone, ever.** After the third, that guest cannot be returned on a
+  phone; its row says "Support se rabta karein" with the masked ID. So the most a stranger holding an unreset phone
+  can get by guessing is 1 − (35/36)³ ≈ **8%**, against 1 − (15/16)³ ≈ 18% a day for 4 choices and 3 tries a day.
+  The real owner has 3 chances, and a mistap costs one.
+- **The decoys are made up, never read from our database,** so the screen never shows another customer's business or
+  client. They come from fixed lists of common business and person names (Roman and Urdu script), shaped like the
+  real answer: the same number of words, the same script and the same capitalisation, so the real one does not stand
+  out. When the real answer is in a script the lists do not cover, that round uses the fallback below.
+- **The same guest always gets the same decoys.** They are chosen from a key only the server holds, plus the guest,
+  and only their order changes. If they changed on every try, the one name that stayed would be the answer.
+- **Fallbacks, in this order, when a round has nothing to ask:**
+  - no live business → an item name from the guest's invoice lines;
+  - no live client → an item name, other than one already asked;
+  - no item either → **the currency and the month of the guest's first invoice** ("PKR · Aug 2026") among 5
+    made-up pairs of common currencies and nearby months.
+- **What the choice reveals:** whoever holds the phone sees the real business and client name among 5 made-up ones
+  each. That is the price of a choice over typing, and the owner accepted it. The picker's rows still show no name.
+
+Tries are stored on the server (`returning_guest_tries`), never held in memory.
 
 ### 4. How it joins the existing rules
 
@@ -190,9 +219,10 @@ session that wrote this).
   an empty list. It returns at most 5 rows, newest first: the kind, the method, the masked ID and email, the live
   invoice count, the last use, and a signed reference valid for 15 minutes for this phone only. No UUID, name or
   full email is returned.
-- `POST /v1/devices/this/accounts/return`, `@RequireRole(GUEST)`: the reference and the answer. It re-checks every
+- `POST /v1/devices/this/accounts/question`, `@RequireRole(GUEST)`: the two rounds for one reference.
+- `POST /v1/devices/this/accounts/return`, `@RequireRole(GUEST)`: the reference and both choices. It re-checks every
   rule in section 4, counts the try, and answers the guest's pass or a refusal (`WRONG_ANSWER` with tries left,
-  `TOO_MANY_TRIES`, `NO_LONGER_AVAILABLE`).
+  `TOO_MANY_TRIES`, `NO_LONGER_AVAILABLE`) as 409 — never 401, which every build reads as "sign out".
 - **A migration, alone and first, on its own branch, on the owner's word:** an index on `linked_device.device_id`
   (today the only index starts with `user_id`, so this read would scan all 6,231 rows), and a small table for the
   tries.
@@ -211,6 +241,11 @@ card, the question, the switch to the old guest with a full pull, and the iOS Ke
 
 ## Rejected
 
+- **A typed answer** (the first recommendation). The owner chose a choice from a list (3b).
+- **4 choices and 3 tries a day** (the coordinator's example). About 18% a day for a guesser, and it recovers every
+  day; 6 choices and 3 tries ever is about 8% in total.
+- **Decoys taken from other customers' rows.** They would show strangers' businesses and clients.
+- **Saying which round was wrong.** It turns 1/36 into two 1/6 guesses.
 - **The phone's id alone brings a guest back** (a′). One tap on an unreset second-hand phone hands over a stranger's
   invoices and clients.
 - **The business name and logo on the rows,** as in the Instagram reference. They identify the previous owner to
@@ -226,7 +261,8 @@ card, the question, the switch to the old guest with a full pull, and the iOS Ke
 
 ## Open
 
-1. **The owner's question:** a guest comes back after the one question (a), or on the phone's id alone (a′)?
+1. ~~The owner's question: a typed answer or the id alone?~~ **Answered 2026-09-21: a choice from a list (3b).**
+   A support tool to give a locked guest its 3 tries back is not built.
 2. (b) Block Store / iCloud Keychain for a **new** phone: a later decision, after (a) is measured.
 3. Android backup copies `device_uuid_prefs` onto a new phone, which then sends the old phone's id. Excluding that
    one file from backup changes nothing on the same phone (it recomputes the same value). To decide separately.
