@@ -158,15 +158,21 @@ Memory is dated observation. Verify any file:line against the code before relyin
      is not asked.
    - Only a 200 is an answer: premium is kept until `offlineValidUntil`, and no ends the grant. Anything else
      is silence and keeps the current dates.
-   - **The server sets `offlineValidUntil`** (the owner's design, 2026-09-14): `min(expiresAt, now + 24 h)`
-     inside the store's refund window of the current charge, in grace, or when the charge's time is unknown;
-     `expiresAt` after it (null for a lifetime: no end). Windows: Google Play 48 h, Apple 14 days. A server
-     that sends none gets a day on the device, never the plan's date.
+   - **The server sets `offlineValidUntil`** (the owner's design, 2026-09-14; the renewal margin added 2026-09-22,
+     0157): `min(end, now + 24 h)` inside the store's refund window of the current charge, in grace, or when the
+     charge's time is unknown; `end` after it (null for a lifetime: no end). Windows: Google Play 48 h, Apple 14
+     days. A server that sends none gets a day on the device, never the plan's date.
+   - **`end` is `expiresAt + 30 min` for a subscription that is still renewing** (status `ACTIVE` or `GRACE`), so
+     the account's other devices do not lose premium at the renewal instant. The server also answers premium for
+     those 30 minutes after `expiresAt` when Google, asked first, does not answer. **No margin** once Google has
+     said the purchase ends: `CANCELLED` (auto-renew off), `EXPIRED`, `REFUNDED`, `REVOKED` or a voided purchase
+     end at `expiresAt`, or at once. Counts are unchanged: the margin is only in what a device is told.
    - The server asks Google on each check, at most once per purchase in 10 minutes (`purchase_identity
      .last_verified_at`): `subscriptionsv2`, then the Orders API's `createTime` for
      `latestSuccessfulOrderId`, or `purchaseTimeMillis` for a lifetime.
    - The server's "no" must be true. `CANCELLED` with time left is premium. A passed date is asked of Google
-     first, and Google unreachable is a 503 `UNVERIFIED` (for a live row, a day instead).
+     first, and Google unreachable is a 503 `UNVERIFIED` (for a live row, a day instead; inside the 30-minute
+     renewal margin, premium until the margin ends).
    - Kill switch `account_premium_enabled` (default on). Off: nothing is asked, and a stored grant does not
      count.
 10. **An iPhone buys through the App Store by these same rules** (0112; the owner, 2026-09-15: *"kia premium

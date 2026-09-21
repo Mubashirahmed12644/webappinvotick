@@ -66,3 +66,20 @@ or yearly renewal can open the same gap for a paying customer, once per renewal.
 1. The window: 30 minutes (recommended), or another length.
 2. Other devices of the account (rule 9) lose the grant at the plan's date until they ask again after the splash; a
    short margin after a renewal date in the server's answer would close that too. The owner's design, so a question.
+
+## Addendum, 2026-09-22 — the owner's answers, and the server's 30-minute margin
+
+- **Q1 (the window): 30 minutes, as built.**
+- **Q2 (other devices): yes.** The owner: the server keeps premium for 30 minutes past a subscription's `expires_at`,
+  so linked devices do not lose premium at the renewal instant; a Google-reported cancel, refund, revoke or voided
+  purchase ends it at once, with no margin. Rule 9 in `billing.md` is rewritten for it.
+- **Built** on `invotick-apis` `feat/renewal-grace`, on top of `feat/purchase-test-flag`: `8b9e064`, 1,429/1,429. Not deployed.
+  - `Entitlement.inRenewalMargin`: status `ACTIVE` or `GRACE`, date passed, less than 30 minutes ago. `holdsPremium`
+    = live or in the margin; what a device is told (`premium`) reads it. Counts keep reading `isCurrentlyActive`.
+  - `offlineValidUntil`: for `ACTIVE`/`GRACE` the plan's end is `expiresAt + 30 min`, both inside the refund window
+    (still never past a day) and after it. `CANCELLED` keeps the plain date.
+  - `currentEntitlement`: a passed date is still asked of Google first. Google's new date wins; Google's ending
+    (`EXPIRED`, refund, revoke) ends it at once; only when Google gives no answer does a row inside the margin answer
+    premium until the margin ends, where it used to be a 503.
+- **Rejected:** the margin in `isCurrentlyActive` (it would move every count and the logs' premium label); a margin
+  for `CANCELLED` (the owner: a cancel ends it); skipping Google inside the margin (its answer is the truth).
