@@ -474,6 +474,20 @@ the list is wrong, not the app.**
 - **Money/ads:** `watch_ad_click`, `ad_request`, `ad_loaded`, `ad_shown`,
   *(`premium_click` is gone from the app, last seen 2026-08-21. The premium tap is `ad_dailog_premium_click`
   (sic), and a paywall view is `screen_view` for `premium_scr`. Found by the billing agent, 2026-09-12.)*
+  **From 1.4.9 (decision [0155](docs/decisions/0155-the-paywall-names-its-door-and-each-continue-names-its-result.md)):**
+  - `premium_scr`'s `screen_view` carries **`entry`**: `save_ad_dialog`, `share_ad_dialog`, `invoice_list`, `drawer`
+    or `preview_footer`. It is absent when the door is unknown. Before 1.4.9, the door is the tap in the 10 s before
+    the view: `ad_dailog_premium_click`, `tap:dashboard:InvoiceListScreen.go_premium_4` or
+    `tap:?:NavigationDrawerContent.go_premium_1`.
+  - Continue is the auto tap `tap:premium_scr:PremiumPaywallSheet.checking_plans_6`. Its label is historical.
+  - **`premium_purchase_result`** is coded, one per press of Continue, on Android and iOS. It carries:
+    - `outcome`: `success`, `user_cancelled`, `failed`, `pending`, `already_owned` or `launch_failed`;
+    - `plan`: the product id, the same text as `purchase_identity.product_id`;
+    - `response_code`: Play's code, only where Play gave one;
+    - `failed_at`: `store`, `acknowledge` or `server`, on `failed` only;
+    - `reason`: `no_store`, `no_screen`, `plans_not_loaded` or `no_offer`, on our own refusal before any sheet.
+  - Before 1.4.9 nothing recorded a purchase's result: 67 of the 70 phones that pressed Continue in the 30 days to
+    2026-09-22 are unknowns.
   `ad_dismissed`, `ad_load_failed`, `ad_show_failed`, `ad_load_crashed`, `ad_dialog_dismissed`,
   **`ad_impression_value`** (3,112 firings / 582 devices — what an impression actually paid, from
   the network, so the ad trade has a revenue side at all) and **`app_open_decision`** (324 / 28

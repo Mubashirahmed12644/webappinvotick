@@ -614,6 +614,30 @@ the page to say so. Count an event's keys before adding more.
 This reverses 0043's rejection of `error.message`. Decision
 [0150](docs/decisions/0150-a-failed-ad-says-the-sdks-sentence-and-the-banner-joins-our-pipeline.md).
 
+### 1.23 A result the store gives is one coded event per attempt; a door is a parameter on the screen it opens. *(decided 2026-09-22)*
+
+**What went wrong.** In the 30 days to 2026-09-22, 70 phones pressed the paywall's Continue and 3 bought. The
+other 67 left no trace: nothing recorded whether Play's sheet opened, or whether the purchase was cancelled,
+declined, pending or refused by our server. The door was just as blind. `prev_screen` said `dashboard` for both
+the invoice-list crown and the drawer, and one coded tap covered the Save and Share ad dialogs. The door could only
+be guessed from whichever tap landed in the 10 seconds before the sheet.
+
+The rules:
+- **A store's answer is a coded event, one per press.** Nothing is pressed when Play or the App Store answers, so no
+  auto tap can carry it (0064). The attempt is taken exactly once, because Play can report one refusal twice: as
+  `launchBillingFlow`'s return value and through the listener. Anything that is not an answer to a press is not an
+  attempt: a restore, a launch's check of what is owned, a pending purchase that completes later.
+- **The outcome is a parameter**, never an event per outcome (§1.1). Where it failed and which of our own checks
+  refused it are parameters too, each present only on the outcome it explains (§1.7).
+- **The press that opens a screen says which door it is**, as a parameter on that screen's own `screen_view`,
+  through `trackScreen(name, params)`. The gateway writes its own stamps last, so a caller can never replace
+  `build_type` or `prev_screen`.
+- **Never derive a door from the neighbouring tap** once the screen can be told.
+
+Events: `premium_purchase_result` (`outcome`, `plan`, `response_code`, `failed_at`, `reason`) and
+`screen_view.entry` for `premium_scr`. Decision
+[0155](docs/decisions/0155-the-paywall-names-its-door-and-each-continue-names-its-result.md).
+
 ### 1.10 Layers
 
 `intent.screen` · `intent.action` · `response.outcome` · `response.gate` · `response.interruption` ·
