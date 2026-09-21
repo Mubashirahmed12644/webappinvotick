@@ -123,3 +123,64 @@ bundle:
   beside the document, and only the app's preview asks for it.
 - **Guessing a country code** for a local number. A QR that opens a stranger's WhatsApp is worse than an empty tile.
 - **Rebuilding the offline bundle from web `main`** — same reason as 0147: `main` lacks render changes 1.4.8 ships.
+
+## Addendum, 2026-09-21 — the footer's email is layered onto the account
+
+**Owner decision.** The footer's contact line's email half is layered, highest first:
+
+1. **The email the user set in the footer Edit sheet** — the sheet's own typed contact line. Top layer, always
+   wins; clearing it there falls back to the next layer.
+2. **The business profile's email.**
+3. **The account's sign-up email**, used automatically when the profile has none. Guests have none, so the email
+   half is simply absent for them — nothing changes from before this addendum.
+
+Also: **the business profile form offers the account's sign-up email as a one-tap suggestion** when its own email
+field is empty. Never a silent prefill — the owner taps a chip to use it, same as typing it themselves.
+
+**Phone was asked for too, and does not exist to layer.** `SessionState.Authenticated` (the app's session model)
+carries no phone number at all — only `userId`, `accessToken`, `displayName`, `email`, `avatarUrl`,
+`isEmailVerified`. A phone exists further away (`UserProfile.phoneNumber`, Room-cached from the account's profile),
+but it is not a sign-up/verified account-level field the way the email is, and reading it needs a suspend/Flow
+call this feature deliberately avoided taking on. So the footer's phone slot stays business-profile-only, exactly
+as 0151 shipped it — checked and confirmed there is nothing to layer.
+
+**Where the account email is read.** `AccountContactStore` (`core/common/footer/`, app-side), a static holder
+mirroring how `OwnFooterStore.region` already works: `AppViewModel.observeAccountContact()` populates it from
+`SessionManager.state` at app start and on every session change — a local read of what sign-in already stored, no
+server call, no schema change. It is null for a guest and stays that way.
+
+**How it reaches the resolved footer.** `OwnFooterRules.resolve()` and `defaultContactLine()` gained an
+`accountEmail` parameter: the business profile's own email always wins; the account's fills the email half of the
+contact line only when the profile has none. `OwnFooterStore.footerFor()` (the one choke point both
+`buildInvoiceSnapshot` and `TemplateModule.createInvoiceDataFromState` read by default, per 805bf792) and
+`OwnFooterSheet`'s own live preview both pass `AccountContactStore.email` in, so the phone's preview, the offline
+and online HTML, the native PDF and the share page all agree — the same single resolution this decision already
+established, extended by one more input.
+
+**Built on** `invoice-kmp-app` branch `VC_108_VN_149` (`d372605f`, on top of the 1.4.9 internal-testing build
+`92f661cc`). Not merged, not deployed with a release build — this is source on the existing branch, no
+versionCode/versionName change.
+
+**Tests:** `OwnFooterRulesTest` +8 (business email wins over the account's; the account's fills the gap only when
+the profile has none; a guest's contact line is unaffected; a blank account email is treated as none; neither
+layer present leaves the line empty; the sheet's own typed override still wins over both; `OwnFooterStore.footerFor`
+reads `AccountContactStore`). `PremiumDocumentCarriesItsOwnFooterTest` +2, end to end through
+`buildInvoiceSnapshot`/`TemplateModule`. New `BusinessFormEmailSuggestionTest` (6) — the suggestion's visibility as
+a pure property, no ViewModel/DI needed. `:core:common`, `:feature:company`, `:feature:document:invoice` unit
+tests green; `:composeApp:assembleDebug` and `compileKotlinIosSimulatorArm64` both green.
+
+### Rejected (this addendum)
+
+- **Auto-insert the account email without asking.** The owner was explicit: a tap, never a silent prefill — the
+  business profile's email field is the business's own record, and the app should not write into it unasked.
+- **Profile only, no account fallback.** Rejected because the owner asked for the fallback by name — a fresh
+  premium account with a business but no email yet should still show *something* useful in the footer's contact
+  line rather than an empty half, without forcing a profile edit first.
+- **Layering the phone the same way.** Not rejected on the merits — there is no session-level phone field to layer
+  in the first place (see above). If the owner later wants a verified/sign-up phone (e.g. via OTP phone auth) fed
+  into this same layering, that is new session-model work, not a extension of this addendum.
+- **A dedicated "account email" field in the footer sheet**, separate from the existing "Phone · email" contact
+  line. The sheet already has exactly one free-text override for that line; splitting it into phone/email sub-fields
+  would touch the sheet's UI and its stored `OwnFooterSettings` shape for a case (typing a custom email while
+  keeping the profile's phone) the owner did not ask for. The existing override already satisfies "always wins,
+  clearing it falls back" as a whole line.
