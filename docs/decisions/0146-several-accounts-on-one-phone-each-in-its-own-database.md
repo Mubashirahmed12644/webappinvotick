@@ -290,3 +290,21 @@ karein? (Recommended: ginti ke baad.)
   1.4.8. The 0143 guard ("newest" = the account most recently joined to the phone) is on its backend branch already.
 - Everything else in this design stands: model (a), no rename or split of `invotick_v2.db`, a held guest re-opened
   without proof, stages 1–3, and re-opening an account already on this phone is not a new move under 0143.
+
+### Settled while building (the coordinator, 2026-09-21)
+
+- **Release blocker, not a nice-to-have: every account's pass moves to the Android Keystore / iOS Keychain before
+  1.4.8 ships.** Stage 1 keeps the parked accounts' passes in the app's own settings file (DataStore, where today's
+  active pass already lives) as a step on the branch only. 1.4.8 is not released while any pass sits there, and the
+  Android backup rules must leave the register out.
+- **The app's own questions come one at a time** (`OnePromptAtATime`, app `8efce603`): the returning-accounts list
+  (0144), the guest-work question (0053), the removed-phone notice (0099), then the premium question (0143). The one on
+  screen is never pushed aside by a later one. A premium question asked for one account goes unanswered and is not
+  remembered when another account is opened first, and a change of account never moves a purchase. The switcher's own
+  prompts join this order.
+- **Two branches that lived only on the owner's Mac are pushed and found already inside 1.4.8**, compared by behaviour
+  (every file they change reads the same or newer on `VC_107_VN_148`): `ios/146-gestures-and-background-sync`
+  `ee46d4e3` (iOS Koin starts once, background sync pass, WebView stamp drag and pull-to-close) and
+  `feat/146-premium-never-taken-back` `a56d8071` (a confirmed grant is never unconfirmed, only Google's named refusal
+  is final, billing calls send `X-Device-Id`, no blank-price plan). Nothing of either was merged; both are dead, and
+  deleting them is the owner's word.
