@@ -198,6 +198,24 @@ Memory is dated observation. Verify any file:line against the code before relyin
       account's Invotick ID.
     - Backend `feat/account-deletion`; not deployed.
 
+13. **A purchase follows its phone's newest account — by itself from a guest, with a yes from anyone else, three times
+    a year** (0143; the owner, 2026-09-21: *"latest UUID ko premium assign ker dain … 4thi per deny"*). Built on branches,
+    not deployed.
+    - **One place decides:** `PurchaseMovePolicy`, only after the store confirmed the purchase in that same call (rule 4),
+      on both roads (restore and the purchase report). A closed account's purchase never moves (rule 11).
+    - **By itself** only from a `GUEST` on no other un-removed phone (`linked_device`) than the one asking. A guest can
+      have a second phone by device link, so "a guest has no other devices" is not assumed. Anyone else moves only on the
+      user's yes (restore `moveConsent=true`); otherwise the answer is `MOVE_NEEDS_CONSENT`, naming the holder.
+    - **Three moves in any rolling 365 days**, counted from `entitlement_binding_log` rows with from ≠ to, after the latest
+      `MOVE_COUNT_RESET`. The 4th is `MOVE_LIMIT_REACHED` with `moveAllowedAgainAt`, and the purchase stays.
+    - **Builds without `moveConsent` (≤ 1.4.7) get exactly the old answers** and nothing moves on their restore. The
+      purchase report never moves a purchase from a signed-in or closed account (until 0143 it moved it silently).
+    - **The phone is premium in every branch** (rule 1). The app asks once; "Not now" is quiet for 30 days, and Restore
+      purchases asks again. The refusal is told once.
+    - **Support reset:** `POST /v2/admin/billing/purchases/moves/reset` (ADMIN, reason required), from Billing Health.
+      It writes one binding-log row and never touches a store. **Off switch:** `billing.purchase-moves.enabled`.
+    - Health Centre `billing-integrity` warns on accounts refused a 4th move (30 days).
+
 ## Known gaps (2026-09-12, found while checking 1.4.5)
 
 1. **1.4.5 can take back a confirmed grant.** **Fixed for 1.4.6** (0070), merged into `VC_102_VN_146`
