@@ -376,5 +376,5 @@ karein? (Recommended: ginti ke baad.)
   `legacy_guest_move_enabled`. One event, `legacy_guest_move`.
 - Proven on the real schema: `AGuestInTheLegacyFileMovesOutWholeTest` (10), `AMovedGuestGetsAPlaceOfItsOwnTest` (4);
   1034/1034, Android debug build, iOS simulator compile. No server change.
-- **Not done:** removing the legacy file's own account once it is alone (0153, question 1); a run on a real phone of
-  each platform.
+- **Not done:** a run on a real phone of each platform. (Removing the legacy file's own account: built by 0154, which
+  also moves `received_invoices` out of every account file into the phone's own store, seen from every account.)

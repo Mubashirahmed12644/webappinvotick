@@ -1164,8 +1164,39 @@ Memory is dated observation. Verify any file:line against the code before relyin
       `legacy_guest_move_enabled` (with `account_switcher_enabled`).
     - **Evidence:** `legacy_guest_move` — `outcome` `moved|skipped|failed`, `reason`, `guest_id`, `rows`,
       `queue_rows`, `removed_rows`, `left_in_legacy`, `attempt`, `elapsed_ms`, `exception_class`.
-    - **Open:** removing the legacy account once it is alone (received invoices live in its file); a real-phone run.
+    - **Open:** a real-phone run. (Removing the legacy account once it is alone: rule 44.)
     - Guards: `AGuestInTheLegacyFileMovesOutWholeTest` (10, real Room), `AMovedGuestGetsAPlaceOfItsOwnTest` (4).
+44. **A received invoice is the phone's; each action on it is an account's** (0154; the owner, 2026-09-22: "viewed
+    phone-wide, like a PDF anyone on the phone can open, but every action belongs to the account that took it"). App
+    `VC_108_VN_149` (pushed): test `72d45c36` (red: 187 compile errors, all in its two files), code `35420158`; unit
+    suite 1047/1047, Android debug, iOS simulator. Backend `migration/shared-invoice-decided-by-user` `db65d33`, then
+    `feat/decision-names-its-account` (test `96a05a4`, code `7a46618`, erase `a66f1bb`). Nothing deployed or released.
+    - **One phone store,** `invotick_phone.db` (`PhoneDatabase` v1): never opened or closed by a switch, never moved by
+      rule 43, never deleted by a removal. The account files keep an empty `received_invoices` (additive only).
+    - **The move** (`ReceivedInvoicesMove`), every file in the register, `invotick_v2.db` included: merge in one
+      transaction → read back and check → remove in one transaction only rows still exactly the copy moved. Nothing
+      removed before the check; a rerun changes nothing. 30 s after start or a switch, before rule 43's move, holding
+      `AccountFileLock`. Kill switch `received_phone_store_enabled`; off, new opens go to the open file as up to 1.4.8.
+    - **One token in two places** (`ReceivedInvoiceMerge`): earliest first opening, latest last opening, the content
+      opened last, a decision never replaced by PENDING, the decider kept with its decision; order-free, idempotent.
+    - **The list** joins the phone store and the open file by token, so it is whole before the move and while off.
+    - **Actions:** a decision stores `decidedByAccountId` + the drawer's masked label; another account reads "Approved
+      by …" and is not asked again (the server answers 409 to a second decision). A future "record as expense" is a row
+      in that account's own synced tables, never in the phone store.
+    - **The decision call** carries the open account's pass, never `X-Device-Id` (that header can draw a 401 on a
+      public route, and a 401 signs a user out); a 403 is retried with none. The server keeps the account in
+      `shared_invoice.decided_by_user_id`, never from the body, never in an answer.
+    - **Removing the `invotick_v2.db` account** is allowed only when nothing is unsent, its received invoices are in
+      the phone store (`ReceivedNotMoved` otherwise), and no other owner's row is in the file (`OthersInside`); its file
+      goes only through `deleteLegacyDatabase`.
+    - **Evidence:** `received_invoices_move` (`outcome`, `reason`, `file`, `rows`, `removed_rows`, `already_on_phone`,
+      `left_in_file`, `elapsed_ms`, `exception_class`); `decided_as` on the three decision events.
+    - **Open:** deploy order (migration alone, then code, then 1.4.9); a run on a real phone of each platform.
+    - **The account erase (rule 32)** clears `decided_by_user_id` where it names the erased account, by its index; the
+      sender's share and the decision stay.
+    - Guards: `AReceivedInvoiceBelongsToThePhoneTest` (15, real Room), `ADecisionNamesItsAccountTest` (3); backend
+      `ADecisionNamesTheAccountThatMadeItTest` (6), the erase case in `AClosedAccountIsErasedAfterItsWindowTest`;
+      backend suite 1408/1408.
 
 ## Established 2026-09-12, while planning the receipt number
 

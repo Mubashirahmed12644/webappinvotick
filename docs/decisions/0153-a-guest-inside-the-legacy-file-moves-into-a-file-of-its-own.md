@@ -126,5 +126,9 @@ Whole unit suite 1034/1034, `:composeApp:assembleDebug`, `:composeApp:compileKot
 
 ## The owner's question
 
+> **Answered 2026-09-22 by 0154:** received invoices now live in the phone's own store, so "remove from this phone"
+> is offered for the `invotick_v2.db` account too — only once its received invoices are moved and no other owner's
+> rows are in its file.
+
 1. Jab purani file mein sirf us ka apna account reh jaye, to kya "Is phone se hatayein" us ke liye bhi khule? (Us
    file mein doosron ki bheji hui invoices bhi hain; pehle unhein naye khule account ki file mein le jana hoga.)

@@ -578,6 +578,14 @@ the list is wrong, not the app.**
   [0153](docs/decisions/0153-a-guest-inside-the-legacy-file-moves-into-a-file-of-its-own.md)). `outcome`
   (`moved|skipped|failed`), `reason`, `guest_id` (a join key), `rows`, `queue_rows`, `removed_rows`, `left_in_legacy`,
   `attempt`, `elapsed_ms`, `exception_class` on a failure. Coded, because nothing is pressed; each outcome once per guest.
+- **Received invoices, from 1.4.9** (decision
+  [0154](docs/decisions/0154-a-received-invoice-is-the-phones-and-each-action-is-an-accounts.md)):
+  - **`received_invoices_move`**: an account file's received invoices moved into the phone's own store, or a failed
+    attempt. `outcome` (`moved|failed`), `reason` (`done`, or the stage: `read|open|open_store|merge|check|remove`),
+    `file` (`legacy|account`, never a file name), `rows`, `removed_rows`, `already_on_phone`, `left_in_file`,
+    `elapsed_ms`, `exception_class` on a failure. Coded; once per file that held rows, and per failure.
+  - **`decided_as`** on `shared_invoice_approved`, `_rejected` and `_decision_failed`: `account|guest|none`, the kind of
+    account open when the receiver decided. Rows up to 1.4.8 have none.
 - **Shipped images, from 1.4.6:** **`bundled_image_unavailable`** — an image a row names (a seeded
   header, template or background) that this build cannot produce. `image` (our asset name),
   `stored_ext` (`png` on rows written up to 1.4.4, `webp` after), `failure`
