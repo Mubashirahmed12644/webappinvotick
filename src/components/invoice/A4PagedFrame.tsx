@@ -752,7 +752,9 @@ export function A4PagedFrame({
                         needs a place, or the footer could never be brought back. It sits where the band's
                         top-right corner would be, and only in the app's own preview. */}
                     {!branded && footerControl && onFooterControl && s > 0 && (
-                      <div style={{ position: "absolute", left: 32, right: 32, bottom: FOOTER_BOTTOM_MARGIN + 95, height: 24 }}>
+                      // The footer's own box, empty: the 1 px rule, the 11 px gap, the 95 px band and its 4 px
+                      // margin. The button places itself against this box exactly as against a real footer.
+                      <div style={{ position: "absolute", left: 32, right: 32, bottom: FOOTER_BOTTOM_MARGIN, height: 1 + 11 + 95 + 4 }}>
                         <FooterControlButton control={{ ...footerControl, scale: s, onPress: onFooterControl }} />
                       </div>
                     )}
