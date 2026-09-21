@@ -219,6 +219,18 @@ Memory is dated observation. Verify any file:line against the code before relyin
       It writes one binding-log row and never touches a store. **Off switch:** `billing.purchase-moves.enabled`.
     - Health Centre `billing-integrity` warns on accounts refused a 4th move (30 days).
 
+14. **A premium account's documents carry no Invotick footer, anywhere** (0147; the owner, 2026-09-21: *"premium user ko
+    invoice ky bottom per jo Invotick ka footer hy usko khatam"*).
+    - Premium is `shownPremium`, the same answer that stops ads (rules 1 and 9). `InvotickFooter` in `core/common` holds it,
+      fed by `AppViewModel`. The two document factories read it by default: `createInvoiceDataFromState` sets
+      `InvoiceData.showInvotickFooter`, and `buildInvoiceSnapshot` sets `InvoiceSnapshot.hideInvotickFooter`. Renderers read
+      the document's own flag only.
+    - A shared link follows its owner **now**. `GET /v2/shared-invoice/{token}` answers `showInvotickFooter` from
+      `PremiumUserIds` (in memory, refreshed every 5 minutes, no query, no store call). The web and the app's receiver
+      screen take the footer off on `false`, and never put it back on.
+    - Free users keep the footer unchanged: it is the growth surface. Weakening it for anyone else is a monetisation
+      question for the owner, never a finding.
+
 ## Known gaps (2026-09-12, found while checking 1.4.5)
 
 1. **1.4.5 can take back a confirmed grant.** **Fixed for 1.4.6** (0070), merged into `VC_102_VN_146`
