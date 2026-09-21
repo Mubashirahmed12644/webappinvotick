@@ -4,6 +4,7 @@ import QRCode from "qrcode";
 import {
   getSharedInvoice,
   getSharedInvoiceResult,
+  renderDataOf,
   installUrlForToken,
 } from "@/lib/shared-invoice";
 import { ApprovalActions } from "@/components/shared-invoice/ApprovalActions";
@@ -151,7 +152,7 @@ export default async function SharedInvoicePage({
           and free tool use (multi-page, fits width, scrolls). No image upload/wait. */}
       <div className="min-h-0 flex-1 px-3">
         <div className="print-area relative mx-auto h-full overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
-          <SharedInvoiceViewer data={shared.snapshot} qrDataUrl="/qr_code.jpg" />
+          <SharedInvoiceViewer data={renderDataOf(shared)} qrDataUrl="/qr_code.jpg" />
         </div>
       </div>
 
