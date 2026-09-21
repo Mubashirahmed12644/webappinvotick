@@ -206,6 +206,9 @@ Memory is dated observation. Verify any file:line against the code before relyin
     - **By itself** only from a `GUEST` on no other un-removed phone (`linked_device`) than the one asking. A guest can
       have a second phone by device link, so "a guest has no other devices" is not assumed. Anyone else moves only on the
       user's yes (restore `moveConsent=true`); otherwise the answer is `MOVE_NEEDS_CONSENT`, naming the holder.
+    - **Only to the phone's newest account** — the one most recently JOINED to it (`linked_device.first_seen_at`),
+      never merely the one open now. Going back to an earlier account (drawer, 0144 picker) is not a move and spends
+      nothing: A → B → A on one phone is one move (clarified with 0146).
     - **Three moves in any rolling 365 days**, counted from `entitlement_binding_log` rows with from ≠ to, after the latest
       `MOVE_COUNT_RESET`. The 4th is `MOVE_LIMIT_REACHED` with `moveAllowedAgainAt`, and the purchase stays.
     - **Builds without `moveConsent` (≤ 1.4.7) get exactly the old answers** and nothing moves on their restore. The

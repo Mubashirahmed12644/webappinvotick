@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-21
 **Status:** decided by the owner 2026-09-21; built on branches — backend `feat/purchase-moves-to-the-latest-account`
-`9b6f8a6`, app `feat/148-premium-moves-with-consent` `e0d42101`, panel `feat/purchase-move-reset` `e641466`. Nothing
+`5d3d06d`, app `feat/148-premium-moves-with-consent` `e0d42101`, panel `feat/purchase-move-reset` `e641466`. Nothing
 merged or deployed.
 **Tier 1** (money and trust, goal G3). Rules 1, 3, 4, 9 and 11 of `.claude/agents/billing.md` still hold unchanged.
 
@@ -55,6 +55,12 @@ signed in on that phone now, with the store token that phone holds.
 1. **The same account already holds it** → nothing moves (`ALREADY_YOURS`).
 2. **The holding account is closed** (rule 11, `users.closed_at`) → never moves; `BELONGS_TO_ANOTHER_ACCOUNT` names it,
    as rule 11 says.
+2a. **Only to the phone's newest account** (clarified 2026-09-21 with decision 0146, multi-account). "Newest" is the
+   account most recently **joined** to this phone — the latest `linked_device.first_seen_at` on this device id, a column
+   written once and never updated, removed accounts included — **not** the account open right now. Switching back to an
+   earlier account from the drawer, or returning to one through the reinstall picker (0144), is not a move: that account
+   gets `BELONGS_TO_ANOTHER_ACCOUNT` (no question, even with a yes) and spends nothing of the cap. So A → B → back to A
+   on one phone is **one** move. With no device id the phone cannot be told, so nothing moves.
 3. **Does it need a yes?** It moves **by itself** only when the holder is a **guest** (`users.role = GUEST`) **and
    that guest is on no other phone**: no un-removed `linked_device` row of the guest other than the phone asking.
    Everything else needs the user's yes:
@@ -144,6 +150,8 @@ lists each purchase with its accounts, which now also shows moves in the last 12
 
 ## Rejected
 
+- **"Newest" = the account open right now.** Every drawer switch or reinstall-picker return would count as a move and
+  burn the cap in an afternoon (found with 0146).
 - **Moving by itself from any account** (the owner's first idea, literally). A signed-in account may be premium on a
   tablet or the web, and would lose it with no warning. The owner chose consent.
 - **Three moves for life.** A family phone or a honest reinstaller would run out for ever; a rolling year recovers.
@@ -179,7 +187,7 @@ account on either road, every build gets `BELONGS_TO_ANOTHER_ACCOUNT`, and so th
 
 | Repo | Branch | Head | Tests |
 |---|---|---|---|
-| `invotick-apis` | `feat/purchase-moves-to-the-latest-account` (from `stage` `c79976b`) | `9b6f8a6` | 29 new: 21 service (**13 fail with stage's behaviour put back**; the 8 that pass both ways are the old-build, no-Google-answer, Google-refusal, closed-account, guest-report and reset cases, which must hold before and after), 3 on a real MySQL (the BINARY(16) id comparisons), 3 on the wire (an old build's body reaches the service with no consent), 2 on the card. Suite **1,328/1,328** incl. `SpringContextBootTest` and `MigrationsApplyToLiveSchemaTest`. No migration. |
+| `invotick-apis` | `feat/purchase-moves-to-the-latest-account` (from `stage` `c79976b`) | `5d3d06d` | **A → B → A = 1 move** (`5d3d06d`, 3 tests red with "open now" put back, suite **1,331/1,331**). Before it, 29 new: 21 service (**13 fail with stage's behaviour put back**; the 8 that pass both ways are the old-build, no-Google-answer, Google-refusal, closed-account, guest-report and reset cases, which must hold before and after), 3 on a real MySQL (the BINARY(16) id comparisons), 3 on the wire (an old build's body reaches the service with no consent), 2 on the card. Suite **1,328/1,328** incl. `SpringContextBootTest` and `MigrationsApplyToLiveSchemaTest`. No migration. |
 | `invoice-kmp-app` | `feat/148-premium-moves-with-consent` (from `VC_107_VN_147` `64106a7f`) | `e0d42101` | `PremiumMoveAsksOnceTest` 10, `RestoreSaysItCanAskTest` 3, `AppStorePurchasesTest` +3 (**red** with only BELONGS treated as held elsewhere). domain 68/68, data 325/325, core:premium 22/22, feature:premium 16/16; composeApp compiles for Android and `iosSimulatorArm64`. Not run on a device. |
 | `invotick-admin-panel` | `feat/purchase-move-reset` (from `main` `71e201d`) | `e641466` | `tsc` clean, eslint clean on the changed files. Not opened in a browser. |
 
