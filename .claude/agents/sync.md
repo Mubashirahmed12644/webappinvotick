@@ -1089,6 +1089,34 @@ Memory is dated observation. Verify any file:line against the code before relyin
     - Guards: `DeviceLinkClaimRegistersDeviceTest` (2 new cases), `ALinkedPhoneJoinsTheAccountAsWhatItIsTest` (7),
       `APhoneJoiningAnAccountIsAskedAboutItsOwnWorkTest` (8), 3 cases in `AGuestsWorkMovesInOneStepTest`.
 
+41. **Each account on a phone lives in a database file of its own, and a switch never lets one account's row, write or
+    pass reach another's** (0146; the owner, 2026-09-21: *"abhi"*, shipping in **1.4.9**). App `VC_108_VN_149`
+    (canonical; first pushed as `VC_107_VN_148`), stage 1 being built. Not released.
+    - **The file:** `invotick_v2.db` is never renamed or moved; it stays the file of the account that had the phone.
+      Each added account gets `invotick_acct_<place>.db`. The register (`AccountRegisterStoreImpl`) lives in the same
+      settings store as the session, so one write moves the session, the account's own settings and the open file.
+      Nothing is written until a second account is added.
+    - **Settings:** a setting is the account's unless `PhoneWideSettings` names it the phone's (theme, premium under
+      0047, the store's config, ad counters). A switch parks the outgoing account's and restores the incoming one's.
+    - **Objects:** `accountModules` are unloaded and loaded again at a switch (`AccountGraph`); the database closes
+      with them. `phoneWideModules` stay: the session, the push token (so a switch re-registers it through the
+      sign-in path), premium's server half, analytics, ads. No type is bound on both sides (a test). A process-lifetime
+      holder asks Koin each time; it never keeps an account's object.
+    - **The switch (`AccountSwitcher`):** the outgoing account pushes what it owes for 5 s at most (offline, not at
+      all); its screens let go, its sync closes for good (`SyncManager.closeForSwitch`), its background work stops,
+      its analytics session ends; then one register write, the account objects rebuilt, the session adopted. If the
+      other file cannot be opened, everything goes back. **An unsent write stays in its own file and goes only under
+      its own account.** A held guest comes back with its own pass and no question (0144's proof only for a guest the
+      phone lost). **A switch never restores, registers or moves a purchase** (0143).
+    - **Stage 1 limits, on the list:** only the open account syncs; the push token follows the open account (not yet
+      every account in the register); received invoices stay in the file they arrived in; a sign-out inside an added
+      account is today's sign-out in that file. **Release blocker for 1.4.9: every pass moves to the Keystore /
+      Keychain** (parked passes sit in the settings file in stage 1).
+    - Guards: `EachAccountKeepsItsOwnPlaceTest` (8), `SwitchingAccountsTest` (9), `ASwitchRebuildsOnlyTheAccountsObjectsTest`
+      (2), `ThePhoneAndTheAccountDoNotShareAnObjectTest` (3), `NoRowCrossesAccountsTest` (2, real Room: none of the 21
+      tables nor the queue of one account is in the other's file), `OnePromptAtATimeTest` (6), and the account cases in
+      `PremiumMoveAsksOnceTest`.
+
 ## Established 2026-09-12, while planning the receipt number
 
 The plan is `docs/SYNC-RECEIPT-NUMBER-PLAN.md`. Each line says how it is known.
