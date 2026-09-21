@@ -1122,6 +1122,25 @@ Memory is dated observation. Verify any file:line against the code before relyin
       `AParkedAccountSendsItsWorkUnderItsOwnPassTest` (4), `RemovingAnAccountNeverLosesItsWorkTest` (3); backend
       the four multi-account cases in `APushTokenSpeaksForOneAccountTest` and `ANoticeNamesItsAccountTest`.
 
+42. **A business's own footer choices ride on the business row, and null never clears them** (0152; the owner,
+    2026-09-22). Backend `migration/business-footer-settings` `5981146` (V20260922_01) and then
+    `feat/business-footer-settings` `76ddf9c`. App `VC_108_VN_149` `63d15aaa`, Room 5 → 6. Not deployed.
+    - **The value:** `businesses.footer_settings` / `business.footerSettings` is the app's `OwnFooterSettings` JSON. The
+      server stores it as sent and never reads it. The whole row is newest-wins, as every business edit is.
+    - **Null means "not said":**
+      - the server keeps the stored value when a copy omits it (every build ≤ 1.4.8, every web write);
+      - the phone keeps its own value when a pulled copy omits it (a server before 0152);
+      - a reset travels as `{}`.
+      - Never make null clear it: one old build's edit would erase every phone's choices.
+    - **Writes:** only `BusinessDao.setFooterSettings` writes the column on the phone. That write is an edit of the
+      business: a new time and number, PENDING_UPDATE (a waiting CREATE stays CREATE), queued. The same value writes
+      and sends nothing. The business form's save keeps the column (`BusinessRepositoryImpl.updateBusiness`).
+    - **Deploy order:** the migration, then the code, then 1.4.9 to the store. A 1.4.9 choice sent to the old server is
+      answered SUCCESS and dropped.
+    - Guards: backend `ABusinessFooterFollowsTheBusinessTest` (5), and the new field in
+      `ACopyThatChangesNothingKeepsItsNumberTest`. App `ABusinessFooterFollowsTheBusinessTest` (8, real Room) and
+      `AnUpdateToV6KeepsEveryBusinessTest`.
+
 ## Established 2026-09-12, while planning the receipt number
 
 The plan is `docs/SYNC-RECEIPT-NUMBER-PLAN.md`. Each line says how it is known.

@@ -58,6 +58,8 @@ footer). 0147's premium rule is unchanged; this decides what goes in the band in
 - **What does not follow the account to a second phone:** the choices. There the footer is built from the business
   profile's defaults, which do sync. Carrying the choices across phones needs a server column or table — **a
   migration, so the owner's decision.** Not built.
+  **Superseded by [0152](0152-a-business-s-footer-choices-follow-the-business.md) (2026-09-22):** the choices now live
+  on the business row and sync with it.
 
 ## How it is built
 
