@@ -379,6 +379,10 @@ the list is wrong, not the app.**
 - **Form-typing proxies:** `business_form_text_typed`, `client_form_text_add`, `item_form_text_add` —
   fired **once per form**, on the first non-blank keystroke in the *name* field. They prove the user
   started typing, **not** that the data was real. Plus `client_add_success` and `Item_added`.
+  From 1.4.9, `client_form_text_add` and `client_form_saved` carry **`entry`** (`invoice_sheet|customers_screen`).
+  There is one client form, and it opens from both places (decision
+  [0161](docs/decisions/0161-one-client-form-the-customers-screen-opens-the-invoice-sheets-form.md)). Absent means an
+  older build, and only the invoice sheet sent these then.
 
 - ⚠️ **1.4.3 (`VC_95_VN_143`) removes nine coded duplicates — the UI layer now owns the press.**
   *(owner decision 2026-09-05, from the Health Centre's "One press, two events" check.)* Every one
