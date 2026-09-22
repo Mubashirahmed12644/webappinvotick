@@ -1,4 +1,11 @@
-# 0147 — One "Show More Details" rule for every form, implemented once
+# 0160 — One "Show More Details" rule for every form, implemented once
+
+> Numbered 0160, not 0147: this Webinvotick checkout was stale when the work started (its
+> `docs/decisions/` listing stopped at 0146), and 0147–0159 were already taken on `gitlab` by the
+> time this was pushed. The `invoice-kmp-app` commit (`ee45395e`) and its in-code comments —
+> `ShowMoreDetails.kt`, `ShowMoreDetailsSection.kt`, the five touched screens, the new tests — all
+> cite **"(0147)"**, which is now wrong; not re-pushed, since that history is already shared on
+> `VC_108_VN_149`. Read any "(0147)" in that repo as this decision.
 
 - **Date:** 2026-09-22
 - **Status:** decided, built on `invoice-kmp-app` branch `fix/show-more-details-single-rule` (off `VC_108_VN_149`)
