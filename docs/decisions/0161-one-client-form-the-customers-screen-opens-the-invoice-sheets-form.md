@@ -89,17 +89,28 @@ Production, `analytics_events`, 30 days `2026-08-23` → `2026-09-23`, counts on
 - **New tap ids per entry.** The gateway's `screen` already separates them (`client_add_form_landed` vs
   `create_client`/`edit_client`). Only the two coded events needed `entry`.
 
-## Questions for the owner
+## The owner's answers (2026-09-22) — built in `4f8c7340`
 
-1. **Should Customers get an "Add Client" button back?** (And Edit on a customer?) Today nothing reaches
-   the form from Customers; this change only makes sure that whatever does reach it is the one form.
-2. **Contacts button.** The old Customers form had an always-visible "Contacts" button. The sheet shows
-   "Add from Contacts" only after the first letter of a name is typed (755 devices used it in 30 days).
-   Keep that for both, or add an always-visible entry to the one form?
+1. **Yes, bring back "Add Client" on Customers.**
+   - The list's FAB is back as `customers_add_client_fab_click` and opens the one form with
+     `entry=CustomersScreen`.
+   - It had been commented out since the first commit (`161a9d10`, 2026-06-08). There was no switch.
+   - The drawer's "Create client" item and Edit were not behind a switch either, so they stay as they are:
+     - the drawer item is commented out in the same way;
+     - the list row ignores `onEditClick`;
+     - the details screen swallows its Edit event and has no Edit button.
+2. **"Add from Contacts" is always visible, from both entries.**
+   - It is a row under the client name from the moment the form opens. It is no longer a popup that
+     appeared only after typing started.
+   - It keeps `create_CreateClientScreen.add_from_contacts_4` (864 taps / 755 devices in 30 days) and has a
+     48 dp minimum height.
+   - The popup's ✕, `create_CreateClientScreen.close_contacts_1` (276 taps / 229 devices in 30 days), goes with
+     the popup.
 
 ## Verification
 
 `invoice-kmp-app` `VC_108_VN_149`:
 - new `OneClientFormTwoEntriesTest` (11 tests);
 - the unit suite, `:composeApp:assembleDebug`, `compileKotlinIosSimulatorArm64` and an Xcode simulator
-  build. The SHA and counts are in the commit and the index row.
+  build. `ad31088b` (the one form) and `4f8c7340` (the answers): unit 1,182/1,182, `assembleDebug`,
+  iOS sim compile, Xcode sim build succeeded, each time.
