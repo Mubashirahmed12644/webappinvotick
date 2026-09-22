@@ -95,10 +95,17 @@ Production, `analytics_events`, 30 days `2026-08-23` → `2026-09-23`, counts on
    - The list's FAB is back as `customers_add_client_fab_click` and opens the one form with
      `entry=CustomersScreen`.
    - It had been commented out since the first commit (`161a9d10`, 2026-06-08). There was no switch.
-   - The drawer's "Create client" item and Edit were not behind a switch either, so they stay as they are:
-     - the drawer item is commented out in the same way;
-     - the list row ignores `onEditClick`;
-     - the details screen swallows its Edit event and has no Edit button.
+   - **Then yes to those too** (`9fc45814`), since nothing but a comment was holding them back:
+     - the drawer's **"Create client"** is back with the id it was written with,
+       `DrawerTiles.drawer_item_create_client`, going to `CustomerRoute.Create`;
+     - the customer detail screen gets an **Edit** button, `CustomerDetailsTopBar.edit_customer_2`. The
+       ViewModel already sent `NavigateToEditCustomer`; the screen threw the event away. It now reaches
+       `CustomerRoute.Edit(customerId)` — the same form in edit mode, same use cases and sync path, and
+       the client keeps its own business;
+     - both top-bar actions go through one `CustomerTopBarAction`: a 48 dp touch target around the 40 dp
+       disc (`docs/LAYOUT_RULES.md`). The disc used to be the button, so Generate PDF's target had been
+       40 dp. There is one customer detail screen, so there was no second copy to fix;
+     - the list row still ignores `onEditClick` — a customer is edited from its detail screen.
 2. **"Add from Contacts" is always visible, from both entries.**
    - It is a row under the client name from the moment the form opens. It is no longer a popup that
      appeared only after typing started.
@@ -113,4 +120,15 @@ Production, `analytics_events`, 30 days `2026-08-23` → `2026-09-23`, counts on
 - new `OneClientFormTwoEntriesTest` (11 tests);
 - the unit suite, `:composeApp:assembleDebug`, `compileKotlinIosSimulatorArm64` and an Xcode simulator
   build. `ad31088b` (the one form) and `4f8c7340` (the answers): unit 1,182/1,182, `assembleDebug`,
-  iOS sim compile, Xcode sim build succeeded, each time.
+  iOS sim compile, Xcode sim build succeeded, each time — and again for `9fc45814`.
+
+## New ids
+
+| Id | Where |
+|:--|:--|
+| `customers_add_client_fab_click` | the Customers list's Add Client button |
+| `DrawerTiles.drawer_item_create_client` | the drawer's Create client (the id it was written with) |
+| `CustomerDetailsTopBar.edit_customer_2` | Edit on the customer detail screen |
+
+Both routes open the one form, so `client_form_text_add` and `client_form_saved` from them carry
+`entry=customers_screen`. No other event changes.
