@@ -12,7 +12,7 @@ import { LegalPage, LegalTable, type LegalSection } from "@/components/legal/Leg
 // ─────────────────────────────────────────────────────────────────────────────────────────────
 
 const SITE = "https://www.invotick.com";
-const EFFECTIVE = "15 September 2026";
+const EFFECTIVE = "22 September 2026";
 // Confirmed by the owner on 2026-09-15. It is the only way to reach us today, deletion included.
 const CONTACT = "support@invotick.com";
 
@@ -245,7 +245,8 @@ const sections: LegalSection[] = [
           (Settings → Google → Ads on most Android phones). Premium removes ads from the app.
         </p>
         <p>
-          The iPhone app does not show ads today. If that changes, we will update this policy first.
+          The iPhone app also shows ads served by Google AdMob. Before it can use your device&apos;s advertising ID, it
+          asks the App Tracking Transparency permission Apple requires; if you say no, no advertising ID is used.
         </p>
       </>
     ),
@@ -264,9 +265,9 @@ const sections: LegalSection[] = [
           rows={[
             ["Hostinger", "Hosts our servers and database, and sends our emails", "Apps, website"],
             ["Vercel", "Hosts the website and the preview images for shared invoice links", "Website, shared links"],
-            ["Google Firebase (Analytics, Crashlytics, Performance Monitoring, Remote Config, Cloud Messaging)", "Usage analytics, crash and performance reports, remote app settings, notifications", "Android (all five); iPhone (Analytics, Crashlytics, Remote Config)"],
+            ["Google Firebase (Analytics, Crashlytics, Performance Monitoring, Remote Config, Cloud Messaging)", "Usage analytics, crash and performance reports, remote app settings, notifications", "Android (all five); iPhone (Analytics, Crashlytics, Remote Config, Cloud Messaging)"],
             ["Google Sign-In", "Signing in with a Google account", "Android, iPhone, website"],
-            ["Google AdMob", "Showing ads", "Android"],
+            ["Google AdMob", "Showing ads", "Android, iPhone"],
             ["Meta (Audience Network through AdMob, Facebook SDK)", "Showing ads (1.4.6 and later), measuring our advertising", "Android"],
             ["Google Play Billing / Apple App Store", "Taking payments for Premium", "Android / iPhone"],
             ["ip-api.com, ipinfo.io", "Estimating country and city from an IP address", "Our servers"],
