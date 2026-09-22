@@ -1198,6 +1198,30 @@ Memory is dated observation. Verify any file:line against the code before relyin
       `ADecisionNamesTheAccountThatMadeItTest` (6), the erase case in `AClosedAccountIsErasedAfterItsWindowTest`;
       backend suite 1408/1408.
 
+45. **No apology without a loss; the sync speaks through a top-bar icon, and covers the screen only three times** (0159;
+    the owner, 2026-09-22). App `VC_108_VN_149`: test `4e149853` (3 of 4 red), code `80b438b3`; unit 1118/1118, Android
+    debug, iOS sim, Xcode sim. Not released.
+    - **Found:** "Data Recovered Successfully … we apologize … won't appear again" after every update (owner, iOS 1.4.9
+      (22)). `dde1f990` (2026-06-26) removed the `HAS_SHOWN_SYNC_SHEET` read from the gate; every version change and
+      sign-in raised the entry flag. 89 "Got It" taps on 76 phones in 30 days. The sheet is removed; an update still
+      asks for a full pull (rule 26).
+    - **The apology** needs evidence: a full pull that ended with records the server sent and this phone could not store
+      (`SyncTransferProgress.lastFullPull.notStored`), once per account (`RecoveryApologyGate`, phone-wide set
+      `recovery_apology_told_for`). Upper bound: `pull_apply` came from 30 of 6,598 phones in 30 days.
+    - **The icon** (`TopBarSyncStatus`, provided by the shell; Invoices, Estimates, Dashboard): `SyncIndicatorMachine` —
+      hidden idle; spinner only after 1 s; tick 2 s only after a visible sync; cloud-off + count offline with work
+      waiting; warning + "Try now" on `SyncManagerState.Error` (a cancellation is Idle, never a failure, 0029). Open
+      account only. No conflict state: no flow asks the person to choose.
+    - **The block** (`BlockingRestore`): only a first pull into an empty file with records (`first_restore`), the same
+      after a switch (`account_switch`), and `GuestWorkCoordinator.joining` after a yes (`guest_merge`, never a sign-up's
+      silent move); shown after 1 s; switch `sync_blocking_screen_enabled`.
+    - **The pull says its counts** (`SyncTransferProgress`, account-scoped): live records and invoices on arrival, per
+      group as stored, and how a full pull ended. Nothing else in the pull changed.
+    - **Events:** `sync_status_sheet` `screen_view` with `state`; coded `data_arriving_ended` (`reason`, `outcome`,
+      `duration_ms`, `records`). Nothing per icon state.
+    - Guards: `AnApologyNeedsALossTest`, `AnApologyIsOncePerAccountTest`, `TheSyncIconSaysWhatIsTrueTest`,
+      `OnlyThreeMomentsStopThePersonTest`, 3 cases in `GuestWorkCoordinatorTest`, `APullSaysWhatIsArrivingTest`.
+
 ## Established 2026-09-12, while planning the receipt number
 
 The plan is `docs/SYNC-RECEIPT-NUMBER-PLAN.md`. Each line says how it is known.

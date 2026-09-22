@@ -600,6 +600,12 @@ the list is wrong, not the app.**
     `elapsed_ms`, `exception_class` on a failure. Coded; once per file that held rows, and per failure.
   - **`decided_as`** on `shared_invoice_approved`, `_rejected` and `_decision_failed`: `account|guest|none`, the kind of
     account open when the receiver decided. Rows up to 1.4.8 have none.
+- **The sync icon and the "data arriving" screen, from 1.4.9** (decision
+  [0159](docs/decisions/0159-no-apology-without-a-loss-and-a-sync-icon-instead-of-a-sheet.md)): the sheet the top-bar
+  icon opens announces itself as `screen_view` `sync_status_sheet` with `state` (`syncing|done|offline|failed`); the tap
+  is the auto-captured `sync_status_icon`. One coded **`data_arriving_ended`** per full-screen block actually shown:
+  `reason` (`first_restore|account_switch|guest_merge`), `outcome` (`done|not_all_stored|failed|ended`), `duration_ms`,
+  `records`. The old `data_sync_bottom_sheet` and `data_sync_gotit_click` stop with 1.4.9.
 - **Shipped images, from 1.4.6:** **`bundled_image_unavailable`** — an image a row names (a seeded
   header, template or background) that this build cannot produce. `image` (our asset name),
   `stored_ext` (`png` on rows written up to 1.4.4, `webp` after), `failure`
