@@ -94,7 +94,17 @@ nav shell may set it.
 
 The owner's rule, in their words: *"tm automatic waly ko meaningful banao gy, na ky meaningful ky
 liye alag sy aik or manual coding likh do."* A coded call is allowed **only where automatic cannot
-reach** — today that is exactly one place, the ad dialog, which is neither a route nor a sheet.
+reach** — for a long time that was exactly one place, the ad dialog, which is neither a route nor a
+sheet.
+
+From 2026-09-23 there is a **second**, and it passes the same test for a sharper reason: the Google
+UMP consent form (`screen_view` for `consent_form`, decision 0162). It is not our composable at all —
+it is a full-screen activity the ad SDK puts up — so no nav host, no `InvotickSheet` and no
+`analyticsId` can see it, and there is nothing automatic to make meaningful. Its own announcement is
+the only way it is announced.
+
+Two places is not a licence for a third. The test is **"can automatic reach this at all"**, not "is
+a coded call more convenient here" — and a screen we draw ourselves always fails it.
 
 ### 1.4 An id used in two places is a bug.
 
@@ -295,6 +305,16 @@ Two things the rule does **not** settle, and both cost something the day it is a
 Deleting a coded call also splits nothing, which is why it is cheap: the name simply stops arriving.
 A **rename** does split (§1.8), and `add_item_click` → `add_item_added` is one — so every funnel step
 that reads it lists the old spellings too.
+
+> **Applied before the fact, 2026-09-23 (decision 0162).** The GDPR consent work was specified with
+> three events, the third being `consent_privacy_options_opened` on the drawer's Privacy-options
+> entry. That entry is an ordinary `DrawerItem` and already carries
+> `analyticsId = "DrawerTiles.drawer_item_privacy_options"`, so the coded twin would have been this
+> defect built new rather than found. It was dropped before any of it shipped: the press is the tap,
+> and **which door the form was opened through is `entry` on the two surviving events**
+> (`first_ad_moment` | `privacy_options`) — the shape decision 0155 gave the paywall. Nothing is
+> lost, because the coded call was carrying no parameter the tap could not (§1.1). The cheapest time
+> to apply this rule is before the event exists.
 
 ### 1.12 A dimension is only as alive as the row it hangs on. *(decided 2026-09-05)*
 

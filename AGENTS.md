@@ -461,6 +461,38 @@ the list is wrong, not the app.**
   carries which parameter is 0050's table, enforced in `SyncFailureEvidence.STAGE_PARAMS`; an absent
   parameter means not applicable at that stage. Network failures and cancellations are no longer
   reported (0029). Builds up to 1.4.4 send only the first three.
+- **GDPR consent, from 1.4.9** (Android; decision
+  [0162](docs/decisions/0162-no-ad-loads-before-consent-and-the-form-comes-after-the-user-has-landed.md)).
+  The app had **no** consent of any kind before 2026-09-23 — no Google UMP, no Consent Mode, no
+  gating — so every name here is new and no row exists under any of them before that release.
+  - **`screen_view` for `consent_form`**, carrying **`entry`** (`first_ad_moment` | `privacy_options`).
+    It is announced by a coded call because the UMP form is Google's own — neither a navigation
+    destination nor an `InvotickSheet`, so nothing names it automatically (§1.3, the same condition
+    the ad dialog meets). Announced when UMP says the status is REQUIRED, which is the last moment
+    the app can observe; a form that then failed to appear is reconciled by the `error` outcome below.
+  - **`consent_decision`** — one row per resolved flow: **`outcome`**
+    (`granted|denied|partial|not_required|dismissed|error`), **`entry`**, **`elapsed_ms`**, and
+    **`error_code`** only where UMP gave one (absent means not applicable, never zero — §1.7).
+    `denied` and `partial` are two words on purpose: refusing everything and allowing device
+    storage but not personalisation are different answers with different revenue.
+  - **Only an EEA/UK phone can produce a `consent_form` view.** Everywhere else UMP answers
+    NOT_REQUIRED, no form is ever shown, and the only `consent_decision` those phones send is
+    `outcome=not_required`. A count of `consent_form` is a count of European users, not of users.
+  - **There is no `consent_privacy_options_opened`**, and adding one would be a defect. The drawer's
+    Privacy-options entry already has its own auto-captured tap
+    (`tap:<screen>:DrawerTiles.drawer_item_privacy_options`), so a coded event beside it is one
+    press under two names — the thing that removed nine coded twins in 1.4.3 (§1.1, §1.11). Which
+    door the form came through is `entry` on the two events above, the shape decision 0155 gave the
+    paywall.
+  - Both are **coded**, so the denylist cannot switch them off. They are first-party **essential UX**
+    events on our own backend: they record a legally required interaction with our own app, carry no
+    advertising identifier and no user data, and are therefore not themselves ad-tracking — which is
+    why they may be sent before consent has been given.
+  - The placement is **land-first**: no consent form on the cold-start splash. A cold start whose
+    consent is unresolved shows no app-open ad and is recorded as `app_open_decision` with
+    **`outcome=consent_pending`** on the splash path — the number that says what land-first costs.
+    `consent_pending` is also a new `ad_blocked_by` value on `app_foreground`.
+  - iOS sends none of these yet; its UMP + ATT work is separate.
 - **Lifecycle:** `app_cold_start`, `app_foreground`, `app_resumed`, `app_paused`, `app_background`,
   `app_heartbeat`, `session_break`, `screen_view`, `network_changed`, `app_exit_dialog_shown`
 
