@@ -45,6 +45,29 @@ const PAGE_INSET_Y = PAGE_MARGIN + SCROLLBAR_W;
 // paddingLeft/Right = 32) so the footer sits with the same gap on the left, right and bottom.
 const FOOTER_BOTTOM_MARGIN = 32;
 
+// ── Where a stamp / signature starts when the invoice has no saved position ───────────────────────
+//
+// One unit of the app's invoice canvas, in sheet pixels. The app draws the document 595 units wide
+// (invoicePdf/SharedComponents.kt) and this sheet is 794px wide, so the app's "dp" and our px are NOT
+// the same length — a gap copied across as a bare number lands in the wrong place. Everything below
+// that came from a native number is converted through this.
+const APP_UNIT = SHEET_W / 595;
+// The gap between the end of the "SHIPPING" row label and the left edge of the stamp. The owner
+// halved it from 3 to 1.5 on 2026-09-23 — the stamp was starting too far into the figures column.
+const STAMP_LABEL_GAP = 1.5 * APP_UNIT;
+// Native's DraggableSignatureModule.getInitialPosition: right edge, minus room for a stamp beside it,
+// minus a horizontal padding and a spacing — all as ratios of the canvas width.
+const SIG_H_PADDING_RATIO = 0.02;
+const SIG_SPACING_RATIO = 0.03;
+const SIG_V_PADDING_RATIO = 0.027;
+// Fallbacks, used only where the layout cannot be measured (a server render — the OG card, and the
+// first paint before useLayoutEffect runs). These ARE the measured numbers for the ordinary invoice
+// (2026-09-23, six items): SHIPPING's label ends at 0.6791 of the sheet, the totals box starts at
+// 0.5351, and the signature lands just under it. They are a starting point, not a guess at the
+// layout — the effect below replaces them with what this document actually rendered.
+const STAMP_DEFAULT_FRAC = { x: 0.682, y: 0.535 };
+const SIGNATURE_DEFAULT_FRAC = { x: 0.572, y: 0.739 };
+
 type Page = { start: number; count: number; summary: boolean };
 
 function paginate(total: number, nNoSummary: number, nWithSummary: number): Page[] {
@@ -406,16 +429,18 @@ export function A4PagedFrame({
   // Overlay sizes (px) from the saved fractions; payment stamp keeps its own slightly larger size.
   const stampSizePx = (data.stampSize ?? 0.189) * SHEET_W;
   const sigSizePx = (data.signatureSize ?? 0.189) * SHEET_W;
-  // Company stamp: start where the user last dragged it (data.stampOffset); if it's a newly-added
-  // stamp with no saved position, drop it in the empty space to the LEFT of the totals.
+  // Company stamp: start where the user last dragged it (data.stampOffset); with no saved position it
+  // starts inside the totals box, a hair after the "SHIPPING" row label — the empty strip between the
+  // row labels and the figures, which is where the app puts it (DraggableStampModule). The exact spot
+  // is measured from the rendered page by the effect below; this is the pre-measurement value.
   const [stampFrac, setStampFrac] = useState(() =>
     data.stampOffsetX != null && data.stampOffsetY != null
       ? { x: data.stampOffsetX, y: data.stampOffsetY }
-      : { x: 0.1, y: 0.52 });
+      : STAMP_DEFAULT_FRAC);
   const [sigFrac, setSigFrac] = useState(() =>
     data.signatureOffsetX != null && data.signatureOffsetY != null
       ? { x: data.signatureOffsetX, y: data.signatureOffsetY }
-      : { x: 0.09, y: 0.6 });
+      : SIGNATURE_DEFAULT_FRAC);
   // Payment stamp lives on the totals box (its top line is aligned by the effect below).
   const [paymentStampFrac, setPaymentStampFrac] = useState({ x: 0.68, y: 0.521 });
   const [selectedOverlay, setSelectedOverlay] = useState<"stamp" | "signature" | null>(null);
@@ -490,6 +515,87 @@ export function A4PagedFrame({
     // Guard avoids a render loop and won't nudge an already-aligned stamp.
     setPaymentStampFrac((f) => (Math.abs(f.y - yFrac) < 0.002 ? f : { x: f.x, y: yFrac }));
   }, [pages, scale, data, paymentStampUrl]);
+
+  // Place a stamp / signature that has NO saved position, from what this document actually rendered.
+  //
+  // The app hard-codes its two defaults as fractions of its canvas, which is fine for a canvas it
+  // draws itself and wrong here: the summary was rebuilt (native-parity side-by-side layout), so the
+  // row a fraction used to land on is not the row it lands on now. Every number below is read off the
+  // rendered summary page instead — the stamp sits against the end of the SHIPPING label wherever
+  // that label ends, in any language, and the signature sits above whatever footer this document has.
+  //
+  // It keeps following the layout — it does NOT place once and latch. The page settles over two or
+  // three passes (the footer band is measured, then pagination, then the fit scale), and a default
+  // frozen on the first of those sat about 1.5px off where the finished page wanted it. It stops
+  // having an opinion the moment the position becomes somebody's choice: the user drags it, or the
+  // app re-injects a saved offset.
+  const stampIsUsers = useRef(false);
+  const sigIsUsers = useRef(false);
+  const placedFor = useRef<string | null>(null);
+  useLayoutEffect(() => {
+    if (placedFor.current !== data.id) {
+      // A different document — nobody has moved anything on this one yet.
+      placedFor.current = data.id;
+      stampIsUsers.current = false;
+      sigIsUsers.current = false;
+    }
+    const sheet = summarySheetRef.current;
+    if (!sheet) return;
+    const sr = sheet.getBoundingClientRect();
+    if (sr.height <= 0) return;
+    // Screen pixels → sheet units. The sheet is drawn at `scale`, so everything measured off the
+    // screen has to be divided back out before it can become a fraction of the 794×1123 sheet.
+    const k = SHEET_H / sr.height;
+    const toSheetX = (v: number) => (v - sr.left) * k;
+    const toSheetY = (v: number) => (v - sr.top) * k;
+    const totals = sheet.querySelector("[data-totals]") as HTMLElement | null;
+
+    const needStamp = data.stampOffsetX == null || data.stampOffsetY == null;
+    if (stampUrl && needStamp && !stampIsUsers.current && totals) {
+      // `data-total-label` is on the row label's own span, so this is where the word ends — not where
+      // its row or its box ends. Marked in the markup rather than matched on the text, because the
+      // label is translated on a shared invoice and "SHIPPING" is only the English of it.
+      //
+      // Read off the hidden measuring copy, which is laid out at the sheet's own 794px with no scale
+      // on it. The visible page is scaled to fit the pane, and dividing a scaled text box back out
+      // left the stamp on a phone about 1.5px from where the same invoice put it on a desktop — small,
+      // but it is the same document and it should not move at all.
+      const flat = withTotalsRef.current;
+      const shipLabel = (flat ?? totals).querySelector('[data-total-row="shipping"] [data-total-label]') as HTMLElement | null;
+      if (shipLabel) {
+        const lr = shipLabel.getBoundingClientRect();
+        const tr = totals.getBoundingClientRect();
+        const origin = flat ? flat.getBoundingClientRect().left : 0;
+        const at = (v: number) => (flat ? v - origin : toSheetX(v));
+        // Right-to-left, the box is mirrored: the labels are on the right and the figures on the
+        // left, so "just after the label" runs the other way and the stamp is placed by its own right
+        // edge. Getting this wrong put the stamp outside the box entirely on an Arabic invoice.
+        const x = (dir === "rtl" ? at(lr.left) - STAMP_LABEL_GAP - stampSizePx : at(lr.right) + STAMP_LABEL_GAP) / SHEET_W;
+        // Top of the box: the stamp reads over the SUB TOTAL → SHIPPING rows, above TOTAL.
+        const y = toSheetY(tr.top) / SHEET_H;
+        setStampFrac((f) => (Math.abs(f.x - x) < 0.0005 && Math.abs(f.y - y) < 0.0005 ? f : { x, y }));
+      }
+    }
+
+    const needSig = data.signatureOffsetX == null || data.signatureOffsetY == null;
+    if (signatureUrl && needSig && !sigIsUsers.current) {
+      // Native's own formula for x: in from the right edge by one stamp's width (the slot the stamp
+      // used to take), one signature's width, a padding and a spacing. Mirrored right-to-left, so an
+      // Arabic invoice signs on the side its reader finishes on.
+      const inFromEdge = sigSizePx + SIG_H_PADDING_RATIO * SHEET_W + SIG_SPACING_RATIO * SHEET_W;
+      const x = (dir === "rtl" ? inFromEdge : SHEET_W - sigSizePx - inFromEdge) / SHEET_W;
+      // Native reserves a flat 0.15 of the width for "the promotional footer banner". We can see the
+      // real footer — and a premium document has none at all (decision 0147) — so the gap is measured.
+      const footerTop = SHEET_H - (branded ? footerH : 0) - FOOTER_BOTTOM_MARGIN;
+      let top = footerTop - SIG_V_PADDING_RATIO * SHEET_W - sigSizePx;
+      // Never across the figures. If the totals box reaches that far down, the signature goes below
+      // it instead: a signature lying over BALANCE DUE reads as a number that has been tampered with.
+      const tr = totals?.getBoundingClientRect();
+      if (tr) top = Math.max(top, toSheetY(tr.bottom) + STAMP_LABEL_GAP);
+      const y = Math.min(Math.max(top, 0), SHEET_H - sigSizePx) / SHEET_H;
+      setSigFrac((f) => (Math.abs(f.x - x) < 0.0005 && Math.abs(f.y - y) < 0.0005 ? f : { x, y }));
+    }
+  }, [pages, scale, data, branded, footerH, sigSizePx, stampSizePx, stampUrl, signatureUrl, dir]);
 
   // Keep the COMPANY stamp / signature at their saved positions when a new invoice snapshot arrives.
   // (Local drags update these too; the drag round-trips through the app and re-injects the same
@@ -651,7 +757,7 @@ export function A4PagedFrame({
                           sheetW={SHEET_W}
                           sheetH={SHEET_H}
                           onSelect={() => setSelectedOverlay("signature")}
-                          onCommit={(x, y) => { setSigFrac({ x, y }); onSignatureMove?.(x, y); }}
+                          onCommit={(x, y) => { sigIsUsers.current = true; setSigFrac({ x, y }); onSignatureMove?.(x, y); }}
                           onRemove={() => { setSignatureRemoved(true); setSelectedOverlay(null); onSignatureRemove?.(); }}
                         />
                       ) : (
@@ -671,7 +777,7 @@ export function A4PagedFrame({
                           sheetW={SHEET_W}
                           sheetH={SHEET_H}
                           onSelect={() => setSelectedOverlay("stamp")}
-                          onCommit={(x, y) => { setStampFrac({ x, y }); onStampMove?.(x, y); }}
+                          onCommit={(x, y) => { stampIsUsers.current = true; setStampFrac({ x, y }); onStampMove?.(x, y); }}
                           onRemove={() => { setStampRemoved(true); setSelectedOverlay(null); onStampRemove?.(); }}
                         />
                       ) : (

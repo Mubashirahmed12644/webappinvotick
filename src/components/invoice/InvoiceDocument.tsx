@@ -190,10 +190,10 @@ export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hide
                 A4PagedFrame align the payment stamp's top edge to this box's top line. */}
             {t.total ? (
               <div data-totals className="relative w-full max-w-[300px]" style={{ border: `1px solid ${color}` }}>
-                <TotalRow label={labels.subTotal} value={formatMoney(data.subtotal, cur)} tint={hexToRgba(color, 0.05)} />
-                <TotalRow label={labels.discount} value={formatMoney(data.discountAmount, cur)} tint={hexToRgba(color, 0.05)} />
-                <TotalRow label={labels.tax} value={formatMoney(data.taxAmount, cur)} tint={hexToRgba(color, 0.05)} />
-                <TotalRow label={labels.shipping} value={formatMoney(data.shippingCost, cur)} tint={hexToRgba(color, 0.05)} />
+                <TotalRow rowKey="subtotal" label={labels.subTotal} value={formatMoney(data.subtotal, cur)} tint={hexToRgba(color, 0.05)} />
+                <TotalRow rowKey="discount" label={labels.discount} value={formatMoney(data.discountAmount, cur)} tint={hexToRgba(color, 0.05)} />
+                <TotalRow rowKey="tax" label={labels.tax} value={formatMoney(data.taxAmount, cur)} tint={hexToRgba(color, 0.05)} />
+                <TotalRow rowKey="shipping" label={labels.shipping} value={formatMoney(data.shippingCost, cur)} tint={hexToRgba(color, 0.05)} />
                 {/* TOTAL — light tint + accent text, the lowest of three rungs on an invoice. On an
                     estimate it is the only figure that matters and the last row in the box, so it
                     takes the hero treatment BALANCE DUE would have had. */}
@@ -306,11 +306,14 @@ export function InvoiceFooter({ qrDataUrl, pageLabel, labels = LABELS }: { qrDat
   );
 }
 
-function TotalRow({ label, value, tint }: { label: string; value: string; tint: string }) {
+function TotalRow({ label, value, tint, rowKey }: { label: string; value: string; tint: string; rowKey?: string }) {
   // Native: non-TOTAL rows carry theme.totalsBackground (primary @ 0.05) + Bold text.
+  // `rowKey` / `data-total-label` name the row and its label for A4PagedFrame, which starts a stamp
+  // that has no saved position just after the SHIPPING label ends. Named in the markup and not
+  // matched on the text, because a shared invoice translates these words.
   return (
-    <div className="flex justify-between px-3 py-1 text-[13px]" style={{ backgroundColor: tint }}>
-      <span className="font-bold text-[#1c1b1f]">{label}</span>
+    <div data-total-row={rowKey} className="flex justify-between px-3 py-1 text-[13px]" style={{ backgroundColor: tint }}>
+      <span data-total-label className="font-bold text-[#1c1b1f]">{label}</span>
       <span className="font-bold">{value}</span>
     </div>
   );
