@@ -314,7 +314,7 @@ export function FreeInvoiceTool() {
               )}
             </button>
             <div className="min-w-0 flex-1">
-              <TextField label="Business name" placeholder="Acme Studio" value={inv.businessName} onChange={(e) => { noteTyping("business", e.target.value); set({ businessName: e.target.value }); }} />
+              <TextField id="fi-business-name" label="Business name" placeholder="Acme Studio" value={inv.businessName} onChange={(e) => { noteTyping("business", e.target.value); set({ businessName: e.target.value }); }} />
             </div>
           </div>
           <div className="mt-2 flex items-center gap-3 text-xs">

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { LandingHero } from "@/components/landing/LandingHero";
-import { FreeInvoiceTool } from "@/components/free-invoice/FreeInvoiceTool";
+import { LandingExperience } from "@/components/landing/LandingExperience";
 import { FreeInvoicePageView } from "@/components/free-invoice/FreeInvoicePageView";
 import { Faq } from "@/components/landing/Faq";
 import { SiteFooter } from "@/components/landing/SiteFooter";
@@ -76,28 +75,38 @@ export default function LandingPage() {
       {/* Structured data for rich results (WebApplication + Organization) */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       {/* Public top bar */}
-      <nav className="mx-auto flex max-w-[1400px] items-center justify-between px-4 py-4 sm:px-6">
+      {/* `flex-wrap`, and both links `whitespace-nowrap`. At a 1.5× font scale the row does not fit,
+          and without this it broke the way `LAYOUT_RULES.md` describes — "Sign in" split across two
+          lines inside its own button. Wrapping the ROW puts the links on a second line whole; only
+          the container gives way. */}
+      <nav className="mx-auto flex max-w-[1400px] flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 py-4 sm:px-6">
         <span className="text-lg font-extrabold tracking-tight text-[var(--color-on-background)]">
           Invotick
         </span>
         <div className="flex items-center gap-2">
-          <Link href="/login" className="rounded-[var(--radius-sm)] px-4 py-2 text-sm font-semibold text-[var(--color-on-surface)] hover:bg-[var(--color-surface-variant)]">
+          <Link href="/login" className="whitespace-nowrap rounded-[var(--radius-sm)] px-4 py-2 text-sm font-semibold text-[var(--color-on-surface)] hover:bg-[var(--color-surface-variant)]">
             Sign in
           </Link>
-          <Link href="/signup" className="rounded-[var(--radius-sm)] bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-on-primary)] hover:brightness-110">
+          {/* Outlined, not solid. There is exactly ONE filled button on this page and it is
+              "Create invoice"; a second solid blue button in the top bar made the eye pick between
+              two calls to action, which is the one thing option C was chosen to avoid. */}
+          <Link href="/signup" className="whitespace-nowrap rounded-[var(--radius-sm)] border border-[var(--color-outline-variant)] px-4 py-2 text-sm font-semibold text-[var(--color-primary)] hover:bg-[var(--color-primary-container)]/50">
             Create account
           </Link>
         </div>
       </nav>
 
       <main className="mx-auto max-w-[1400px] px-4 pb-20 pt-8 sm:px-6 sm:pt-12">
-        <LandingHero />
+        {/*
+          The first step of the free-tool funnel (decision 0163). Renders nothing, and lives HERE —
+          at the page, not inside the tool — so that `free_invoice_page_view` keeps meaning exactly
+          what it has always meant: somebody landed on this page. The tool is now behind a button,
+          and moving this line inside it would turn the funnel's own denominator into a count of the
+          people who pressed the button.
+        */}
+        <FreeInvoicePageView />
 
-        <section aria-label="Invoice generator" className="mt-10 sm:mt-12">
-          {/* The first step of the free-tool funnel (decision 0163). Renders nothing. */}
-          <FreeInvoicePageView />
-          <FreeInvoiceTool />
-        </section>
+        <LandingExperience />
 
         {/* Honest privacy line */}
         <p className="mx-auto mt-10 max-w-2xl text-center text-xs text-[var(--color-on-surface-variant)]">
