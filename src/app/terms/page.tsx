@@ -272,6 +272,7 @@ export default function TermsPage() {
   return (
     <LegalPage
       title="Terms of Use"
+      current="terms"
       effectiveDate={EFFECTIVE}
       intro={
         <p>
