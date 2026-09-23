@@ -52,7 +52,9 @@ export function StoreBadges({ onBadgeClick }: { onBadgeClick?: (store: Store) =>
 
   return (
     <div className="mt-5">
-      <p className="text-center text-xs font-semibold uppercase tracking-[0.12em] text-[var(--color-on-surface-variant)]">
+      {/* Centred on a phone, where the whole hero is centred; aligned with the headline from `lg`,
+          where it is not. A centred label over a left-aligned column reads as a stray element. */}
+      <p className="text-center text-xs font-semibold uppercase tracking-[0.12em] text-[var(--color-on-surface-variant)] lg:text-start">
         Or get the app
       </p>
       {/* Stacked on a phone, side by side once there is room.
@@ -60,7 +62,7 @@ export function StoreBadges({ onBadgeClick }: { onBadgeClick?: (store: Store) =>
           16 px gutters, two badges leave 138 px each — and "Google Play" alone is 125 px of bold
           text at a 1.5× font scale, before the icon and the padding. So they stack, and the row
           starts at `sm` where there is 288 px of badge to share. */}
-      <div className="mt-3 flex flex-col items-stretch gap-2.5 sm:flex-row sm:items-stretch sm:justify-center">
+      <div className="mt-3 flex flex-col items-stretch gap-2.5 sm:flex-row sm:items-stretch sm:justify-center lg:justify-start">
         <PlayBadge emphasis={emphasis(playFirst)} onClick={() => onBadgeClick?.("play")} order={playFirst ? 1 : 2} />
         <AppStoreBadge emphasis={emphasis(appStoreFirst)} order={appStoreFirst ? 1 : 2} />
       </div>

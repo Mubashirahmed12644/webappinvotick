@@ -236,9 +236,28 @@ export function FreeInvoiceTool() {
   const cur = inv.currency;
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,42fr)_minmax(0,58fr)] xl:grid-cols-[minmax(0,28fr)_minmax(0,54fr)_minmax(0,18fr)] xl:gap-6">
+    /*
+      `grid-cols-1` is load-bearing on a phone and was missing.
+
+      Below `lg` this grid had no column definition at all, so the single implicit column was
+      `auto` — sized to the widest thing inside it. The widest thing is `#fi-paper`, which is a
+      FIXED `width: 794px` element shrunk with `transform: scale()`, and a transform does not
+      change what an element occupies in layout. So the column asked for 478 px inside a 343 px
+      page, and every card, label and input in the form was drawn past the right edge of a 375 px
+      phone with the page quietly scrolling sideways to cover it.
+
+      Measured on `65a6bab` — the build live today, before this change: `clientWidth` 375,
+      `scrollWidth` 494, `grid-template-columns: 478.531px`. So this is not new, and on the page
+      that takes 88.5 % of the non-Pakistan traffic it has been true the whole time.
+
+      `grid-cols-1` is `repeat(1, minmax(0, 1fr))`: a column that is exactly the container, with a
+      floor of 0 so a fixed-width child cannot push it open. `min-w-0` on each child is the same
+      rule one level down — a grid item's automatic minimum is its min-content, which is the other
+      half of how 794 px escapes.
+    */
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,42fr)_minmax(0,58fr)] xl:grid-cols-[minmax(0,28fr)_minmax(0,54fr)_minmax(0,18fr)] xl:gap-6">
       {/* ---------------- LEFT: data entry form ---------------- */}
-      <div className="flex flex-col gap-5">
+      <div className="flex min-w-0 flex-col gap-5">
         <div className="flex flex-wrap items-center gap-2">
           <Button type="button" variant="secondary" size="sm" onClick={surpriseMe}>
             ✨ Surprise me
@@ -356,13 +375,35 @@ export function FreeInvoiceTool() {
                 <div key={it.id} className="rounded-[var(--radius-sm)] border border-[var(--color-outline-variant)] p-3">
                   <div className="flex items-start gap-2">
                     <span className="mt-2.5 text-xs font-bold text-[var(--color-on-surface-variant)]">{i + 1}</span>
-                    <div className="flex-1">
+                    {/* `min-w-0`: a flex item's automatic minimum is its min-content, so without it
+                        this column could not shrink below the width the inputs inside it wanted. */}
+                    <div className="min-w-0 flex-1">
                       <TextField placeholder="Description of work or item" value={it.description} onChange={(e) => { noteTyping("item", e.target.value); setItem(it.id, { description: e.target.value }); }} />
-                      <div className="mt-2 grid grid-cols-3 gap-2">
+                      {/*
+                        Qty and Rate share a row; the amount gets a row of its own, at every width.
+
+                        It used to be a third cell in `grid-cols-3`. At 375 px that is a 72 px box,
+                        and a real line total — `Rs1,284,500.75` — is about 105 px, so it was drawn
+                        straight across the Rate field the user had just typed into. Measured, not
+                        predicted. `LAYOUT_RULES.md` names both halves of this: never assume two
+                        things fit side by side, and money shrinks or wraps but is never cut — and a
+                        computed total lying on top of the number it was computed from is worse than
+                        either, because it makes the arithmetic itself look wrong (G3).
+
+                        Its own row cannot overlap anything, at any width or font scale. The row
+                        wraps rather than squeezing, so when the money and its label stop fitting
+                        together the LABEL gives way and the figure stays whole.
+                      */}
+                      <div className="mt-2 grid grid-cols-2 gap-2">
                         <TextField placeholder="Qty" inputMode="decimal" value={it.quantity} onChange={(e) => setItem(it.id, { quantity: e.target.value })} />
                         <TextField placeholder="Rate" inputMode="decimal" value={it.rate} onChange={(e) => setItem(it.id, { rate: e.target.value })} />
-                        <div className="flex h-11 items-center justify-end rounded-[var(--radius-sm)] bg-[var(--color-surface-variant)] px-3 text-sm font-bold">
-                          {formatMoney(amount, cur)}
+                        <div className="col-span-2 flex min-h-11 flex-wrap items-center justify-between gap-x-3 gap-y-0.5 rounded-[var(--radius-sm)] bg-[var(--color-surface-variant)] px-3 py-2">
+                          <span className="text-[11px] font-bold uppercase tracking-wide text-[var(--color-on-surface-variant)]">
+                            Amount
+                          </span>
+                          <span className="text-sm font-bold tabular-nums text-[var(--color-on-surface)]">
+                            {formatMoney(amount, cur)}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -459,7 +500,7 @@ export function FreeInvoiceTool() {
       </div>
 
       {/* ---------------- RIGHT: actions + templates rail ---------------- */}
-      <div className="lg:col-span-2 xl:col-span-1 xl:sticky xl:top-4 xl:self-start">
+      <div className="min-w-0 lg:col-span-2 xl:col-span-1 xl:sticky xl:top-4 xl:self-start">
         <div className="flex flex-col gap-4">
           {/* Primary actions */}
           <div className="flex flex-wrap items-center gap-2">
