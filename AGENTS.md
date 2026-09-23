@@ -239,7 +239,10 @@ Two that bite most often:
 
 ### Web app — `Webinvotick` (this repo; Next.js 16 App Router, React 19, Tailwind v4)
 - `src/app/i/[token]` public share view · `src/app/embed/render` server-data render for the app's
-  Online tab · `src/app/api/og/[token]` OG card (Vercel Blob) · `/free-invoice` public tool.
+  Online tab · `src/app/api/og/[token]` OG card (Vercel Blob) · **`/` IS the free invoice tool**
+  (`src/app/page.tsx` → `FreeInvoiceTool.tsx`) — public, no sign-up, builds an invoice and exports a PDF
+  in the browser. This line said `/free-invoice` until 2026-09-23; **that route has never existed**, so
+  anybody looking for the tool there found nothing and anybody quoting the line sent traffic to a 404.
 - `renderer/` is a **separate Vite single-file build** that produces the app's offline bundle from
   the same React components. Same components, two build targets.
 - `src/app/api/backend/[...path]` proxies to the backend so browsers on blocked networks work.
@@ -398,6 +401,44 @@ the list is wrong, not the app.**
   ⚠️ **Backend deploys first.** `AnalyticsVersionGate` refused any batch with a null
   `appVersionCode`, which is every web batch — 200 OK, zero stored. It now exempts `Platform.Web`.
   Ship the web against the old gate and the funnel reads as a step nobody reached.
+- **G1 on the web — the free invoice tool at `/`** *(decision
+  [0163](docs/decisions/0163-the-free-invoice-tool-reports-its-own-funnel-and-offers-the-app-after-the-pdf.md);
+  built 2026-09-23 on `feat/free-invoice-funnel-and-install-offer`, **not deployed**).* Most non-Pakistan
+  web traffic is mobile (**88.5 %** — android 72.9 / ios 15.6 / desktop 11.5, 30 days), and the owner's
+  plan is that social-ad traffic lands here, makes a real invoice with **no install and no sign-up**, and
+  is only then offered the app. Until this, **the page had no events at all**: every number about it was
+  zero because nothing had ever been asked, not because nobody came.
+  Same pipeline, same route (`src/app/api/analytics/track/route.ts`), same server-side stamping. Seven
+  **new** coded names, all carrying **`surface=web_free_tool`** and `viewer_platform`:
+  - **`free_invoice_page_view`** — landed. No parameters at all: it is the denominator, so nothing it
+    carries may be able to drop the row.
+  - **`free_invoice_form_typed`** (`form` = `business|client|item`) — the first non-blank keystroke in a
+    form's name field, once per form per visit. The web twin of the app's `business_form_text_typed` /
+    `client_form_text_add` / `item_form_text_add`, with the **same honest meaning** (typing started, NOT
+    that the data is real) and **one name instead of three** (§1.1). "✨ Surprise me" fires none of them.
+  - **`free_invoice_completed`** (`source`, `items`, `has_logo`, `has_tax`, `has_discount`,
+    `optional_fields`) — the draft first held a business name, a client name and one priced line.
+    The `has_*` keys are the app's **lost** `optional_fields_filled` / `has_logo` / `has_discount`, put
+    back where they can still be seen.
+  - **`free_invoice_pdf_download`** (`outcome` = `saved|failed`, `source`, `exception_class` on a
+    failure) — **the value moment and the G1 signal for this surface.** One row per press, the 0155
+    shape. `saved` is the file being produced, never a claim that the person kept it (§1.14).
+  - **`free_invoice_install_offer_shown`** (`trigger` = `pdf_downloaded`) /
+    **`_click`** (`destination` = `play_store|app_store|web_account`) /
+    **`_dismissed`** (`method` = `close_button|not_now`). Ignoring the offer produces no row: it is the
+    absence of both, against a `shown` that is always there to divide by.
+  - **`source`** (`typed|sample|sample_edited`) is the G1 question this surface has and the app does
+    not: the tool's "✨ Surprise me" fills a whole invoice with OUR business, OUR client and OUR items
+    in one press, so without it a downloaded sample and a downloaded real invoice are one number. Absent
+    = unknown, never `typed`.
+  - **`app_store` is declared and nothing renders it.** There is no Invotick listing on the App Store —
+    `itunes.apple.com/lookup` returns `resultCount: 0` for `id=6757918977` **and** for
+    `bundleId=invotick.invoicemaker` (checked 2026-09-23). iPhone and desktop get the account offer.
+  - Two limits the copy states rather than hides: a web-made invoice **does not** follow the user into
+    the app (the `iv_doc` carry-over exists only for share links, 0110, and iOS has no install referrer
+    at all), and the browser is not storage — clearing site data loses the drafts.
+  - **The offer never blocks.** Creating, previewing and downloading all work with it on screen, and it
+    only appears after a PDF has been produced.
 - **Money/ads:** `premium_click`, `watch_ad_click`, `ad_request`, `ad_loaded`, `ad_shown`,
   `ad_dismissed`, `ad_load_failed`, `ad_show_failed`, `ad_load_crashed`, `ad_dialog_dismissed`,
   **`ad_impression_value`** (3,112 firings / 582 devices — what an impression actually paid, from

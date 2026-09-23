@@ -46,6 +46,8 @@ export function createEmptyInvoice(): FreeInvoice {
     templateId: "simple",
     headerImage: null,
     titleColor: null,
+    // Started empty, so everything that ends up in it was typed here (decision 0163).
+    origin: "typed",
     createdAt: now,
     updatedAt: now,
   };

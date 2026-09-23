@@ -1,10 +1,10 @@
 import "server-only";
 import { config } from "@/lib/config";
-import { WEB_SURFACE, type WebEventName } from "./events";
+import { surfaceForEvent, type WebEventName } from "./events";
 import type { ViewerPlatform } from "./platform";
 
 /**
- * Sends one event from the share page into the SAME pipeline the Android app uses —
+ * Sends one event from a public web page into the SAME pipeline the Android app uses —
  * `POST /v2/analytics/track` — so a web journey and an app journey are rows in one table and one
  * funnel, not two systems that have to be reconciled by hand.
  *
@@ -59,7 +59,8 @@ export async function sendWebAnalyticsEvent(args: {
         eventName: args.eventName,
         params: {
           ...args.params,
-          surface: WEB_SURFACE,
+          // Decided from the event name, here (see `events.ts`) — never sent by the browser.
+          surface: surfaceForEvent(args.eventName),
           viewer_platform: args.viewerPlatform,
           ...(args.shareToken ? { iv_doc: args.shareToken } : {}),
         },

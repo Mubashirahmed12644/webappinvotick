@@ -55,3 +55,37 @@ export function trackWebEvent(
     // Storage, network, an extension blocking the call — none of it is the receiver's problem.
   }
 }
+
+/**
+ * The same thing, at most once per visit.
+ *
+ * Several steps of the free-tool funnel are "the first time X happened" — the first keystroke in a
+ * form, the draft first being complete, the offer going up. A per-component `useRef` is not enough
+ * for any of them: React runs effects twice in development Strict Mode, and a reload re-mounts the
+ * whole tool against a draft the browser restored from IndexedDB. Both would report the same first
+ * time twice, and the number would be wrong in the direction nobody checks.
+ *
+ * The mark lives in `sessionStorage` beside the session id, so it has exactly the lifetime of the
+ * thing it is counting: one visit, in one tab, ending when the tab closes. A `localStorage` mark
+ * would silence the event for that browser for ever — a returning visitor's second invoice would be
+ * a funnel step nobody reached.
+ *
+ * Returns true when the event was sent, so a caller can chain (the offer only goes up once, and its
+ * `shown` event and its appearance must never disagree).
+ */
+export function trackWebEventOnce(
+  key: string,
+  event: WebEventName,
+  params: Record<string, string | number> = {},
+): boolean {
+  const mark = `invotick_web_once:${key}`;
+  try {
+    if (window.sessionStorage.getItem(mark)) return false;
+    window.sessionStorage.setItem(mark, "1");
+  } catch {
+    // No storage means no session id either, so `trackWebEvent` will send nothing. Falling through
+    // keeps that one decision in one place.
+  }
+  trackWebEvent(event, params);
+  return true;
+}

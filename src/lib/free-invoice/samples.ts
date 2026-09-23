@@ -217,5 +217,8 @@ export function randomSample(): FreeInvoice {
     headerImage: t.headerImage,
     color: t.color,
     titleColor: t.titleColor ?? null,
+    // Our words, not theirs — until a content field is edited, when `FreeInvoiceTool` moves this to
+    // `sample_edited`. An invoice made of our placeholder data is not activation (AGENTS.md §1).
+    origin: "sample",
   };
 }

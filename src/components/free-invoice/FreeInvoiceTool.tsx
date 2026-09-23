@@ -13,9 +13,12 @@ import { randomSample } from "@/lib/free-invoice/samples";
 import { getAllInvoices, putInvoice, deleteInvoice, getActiveId, setActiveId, hasContent } from "@/lib/free-invoice/store";
 import { initialCurrency, setPreferredCurrency } from "@/lib/free-invoice/currency-detect";
 import { exportInvoicePdf } from "@/lib/free-invoice/pdf";
+import { completionParams, isComplete, originAfterEdit, sourceOf, touchesContent } from "@/lib/free-invoice/funnel";
+import { trackWebEvent, trackWebEventOnce } from "@/lib/analytics/client";
 import type { InvoiceTemplate } from "@/lib/free-invoice/templates";
 import { A4Preview } from "./A4Preview";
 import { BackupModal } from "./BackupModal";
+import { InstallOffer } from "./InstallOffer";
 
 // Code-split: the picker JS + the 9 header images load only when opened, so the
 // landing page's initial payload stays light for SEO / Core Web Vitals.
@@ -42,6 +45,7 @@ export function FreeInvoiceTool() {
   const [showBizDetails, setShowBizDetails] = useState(false);
   const [showClientDetails, setShowClientDetails] = useState(false);
   const [showInvoiceMeta, setShowInvoiceMeta] = useState(false);
+  const [offerOpen, setOfferOpen] = useState(false);
   const logoInput = useRef<HTMLInputElement>(null);
 
   const unsyncedCount = saved.filter((i) => !i.isSynced).length;
@@ -52,12 +56,39 @@ export function FreeInvoiceTool() {
   const hasClientDetails = Boolean(inv.clientAddress || inv.shipTo);
   const clientDetailsOpen = showClientDetails || hasClientDetails;
 
+  /**
+   * The value moment, and the G1 signal for this surface (decision 0163).
+   *
+   * **One row per press, carrying what happened** — the `premium_purchase_result` shape from
+   * decision 0155, for the same reason: before it, a press whose result nobody recorded was simply
+   * an unknown. `outcome=saved` is `jsPDF.save()` returning and nothing more; whether the browser
+   * then wrote the file to disk is not something this page can see, which is why the name is
+   * `free_invoice_pdf_download` and not `pdf_saved` (§1.14).
+   *
+   * `source` rides on this row so "how many REAL invoices came off this page" is one query rather
+   * than a join back to `free_invoice_completed`.
+   */
   async function downloadPdf() {
     setDownloading(true);
+    const source = sourceOf(inv);
     try {
       await exportInvoicePdf("fi-paper", `${inv.invoiceNumber || "invoice"}.pdf`);
+      trackWebEvent("free_invoice_pdf_download", { outcome: "saved", ...(source ? { source } : {}) });
+      // The offer goes up only here: after the person has actually got something out of the page,
+      // never before, and at most once a visit. `trackWebEventOnce` returning false means it has
+      // already been offered in this tab, so a second download is left alone.
+      if (trackWebEventOnce("install_offer_shown", "free_invoice_install_offer_shown", { trigger: "pdf_downloaded" })) {
+        setOfferOpen(true);
+      }
     } catch (e) {
       console.error("PDF export failed", e);
+      trackWebEvent("free_invoice_pdf_download", {
+        outcome: "failed",
+        ...(source ? { source } : {}),
+        // The class name only. A message can carry the business or client name that this page
+        // promises never leaves the browser, and the route would refuse it in any case.
+        ...(e instanceof Error && e.name ? { exception_class: e.name } : {}),
+      });
     } finally {
       setDownloading(false);
     }
@@ -86,6 +117,38 @@ export function FreeInvoiceTool() {
     }, 600);
     return () => clearTimeout(t);
   }, [inv]);
+
+  /**
+   * The draft first reached invoice shape: a business name, a client name and at least one priced
+   * line (`isComplete`). Once per draft per visit — the mark is keyed by the invoice id, so opening
+   * a second invoice reports its own completion and re-opening the first does not.
+   *
+   * The parameters are read at that first moment on purpose: they say what the invoice was when it
+   * became one, not what it grew into afterwards.
+   */
+  useEffect(() => {
+    if (!inv.id || !isComplete(inv)) return;
+    trackWebEventOnce(`completed:${inv.id}`, "free_invoice_completed", completionParams(inv));
+  }, [inv]);
+
+  /**
+   * The web twin of the app's `business_form_text_typed` / `client_form_text_add` /
+   * `item_form_text_add`: the first non-blank keystroke in a form's name field, once per form per
+   * visit, with the form as a parameter rather than three names (§1.1).
+   *
+   * **It means exactly what the app's does and no more: typing started.** It is not evidence the
+   * data is real. It cannot be — nothing here can tell "Acme Studio" from "asdf". `source` on
+   * `free_invoice_completed` and `free_invoice_pdf_download` is what separates our sample words from
+   * theirs, and even that does not judge what they typed.
+   *
+   * "✨ Surprise me" fills these fields through `setInv` and never through an input's `onChange`, so
+   * it fires none of these. That is the honest result and it is worth keeping true: a sample press
+   * is not a person typing.
+   */
+  function noteTyping(form: "business" | "client" | "item", value: string) {
+    if (!value.trim()) return;
+    trackWebEventOnce(`form_typed:${form}`, "free_invoice_form_typed", { form });
+  }
 
   // Collapse the progressive-disclosure cards back to their compact state when
   // switching invoices (auto-open still kicks in for cards that carry data).
@@ -136,12 +199,21 @@ export function FreeInvoiceTool() {
     if (id === inv.id) newInvoice();
   }
 
+  // Editing anything of the person's own moves a "Surprise me" draft from `sample` to
+  // `sample_edited`, one way only (see `funnel.ts`). A template, a colour or the currency is ours or
+  // automatic and does not count as their data.
   const set = (patch: Partial<FreeInvoice>) =>
-    setInv((prev) => ({ ...prev, ...patch, updatedAt: Date.now() }));
+    setInv((prev) => ({
+      ...prev,
+      ...patch,
+      ...(touchesContent(patch) ? { origin: originAfterEdit(prev.origin) } : {}),
+      updatedAt: Date.now(),
+    }));
   const setItem = (id: string, patch: Partial<FreeLineItem>) =>
     setInv((prev) => ({
       ...prev,
       items: prev.items.map((it) => (it.id === id ? { ...it, ...patch } : it)),
+      origin: originAfterEdit(prev.origin),
       updatedAt: Date.now(),
     }));
   const addItem = () =>
@@ -223,7 +295,7 @@ export function FreeInvoiceTool() {
               )}
             </button>
             <div className="min-w-0 flex-1">
-              <TextField label="Business name" placeholder="Acme Studio" value={inv.businessName} onChange={(e) => set({ businessName: e.target.value })} />
+              <TextField label="Business name" placeholder="Acme Studio" value={inv.businessName} onChange={(e) => { noteTyping("business", e.target.value); set({ businessName: e.target.value }); }} />
             </div>
           </div>
           <div className="mt-2 flex items-center gap-3 text-xs">
@@ -258,7 +330,7 @@ export function FreeInvoiceTool() {
         <Section title="Bill to">
           {/* Compact by default — name + email are what shows on the invoice. */}
           <div className="grid gap-3 sm:grid-cols-2">
-            <TextField label="Client name" placeholder="Client or company" value={inv.clientName} onChange={(e) => set({ clientName: e.target.value })} />
+            <TextField label="Client name" placeholder="Client or company" value={inv.clientName} onChange={(e) => { noteTyping("client", e.target.value); set({ clientName: e.target.value }); }} />
             <TextField label="Client email" type="email" placeholder="client@email.com" value={inv.clientEmail} onChange={(e) => set({ clientEmail: e.target.value })} />
           </div>
           {!clientDetailsOpen ? (
@@ -285,7 +357,7 @@ export function FreeInvoiceTool() {
                   <div className="flex items-start gap-2">
                     <span className="mt-2.5 text-xs font-bold text-[var(--color-on-surface-variant)]">{i + 1}</span>
                     <div className="flex-1">
-                      <TextField placeholder="Description of work or item" value={it.description} onChange={(e) => setItem(it.id, { description: e.target.value })} />
+                      <TextField placeholder="Description of work or item" value={it.description} onChange={(e) => { noteTyping("item", e.target.value); setItem(it.id, { description: e.target.value }); }} />
                       <div className="mt-2 grid grid-cols-3 gap-2">
                         <TextField placeholder="Qty" inputMode="decimal" value={it.quantity} onChange={(e) => setItem(it.id, { quantity: e.target.value })} />
                         <TextField placeholder="Rate" inputMode="decimal" value={it.rate} onChange={(e) => setItem(it.id, { rate: e.target.value })} />
@@ -409,6 +481,19 @@ export function FreeInvoiceTool() {
       </div>
 
       <BackupModal open={backupOpen} onClose={() => setBackupOpen(false)} count={unsyncedCount} />
+
+      {/* The soft install offer (decision 0163). It exists only after a PDF has been produced, it
+          covers nothing that can be worked in, and every button on this page keeps working while it
+          is up. `free_invoice_install_offer_shown` is fired where it is decided, in `downloadPdf`. */}
+      {offerOpen && (
+        <InstallOffer
+          onCreateAccount={() => {
+            setOfferOpen(false);
+            setBackupOpen(true);
+          }}
+          onClose={() => setOfferOpen(false)}
+        />
+      )}
     </div>
   );
 }

@@ -11,6 +11,8 @@ export interface FreeLineItem {
   rate: string;
 }
 
+export type InvoiceOrigin = "typed" | "sample" | "sample_edited";
+
 export interface FreeInvoice {
   id: string; // stable UUID assigned at creation — the dedup key for later sync
   // Your business
@@ -48,6 +50,16 @@ export interface FreeInvoice {
   templateId: string;
   headerImage: string | null; // /system-assets/header_N.png, or null for simple
   titleColor: string | null; // optional override for the "Invoice" title color
+  // Where the content came from, for the G1 question: is this the person's own invoice, or ours?
+  // "✨ Surprise me" fills a whole invoice with our sample business, client and line items in one
+  // press, and that draft can reach the PDF without a character being typed. `typed` on creation,
+  // `sample` from Surprise me, and `sample_edited` the first time a content field of a sample draft
+  // is changed — a one-way move, because our words may still be in the rest of it.
+  //
+  // Optional because a draft saved in this browser before it existed has none, and a draft with no
+  // origin is reported as unknown, never as `typed` (AGENTS-EVENTS.md §1.7). Local only: the backup
+  // sync maps named fields, so this never leaves the browser.
+  origin?: InvoiceOrigin;
   // Bookkeeping
   createdAt: number;
   updatedAt: number;

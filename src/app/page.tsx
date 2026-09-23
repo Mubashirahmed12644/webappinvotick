@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { LandingHero } from "@/components/landing/LandingHero";
 import { FreeInvoiceTool } from "@/components/free-invoice/FreeInvoiceTool";
+import { FreeInvoicePageView } from "@/components/free-invoice/FreeInvoicePageView";
 import { Faq } from "@/components/landing/Faq";
 import { SiteFooter } from "@/components/landing/SiteFooter";
 import { FAQ_ITEMS } from "@/components/landing/faq-data";
@@ -93,6 +94,8 @@ export default function LandingPage() {
         <LandingHero />
 
         <section aria-label="Invoice generator" className="mt-10 sm:mt-12">
+          {/* The first step of the free-tool funnel (decision 0163). Renders nothing. */}
+          <FreeInvoicePageView />
           <FreeInvoiceTool />
         </section>
 
