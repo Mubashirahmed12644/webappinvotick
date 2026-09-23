@@ -524,6 +524,7 @@ export default function PrivacyPolicyPage() {
   return (
     <LegalPage
       title="Privacy Policy"
+      current="privacy"
       effectiveDate={EFFECTIVE}
       intro={
         <p>
