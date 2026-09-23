@@ -83,7 +83,8 @@ const sections: LegalSection[] = [
       <>
         <ul>
           <li>
-            <strong>Account details.</strong> Your name, email address and password if you create an account, or your
+            <strong>Account details.</strong>{" "}
+            Your name, email address and password if you create an account, or your
             Google account&apos;s name and email if you sign in with Google. A phone number if you choose to add one. We
             store only a scrambled (hashed) form of your password, never the password itself.
           </li>
@@ -135,7 +136,8 @@ const sections: LegalSection[] = [
           whether the app is in light or dark mode, and a device identifier created by the app.
         </li>
         <li>
-          <strong>Usage information.</strong> Which screens you open and which buttons you press, and events such as
+          <strong>Usage information.</strong>{" "}
+          Which screens you open and which buttons you press, and events such as
           &quot;invoice created&quot; or &quot;invoice shared&quot;, with the time they happened. These records describe
           what you did in the app, not the contents of your invoices.
         </li>
@@ -154,11 +156,13 @@ const sections: LegalSection[] = [
           tell you, for example, that a client opened or approved your invoice.
         </li>
         <li>
-          <strong>Advertising information (Android).</strong> Ad requests, which ads were shown and clicked, what an ad
+          <strong>Advertising information (Android).</strong>{" "}
+          Ad requests, which ads were shown and clicked, what an ad
           earned, and your device&apos;s advertising ID. See <a href="#ads">Ads</a>.
         </li>
         <li>
-          <strong>Cookies on the website.</strong> A sign-in cookie that keeps you signed in to the web app. The free
+          <strong>Cookies on the website.</strong>{" "}
+          A sign-in cookie that keeps you signed in to the web app. The free
           invoice tool saves your invoices in your own browser&apos;s storage. We do not use advertising cookies on the
           website.
         </li>
@@ -175,12 +179,14 @@ const sections: LegalSection[] = [
           background or receipt) or to scan an Invotick ID code. Only the picture you choose is saved.
         </li>
         <li>
-          <strong>Microphone and speech</strong> are used only when you tap to dictate invoice details. Your speech is
+          <strong>Microphone and speech</strong>{" "}
+          are used only when you tap to dictate invoice details. Your speech is
           turned into text by your phone&apos;s speech service (Google&apos;s on Android, Apple&apos;s on iPhone),
           under that company&apos;s own privacy terms. We receive only the resulting text you keep.
         </li>
         <li>
-          <strong>Notifications</strong> are optional and can be turned off in your phone&apos;s settings.
+          <strong>Notifications</strong>{" "}
+          are optional and can be turned off in your phone&apos;s settings.
         </li>
       </ul>
     ),
@@ -191,12 +197,14 @@ const sections: LegalSection[] = [
     body: (
       <>
         <p>
-          <strong>Android app 1.4.6 and later, and the iPhone app.</strong> &quot;Import from contacts&quot; reads your
+          <strong>Android app 1.4.6 and later, and the iPhone app.</strong>{" "}
+          &quot;Import from contacts&quot; reads your
           phone&apos;s contacts only on the phone, so you can pick a client. Only the client you pick is saved, as part of
           your data. Nothing else from your contacts leaves your phone.
         </p>
         <p>
-          <strong>Android app 1.4.5 and earlier.</strong> When you used &quot;Import from contacts&quot;, these versions
+          <strong>Android app 1.4.5 and earlier.</strong>{" "}
+          When you used &quot;Import from contacts&quot;, these versions
           also uploaded your phone&apos;s contact list (names, phone numbers and email addresses) to our servers, and
           kept a copy of it inside the app. We stopped this in version 1.4.6. When a phone updates to 1.4.6, the app
           deletes its own copy once. Until every phone has updated, older versions may still upload.
@@ -205,7 +213,8 @@ const sections: LegalSection[] = [
           Contact lists already received from older versions are stored on our servers. They are not shown to other
           users and are not used by any feature of the app. We will not use them for any new purpose without first
           updating this policy and, where the law requires it, asking for consent. To have the contact list uploaded
-          from your phone deleted, write to {mail} from your account&apos;s email or with your Invotick ID.
+          from your phone deleted, write to {mail}{" "}
+          from your account&apos;s email or with your Invotick ID.
         </p>
       </>
     ),
@@ -290,7 +299,8 @@ const sections: LegalSection[] = [
       <>
         <p>
           When you share an invoice or estimate as a link, we host a page for it. <strong>Anyone who has the link can open
-          it</strong> and see what is on the document: your business details, your client&apos;s details, the items and
+          it</strong>{" "}
+          and see what is on the document: your business details, your client&apos;s details, the items and
           totals, and your logo, signature and stamp. Share the link only with people who should see it.
         </p>
         <p>
@@ -376,7 +386,8 @@ const sections: LegalSection[] = [
     body: (
       <>
         <p>
-          <strong>By email, today.</strong> Write to {mail} from your account&apos;s email address, or include your
+          <strong>By email, today.</strong> Write to {mail}{" "}
+          from your account&apos;s email address, or include your
           Invotick ID if you use the app as a guest, and ask us to delete your account. We will close it and erase its
           data, including your documents, clients, images and any contact list uploaded from your phone, within 30 days.
         </p>
