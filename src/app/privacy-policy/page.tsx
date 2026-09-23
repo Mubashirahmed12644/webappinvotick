@@ -12,7 +12,7 @@ import { LegalPage, LegalTable, type LegalSection } from "@/components/legal/Leg
 // ─────────────────────────────────────────────────────────────────────────────────────────────
 
 const SITE = "https://www.invotick.com";
-const EFFECTIVE = "22 September 2026";
+const EFFECTIVE = "23 September 2026";
 // Confirmed by the owner on 2026-09-15. It is the only way to reach us today, deletion included.
 const CONTACT = "support@invotick.com";
 
@@ -116,6 +116,11 @@ const sections: LegalSection[] = [
         <p>
           The app keeps your data on your phone first, then backs it up to our servers so it is safe and available on
           your other devices.
+        </p>
+        <p>
+          We expect what you give us to be accurate and to be yours to give — your own details, and details of clients
+          you are entitled to invoice. We do not check it, and we cannot correct it for you; you can edit it in the app
+          at any time, and please keep it up to date.
         </p>
       </>
     ),
@@ -309,6 +314,20 @@ const sections: LegalSection[] = [
     ),
   },
   {
+    id: "business-transfer",
+    heading: "If Invotick changes hands",
+    body: (
+      <p>
+        If Flixotech LLC is sold, merges with another company, or sells the part of the business that runs Invotick, the
+        information covered by this policy — including your account, your documents and your clients&apos; details —
+        would pass to the buyer or successor as part of that deal, along with anything shared with them beforehand to
+        let them examine the business. This policy would keep applying to your data until you are told otherwise, and we
+        would tell you in the app or by email before anything about it changed. If you would rather not have your data
+        go with it, you can ask us to delete your account first: {mail}.
+      </p>
+    ),
+  },
+  {
     id: "payments",
     heading: "Payments",
     body: (
@@ -323,11 +342,19 @@ const sections: LegalSection[] = [
     id: "storage",
     heading: "Where information is stored",
     body: (
-      <p>
-        Your data is stored on your device and on our servers, which are run by Hostinger in the European Union
-        (France). Some service providers, such as Google, Meta and Vercel, process data in other countries, including the
-        United States. By using Invotick you understand that your information may be processed outside your country.
-      </p>
+      <>
+        <p>
+          Your data is stored on your device and on our servers, which are run by Hostinger in the European Union
+          (France). Some service providers, such as Google, Meta and Vercel, process data in other countries, including the
+          United States. By using Invotick you understand that your information may be processed outside your country.
+        </p>
+        <p>
+          When information leaves the European Union or the United Kingdom this way, we rely on the transfer terms those
+          providers offer for it — usually the <strong>Standard Contractual Clauses</strong> approved by the European
+          Commission, or an equivalent safeguard where the provider has one. If you want to know which safeguard covers
+          a particular provider, write to {mail} and we will tell you.
+        </p>
+      </>
     ),
   },
   {
@@ -376,10 +403,46 @@ const sections: LegalSection[] = [
           <li>You can reset your advertising ID or opt out of interest-based ads in your phone&apos;s settings.</li>
           <li>You can ask us for a copy of your data, to correct it, or to delete it, by writing to {mail}.</li>
         </ul>
+        <p>Whatever country you are in, you can write to {mail} and ask us to:</p>
+        <ul>
+          <li>
+            <strong>Show you your data</strong> — tell you what we hold about you and give you a copy of it.
+          </li>
+          <li>
+            <strong>Correct it</strong> — fix anything that is wrong or out of date.
+          </li>
+          <li>
+            <strong>Delete it</strong> — erase your account and its data, as described in{" "}
+            <a href="#delete">Deleting your account and data</a>.
+          </li>
+          <li>
+            <strong>Hand it over</strong> — give you your invoices, clients and other data in a file you can take to
+            another service.
+          </li>
+          <li>
+            <strong>Stop a particular use</strong> — object to our using your information for something, and we will
+            stop unless we have to continue by law.
+          </li>
+          <li>
+            <strong>Put a use on hold</strong> — keep your information but stop using it while a question about it is
+            being settled.
+          </li>
+          <li>
+            <strong>Take back a permission</strong> — withdraw anything you allowed, such as notifications, camera or
+            photo access. This does not undo what was already done while the permission was on.
+          </li>
+          <li>
+            <strong>Stop marketing email</strong> — we will still send the emails the service itself needs, such as
+            sign-in codes.
+          </li>
+        </ul>
         <p>
-          Depending on where you live (for example the European Union, the United Kingdom or California), you may have
-          further rights, such as to object to or restrict certain uses, or to complain to your data protection
-          authority. We do not sell your personal information for money. We will answer any request within 30 days.
+          Some places give these rights a name in law — the <strong>GDPR</strong> in the European Union and the United
+          Kingdom, the <strong>CCPA</strong> and <strong>CPRA</strong> in California, and <strong>PIPEDA</strong> in
+          Canada, among others. You do not need to know which one covers you, or to quote it: write to {mail} and we
+          will treat your message as a request under whichever rights you have. You may also complain to the data
+          protection authority for your country or state. We do not sell your personal information for money. We will
+          answer any request within 30 days.
         </p>
       </>
     ),
@@ -397,13 +460,31 @@ const sections: LegalSection[] = [
     ),
   },
   {
-    id: "children",
-    heading: "Children",
+    id: "third-party-links",
+    heading: "Links to other websites",
     body: (
       <p>
-        Invotick is a business tool and is not meant for children under 13. We do not knowingly collect information from
-        children under 13. If you believe a child has given us information, write to {mail} and we will delete it.
+        Invotick, this website and the invoice pages we host contain links to websites run by other companies — an app
+        store, a payment or ad partner, or a link you or your client put on a document. Those websites are not ours. We
+        do not control them and we are not responsible for what they do with your information, so please read the
+        privacy policy of any site you open from here. This policy covers only Invotick.
       </p>
+    ),
+  },
+  {
+    id: "children",
+    heading: "Children and minimum age",
+    body: (
+      <>
+        <p>
+          <strong>You must be at least 13 years old to use Invotick</strong>, and old enough in your country to agree to
+          our <Link href="/terms">Terms of Use</Link>. Invotick is a business tool and is not meant for children.
+        </p>
+        <p>
+          We do not knowingly collect information from children under 13. If you believe a child has given us
+          information, write to {mail} and we will delete it.
+        </p>
+      </>
     ),
   },
   {
