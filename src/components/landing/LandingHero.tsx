@@ -11,7 +11,7 @@ export function LandingHero() {
       </h1>
       <p className="mx-auto mt-4 max-w-2xl text-base text-[var(--color-on-surface-variant)] sm:text-lg">
         Create a professional invoice in seconds and download it as a PDF — no account, no watermark hassle.
-        Fill in the details on the left and watch your invoice build in real time on the right.
+        Fill in the details and watch your invoice build in real time.
       </p>
     </header>
   );
