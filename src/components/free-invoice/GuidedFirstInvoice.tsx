@@ -176,8 +176,17 @@ export function GuidedFirstInvoice() {
                   label="Business name"
                   placeholder="Acme Studio"
                   autoComplete="organization"
+                  enterKeyHint="next"
                   value={inv.businessName}
                   onChange={(e) => onBusinessName(e.target.value)}
+                  onKeyDown={(e) => {
+                    // The key already under the thumb. Without this the only way on was a button
+                    // the keyboard was covering.
+                    if (e.key === "Enter" && hasBusiness) {
+                      e.preventDefault();
+                      goTo(2);
+                    }
+                  }}
                 />
 
                 {showLogoMoment && (
@@ -220,10 +229,17 @@ export function GuidedFirstInvoice() {
                   id="fi-client-name"
                   label="Client name"
                   placeholder="Client or company"
+                  enterKeyHint="next"
                   value={inv.clientName}
                   onChange={(e) => {
                     fi.noteTyping("client", e.target.value);
                     fi.set({ clientName: e.target.value });
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && hasClient) {
+                      e.preventDefault();
+                      goTo(3);
+                    }
                   }}
                 />
                 <p className="mt-2 text-sm text-[var(--color-on-surface-variant)]">
@@ -452,9 +468,14 @@ function Question({ children }: { children: React.ReactNode }) {
 /** The one filled button on the step. Full width on a phone so it is the only thing to aim at. */
 function Continue({ onClick, disabled, children }: { onClick: () => void; disabled: boolean; children: React.ReactNode }) {
   return (
-    <Button type="button" size="lg" onClick={onClick} disabled={disabled} className="mt-5 w-full">
-      {children}
-    </Button>
+    // Sticky, because on a phone the keyboard eats the bottom half of the screen: measured on the
+    // live page at a keyboard-open viewport (375x400) the button sat at 420px — 20px below the fold,
+    // so after typing a name there was nothing on screen telling you where to go next.
+    <div className="sticky bottom-0 z-10 mt-5 border-t border-[var(--color-outline-variant)] bg-[var(--color-surface)] pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3">
+      <Button type="button" size="lg" onClick={onClick} disabled={disabled} className="w-full">
+        {children}
+      </Button>
+    </div>
   );
 }
 
