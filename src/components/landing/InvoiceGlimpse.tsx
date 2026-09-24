@@ -1,3 +1,9 @@
+"use client";
+
+import { useSyncExternalStore } from "react";
+import { formatMoney } from "@/lib/format";
+import { initialCurrency } from "@/lib/free-invoice/currency-detect";
+
 /**
  * The glimpse of an invoice under the headline — what the owner asked for as the middle of the
  * hybrid landing: the message, then a look at the thing, then the one button.
@@ -29,8 +35,37 @@
  * It stays `dir="ltr"` inside a mirrored page for the same reason a photograph does: the sample is
  * an English invoice, and flipping it would not make it an Arabic one — it would make it a
  * backwards English one.
+ *
+ * ## It is priced in the reader's own money, and it is from nowhere
+ *
+ * It used to be `$1,200.00` billed to an address in Leeds. The top countries after Pakistan are
+ * India, South Africa, Somalia, Zambia, Zimbabwe, Nigeria and Sri Lanka, so the one example of "an
+ * Invotick invoice" a visitor ever sees was priced in a currency they do not use and addressed to a
+ * street in England. Neither says *this is for you*.
+ *
+ * The currency now comes from `initialCurrency()` — the same country-based guess the tool itself
+ * opens with, read in the **browser** so the page stays statically prerendered (`StoreBadges` has
+ * the full reasoning). The server renders USD and the client swaps it on the first paint; that is
+ * the existing behaviour for a reader with no JavaScript, and it is a repaint of decoration, not a
+ * layout shift, because every size here is a fraction of the card's own width.
+ *
+ * **The figures themselves do not move with it**, and that is deliberate. Re-scaling `1,200` into
+ * plausible rupees or rand would be us inventing a price list; the amounts are a shape, and the
+ * symbol in front of them is the part that says whose invoice this is.
+ *
+ * The client's address is simply gone. There is no such thing as a neutral street, and the line was
+ * carrying nothing: the name is what identifies who an invoice is for.
  */
 export function InvoiceGlimpse() {
+  // `null` on the server and through hydration — "we have not looked yet" — which renders the USD
+  // the page has always rendered. It is never a claim that the reader IS in the US (§1.7).
+  const currency = useSyncExternalStore<string | null>(
+    () => () => {},
+    initialCurrency,
+    () => null,
+  ) ?? "USD";
+  const money = (amount: number) => formatMoney(amount, currency);
+
   return (
     <div className="relative mx-auto w-full max-w-[420px]" aria-hidden="true" dir="ltr">
       {/* A soft brand wash behind the card, the same gesture the legal pages open with. */}
@@ -76,9 +111,6 @@ export function InvoiceGlimpse() {
               <div className="font-bold text-[#1c1b1f]" style={{ fontSize: "3.3cqw", lineHeight: 1.35 }}>
                 Northgate Coffee Co.
               </div>
-              <div className="text-[#6b6874]" style={{ fontSize: "2.7cqw", lineHeight: 1.45 }}>
-                14 Mill Street, Leeds
-              </div>
             </div>
             <div className="text-end">
               <Label>Due</Label>
@@ -90,13 +122,13 @@ export function InvoiceGlimpse() {
 
           <div style={{ height: "4cqw" }} />
 
-          <Row desc="Brand identity — logo & type" amount="$1,200.00" />
-          <Row desc="Menu & packaging design" amount="$640.00" />
+          <Row desc="Brand identity — logo & type" amount={money(1200)} />
+          <Row desc="Menu & packaging design" amount={money(640)} />
 
           <div className="mt-[3cqw] flex justify-end">
             <div style={{ width: "52%" }}>
-              <Total label="Subtotal" value="$1,840.00" />
-              <Total label="Tax 8%" value="$147.20" />
+              <Total label="Subtotal" value={money(1840)} />
+              <Total label="Tax 8%" value={money(147.2)} />
               <div
                 className="mt-[2cqw] flex items-baseline justify-between rounded-md bg-[var(--color-primary-container)]"
                 style={{ padding: "2.2cqw 3cqw" }}
@@ -105,7 +137,7 @@ export function InvoiceGlimpse() {
                   Total
                 </span>
                 <span className="font-extrabold text-[var(--color-on-primary-container)]" style={{ fontSize: "4.2cqw" }}>
-                  $1,987.20
+                  {money(1987.2)}
                 </span>
               </div>
             </div>

@@ -83,14 +83,22 @@ export default function LandingPage() {
         <span className="text-lg font-extrabold tracking-tight text-[var(--color-on-background)]">
           Invotick
         </span>
-        <div className="flex items-center gap-2">
-          <Link href="/login" className="whitespace-nowrap rounded-[var(--radius-sm)] px-4 py-2 text-sm font-semibold text-[var(--color-on-surface)] hover:bg-[var(--color-surface-variant)]">
+        {/*
+          Two plain text links, and neither is a button.
+
+          "Create account" was an outlined button in the most valuable corner of a page that
+          promises "no sign-up", so the first thing an arriving stranger was offered was the one
+          thing the page says they do not need. One filled element per screen is the owner's rule,
+          and on this page that element is "Create invoice" — everything else gives way to it.
+
+          It is demoted rather than removed: somebody who already has an account arrives here too,
+          and taking their way in would be a worse trade than a quiet link.
+        */}
+        <div className="flex items-center gap-1">
+          <Link href="/login" className="whitespace-nowrap rounded-[var(--radius-sm)] px-3 py-2 text-sm font-semibold text-[var(--color-on-surface-variant)] hover:bg-[var(--color-surface-variant)] hover:text-[var(--color-on-surface)]">
             Sign in
           </Link>
-          {/* Outlined, not solid. There is exactly ONE filled button on this page and it is
-              "Create invoice"; a second solid blue button in the top bar made the eye pick between
-              two calls to action, which is the one thing option C was chosen to avoid. */}
-          <Link href="/signup" className="whitespace-nowrap rounded-[var(--radius-sm)] border border-[var(--color-outline-variant)] px-4 py-2 text-sm font-semibold text-[var(--color-primary)] hover:bg-[var(--color-primary-container)]/50">
+          <Link href="/signup" className="whitespace-nowrap rounded-[var(--radius-sm)] px-3 py-2 text-sm font-semibold text-[var(--color-on-surface-variant)] hover:bg-[var(--color-surface-variant)] hover:text-[var(--color-on-surface)]">
             Create account
           </Link>
         </div>
