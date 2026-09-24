@@ -75,6 +75,27 @@ export const FREE_TOOL_EVENT_NAMES = [
   // Landed on the tool. The denominator of this whole funnel, so it carries no parameter that could
   // delay it or fail: it fires on mount, before any storage read.
   "free_invoice_page_view",
+  // The tool was opened — and **this is the number the landing page exists to move**. Decision 0164
+  // specified it and never built it, so between that deploy and this one `free_invoice_page_view`
+  // said somebody landed and nothing at all said anybody pressed the button.
+  //
+  // It is also **step 1 of the guided flow**. `free_invoice_step_reached` therefore starts at
+  // `client`: the tool opening and the business step being reached are one moment, and two names
+  // for one moment is one press counted twice (§1.11).
+  "free_invoice_tool_opened",
+  // Advanced to a later step of the guided flow, once per step per visit. ONE name with the step as
+  // a parameter, never a name per step (§1.1): three names would make "how far did they get" an OR
+  // across three counters, and the first one anybody forgot would lower the number in silence.
+  "free_invoice_step_reached",
+  // What the person did with the logo we generated from their business name. The app has generated
+  // one silently since long before this page existed; this is the first time anyone can see whether
+  // people want it.
+  "free_invoice_logo_choice",
+  // A store badge on the landing, pressed by somebody who has NOT made an invoice — a **new** name
+  // rather than 0163's `free_invoice_install_offer_click`, which is pressed by somebody who already
+  // got a PDF out of this page. Filing both under one id would put two populations under one name
+  // (§1.4) and would raise the offer's numbers the day this deployed, with nothing saying so.
+  "free_invoice_store_badge_click",
   // First non-blank keystroke in a form's NAME field, once per form per visit. `form` is which one.
   "free_invoice_form_typed",
   // The draft first held everything an invoice needs: a business name, a client name, and at least
@@ -106,6 +127,10 @@ const EVENT_SURFACE: Record<WebEventName, WebSurface> = {
   shared_invoice_create_own_click: WEB_SURFACE,
   shared_invoice_pdf_click: WEB_SURFACE,
   free_invoice_page_view: FREE_TOOL_SURFACE,
+  free_invoice_tool_opened: FREE_TOOL_SURFACE,
+  free_invoice_step_reached: FREE_TOOL_SURFACE,
+  free_invoice_logo_choice: FREE_TOOL_SURFACE,
+  free_invoice_store_badge_click: FREE_TOOL_SURFACE,
   free_invoice_form_typed: FREE_TOOL_SURFACE,
   free_invoice_completed: FREE_TOOL_SURFACE,
   free_invoice_pdf_download: FREE_TOOL_SURFACE,
@@ -177,6 +202,57 @@ export const INVOICE_SOURCES = ["typed", "sample", "sample_edited"] as const;
 
 /** What the browser did with the PDF request. `saved` is `jsPDF.save` returning, nothing more. */
 export const PDF_OUTCOMES = ["saved", "failed"] as const;
+
+/* ---------------- the guided first invoice (decision 0165) ---------------- */
+
+/**
+ * Which door the tool was opened through.
+ *
+ * Two real ways in, and they must not be one number. `cta_press` is somebody who read the page and
+ * pressed the button — the thing the landing is judged on. `deep_link` is a reload, a bookmark or a
+ * shared link arriving on a URL that already says `#create`, where nobody was persuaded of
+ * anything. Counting them together would make every change to the page look better than it was, in
+ * proportion to how many people reload it.
+ */
+export const TOOL_OPEN_METHODS = ["cta_press", "deep_link"] as const;
+
+/**
+ * The step the person **advanced to**, first time only.
+ *
+ * `business` is deliberately not here: reaching step 1 is the tool opening, and that already has a
+ * row (`free_invoice_tool_opened`). One action, one event (§1.1) — so a funnel of this flow reads
+ * `free_invoice_page_view` → `free_invoice_tool_opened` → these three, in that order, and the
+ * denominator of "reached the client step" is the `tool_opened` count.
+ *
+ * `done` is the finished-invoice screen being shown, **not** a PDF: the download is its own press
+ * and its own row (`free_invoice_pdf_download`), and the gap between the two is the last drop
+ * before this surface's G1 moment.
+ */
+export const GUIDED_STEPS = ["client", "items", "done"] as const;
+
+/**
+ * What the person did with the mark we generated from their business name.
+ *
+ * `change_opened` is the file picker being opened and **nothing more** (§1.14). Whether a file was
+ * then chosen is not observable from a press — a cancelled picker looks identical — and it is
+ * already answered honestly elsewhere: `has_logo` on `free_invoice_completed` says whether the
+ * finished invoice carried a logo at all. A value called `changed` would be a claim about an
+ * outcome nobody watched.
+ *
+ * Not capped to once a visit. Each of the three is a deliberate press, and somebody who opens the
+ * picker, cancels, and then keeps the generated mark has done two things, not one.
+ */
+export const LOGO_CHOICES = ["kept", "change_opened", "skipped"] as const;
+
+/**
+ * Where a landing store badge sends them.
+ *
+ * `app_store` is declared and **nothing renders it as a link today** — there is no Invotick listing
+ * (`APP_STORE_URL` in `free-invoice/install.ts`). The badge is drawn as *Coming soon* and is not
+ * pressable, so no row can carry this value until that one line changes. It is written down now so
+ * the day the listing exists is not a change to the event contract.
+ */
+export const STORE_BADGE_DESTINATIONS = ["play_store", "app_store"] as const;
 
 /**
  * What put the install offer on screen.
@@ -275,6 +351,22 @@ const PARAM_SCHEMA: Record<WebEventName, Record<string, ParamRule>> = {
   // carries may be able to delay it, fail its schema, or drop the row. `surface` and
   // `viewer_platform` are stamped server-side and are enough to split it.
   free_invoice_page_view: {},
+
+  free_invoice_tool_opened: {
+    method: { kind: "enum", values: TOOL_OPEN_METHODS, required: true },
+  },
+
+  free_invoice_step_reached: {
+    step: { kind: "enum", values: GUIDED_STEPS, required: true },
+  },
+
+  free_invoice_logo_choice: {
+    choice: { kind: "enum", values: LOGO_CHOICES, required: true },
+  },
+
+  free_invoice_store_badge_click: {
+    destination: { kind: "enum", values: STORE_BADGE_DESTINATIONS, required: true },
+  },
 
   free_invoice_form_typed: {
     form: { kind: "enum", values: TYPED_FORMS, required: true },

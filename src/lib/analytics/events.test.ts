@@ -84,3 +84,54 @@ test("a dismissal names how it was closed", () => {
   });
   assert.equal(sanitiseParams("free_invoice_install_offer_dismissed", { method: "ignored" }), null);
 });
+
+/* ---------------- the guided first invoice (decision 0165) ---------------- */
+
+test("the tool's open names its door, and the two doors are not interchangeable", () => {
+  assert.deepEqual(sanitiseParams("free_invoice_tool_opened", { method: "cta_press" }), { method: "cta_press" });
+  assert.deepEqual(sanitiseParams("free_invoice_tool_opened", { method: "deep_link" }), { method: "deep_link" });
+  // A missing method would make a press and a reload one number, so the row is refused instead.
+  assert.equal(sanitiseParams("free_invoice_tool_opened", {}), null);
+  assert.equal(sanitiseParams("free_invoice_tool_opened", { method: "button" }), null);
+});
+
+test("a step is a parameter, and `business` is deliberately not one of its values", () => {
+  for (const step of ["client", "items", "done"]) {
+    assert.deepEqual(sanitiseParams("free_invoice_step_reached", { step }), { step });
+  }
+  // Reaching step 1 IS the tool opening and already has a row; a second name for one moment is one
+  // press counted twice (§1.11). So this value must never be accepted.
+  assert.equal(sanitiseParams("free_invoice_step_reached", { step: "business" }), null);
+  assert.equal(sanitiseParams("free_invoice_step_reached", {}), null);
+});
+
+test("the logo choice says what was pressed, never what came of it", () => {
+  for (const choice of ["kept", "change_opened", "skipped"]) {
+    assert.deepEqual(sanitiseParams("free_invoice_logo_choice", { choice }), { choice });
+  }
+  // `changed` would claim an outcome the press cannot see — a cancelled picker looks identical
+  // (§1.14). `has_logo` on `free_invoice_completed` is where that question is answered honestly.
+  assert.equal(sanitiseParams("free_invoice_logo_choice", { choice: "changed" }), null);
+  assert.equal(sanitiseParams("free_invoice_logo_choice", { choice: "uploaded" }), null);
+});
+
+test("a landing badge press is its own name, with only the two stores as destinations", () => {
+  assert.deepEqual(sanitiseParams("free_invoice_store_badge_click", { destination: "play_store" }), {
+    destination: "play_store",
+  });
+  // Declared before it can be rendered: there is no App Store listing, so no row carries this yet.
+  assert.deepEqual(sanitiseParams("free_invoice_store_badge_click", { destination: "app_store" }), {
+    destination: "app_store",
+  });
+  // The offer's third destination is not a store and must not arrive here (§1.15).
+  assert.equal(sanitiseParams("free_invoice_store_badge_click", { destination: "web_account" }), null);
+  assert.equal(sanitiseParams("free_invoice_store_badge_click", {}), null);
+});
+
+test("the badge press and the offer press stay two names, because they are two populations", () => {
+  // §1.4: somebody who went straight to the store without trying the tool, and somebody who already
+  // got a PDF out of it. One id for both would raise the offer's numbers with nothing saying so.
+  assert.notEqual("free_invoice_store_badge_click", "free_invoice_install_offer_click");
+  assert.ok(isWebEventName("free_invoice_store_badge_click"));
+  assert.ok(isWebEventName("free_invoice_install_offer_click"));
+});

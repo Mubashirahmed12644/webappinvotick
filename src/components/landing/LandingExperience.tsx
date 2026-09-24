@@ -1,15 +1,16 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
-import { FreeInvoiceTool } from "@/components/free-invoice/FreeInvoiceTool";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { GuidedFirstInvoice } from "@/components/free-invoice/GuidedFirstInvoice";
+import { trackWebEvent } from "@/lib/analytics/client";
 import { InvoiceGlimpse } from "./InvoiceGlimpse";
 import { StoreBadges } from "./StoreBadges";
 
 /**
- * The hybrid landing — option C.
+ * The hybrid landing — option C of decision 0164, with 0165's fixes measured on the live site.
  *
- * A message, a look at an invoice, **one** button, and the stores underneath it. Pressing the button
- * opens the real tool **on this page**: no route change, no second page, no server round trip.
+ * A message, **one** button, a look at an invoice, and the stores. Pressing the button opens the
+ * guided first-invoice flow **on this page**: no route change, no second page, no server round trip.
  *
  * ## The rule this whole shape exists to keep
  *
@@ -18,9 +19,29 @@ import { StoreBadges } from "./StoreBadges";
  * read in the browser instead (`StoreBadges`). And the tool must not move to `/create`: a page hop
  * between the search result and the form is a place for free traffic to fall out of.
  *
+ * ## The fold, measured — the reason the order changed on a phone
+ *
+ * On a 375×667 phone (a budget Android and the iPhone SE, and India / South Africa / Pakistan are
+ * where this traffic comes from) the "Create invoice" button's bottom edge sat at **696 px against
+ * a 667 px viewport** — 27 px of a 56 px button, below the fold, on the one page whose whole job is
+ * to get that button pressed. The glimpse above it is ~320 px of decoration and is what put it
+ * there.
+ *
+ * So on a phone the order is **message → button → stores → glimpse**, and from `lg` the glimpse
+ * takes the second column and the original arrangement is untouched. It is not hidden and not
+ * shrunk: it is still the first thing under the fold, which is where a person who wants to see
+ * before pressing will scroll anyway.
+ *
+ * ## One promise, said once
+ *
+ * The page used to say "no sign-up" three times — a pill above the headline, the subline, and a
+ * line under the button. Three statements of one fact read as a page trying to convince you. The
+ * subline keeps it; the pill and the under-button line are gone, which is also ~90 px of the height
+ * the button needed.
+ *
  * ## The tool is HIDDEN, not unmounted, and that is the decision
  *
- * `<div hidden>` rather than `{open && <FreeInvoiceTool/>}`, for three reasons that all point the
+ * `<div hidden>` rather than `{open && <GuidedFirstInvoice/>}`, for three reasons that all point the
  * same way:
  *
  * 1. **The markup stays in the static HTML.** Every label, placeholder and heading inside the tool
@@ -63,6 +84,29 @@ export function LandingExperience() {
   const open = pressed || hashOpen;
 
   /**
+   * One row the first time the tool opens, saying which door it was (decision 0164's proposal,
+   * built here). **This is the number this page exists to move**, and until now nothing counted it:
+   * `free_invoice_page_view` says somebody landed, and nothing at all said anybody pressed.
+   *
+   * `cta_press` and `deep_link` are two real ways in and must not be one number — arriving on a URL
+   * that already says `#create` is a reload, a bookmark or a shared link, not somebody being
+   * persuaded by the button.
+   *
+   * It is also **step 1 of the guided flow**, which is why `free_invoice_step_reached` starts at
+   * `client`: one action, one event (§1.1). A second row here for "reached the business step" would
+   * be the same press counted twice.
+   *
+   * The ref is not decoration: React runs effects twice in development Strict Mode, and `open` can
+   * become true by either route.
+   */
+  const reported = useRef(false);
+  useEffect(() => {
+    if (!open || reported.current) return;
+    reported.current = true;
+    trackWebEvent("free_invoice_tool_opened", { method: pressed ? "cta_press" : "deep_link" });
+  }, [open, pressed]);
+
+  /**
    * Only a PRESS scrolls and takes focus.
    *
    * Arriving on `#create` deliberately does neither: a page that jumps and pops the keyboard open
@@ -97,17 +141,12 @@ export function LandingExperience() {
         className={open ? "pb-2" : "grid items-center gap-6 sm:gap-8 lg:grid-cols-2 lg:gap-12"}
       >
         <div className={open ? "" : "text-center lg:col-start-1 lg:row-start-1 lg:text-start"}>
-          {!open && (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-primary-container)] px-3 py-1.5 text-xs font-bold text-[var(--color-on-primary-container)]">
-              100% free · No sign-up to start
-            </span>
-          )}
           <h1
             id="landing-title"
             className={
               open
                 ? "text-xl font-extrabold tracking-tight text-[var(--color-on-background)] sm:text-2xl"
-                : "mt-4 text-[1.85rem] font-extrabold leading-[1.12] tracking-tight text-[var(--color-on-background)] sm:text-5xl"
+                : "text-[1.85rem] font-extrabold leading-[1.12] tracking-tight text-[var(--color-on-background)] sm:text-5xl"
             }
           >
             Free invoice generator
@@ -115,21 +154,23 @@ export function LandingExperience() {
               <span className="mt-1 block text-[var(--color-primary)]">that gets you paid faster</span>
             )}
           </h1>
-          {/* Two lines on a phone, deliberately. The first draft ran to four, and four lines of
-              grey text is 160 px between the headline and the one button this page has. */}
+          {/* The page's ONE promise. Two lines on a phone, deliberately: the first draft ran to
+              four, and four lines of grey text is 160 px between the headline and the one button
+              this page has. */}
           {!open && (
             <p className="mx-auto mt-3 max-w-[42ch] text-[15px] leading-relaxed text-[var(--color-on-surface-variant)] sm:mt-4 sm:text-lg lg:mx-0">
-              Fill in your details, download the PDF. No account, no watermark, nothing to install.
+              Three questions, then download the PDF. No account, no watermark, nothing to install.
             </p>
           )}
         </div>
 
-        {!open && (
-          <div className="lg:col-start-2 lg:row-span-2 lg:row-start-1">
-            <InvoiceGlimpse />
-          </div>
-        )}
-
+        {/*
+          The button comes BEFORE the glimpse in source order, so a phone — which reads this grid as
+          one column — gets it above the fold. From `lg` the explicit row/column placements below
+          put everything back where 0164 had it: text top-left, glimpse down the right, button
+          bottom-left. The source order is the phone's layout; the placement classes are the
+          desktop's.
+        */}
         {!open && (
           <div className="lg:col-start-1 lg:row-start-2">
             {/* ONE prominent button. Full width on a phone so it is the only thing to aim at, and
@@ -146,10 +187,22 @@ export function LandingExperience() {
                 <path d="M5 12h14M13 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </button>
-            <p className="mt-3 text-center text-sm text-[var(--color-on-surface-variant)] lg:text-start">
-              Opens right here · Free · No sign-up
-            </p>
-            <StoreBadges />
+            {/* The badges stay with the button, above the glimpse on a phone: "or get the app" is
+                the second choice this page offers, and it belongs beside the first one rather than
+                after 320 px of decoration. */}
+            <StoreBadges
+              onBadgeClick={(store) =>
+                trackWebEvent("free_invoice_store_badge_click", {
+                  destination: store === "play" ? "play_store" : "app_store",
+                })
+              }
+            />
+          </div>
+        )}
+
+        {!open && (
+          <div className="lg:col-start-2 lg:row-span-2 lg:row-start-1">
+            <InvoiceGlimpse />
           </div>
         )}
       </section>
@@ -160,7 +213,7 @@ export function LandingExperience() {
         press.
       */}
       <section id="create" aria-label="Invoice generator" hidden={!open} className="scroll-mt-4">
-        <FreeInvoiceTool />
+        <GuidedFirstInvoice />
       </section>
     </>
   );
