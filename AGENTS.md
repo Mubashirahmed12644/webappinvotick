@@ -439,6 +439,33 @@ the list is wrong, not the app.**
     at all), and the browser is not storage — clearing site data loses the drafts.
   - **The offer never blocks.** Creating, previewing and downloading all work with it on screen, and it
     only appears after a PDF has been produced.
+- **The landing's three steps, from decision
+  [0165](docs/decisions/0165-the-landing-asks-three-questions-and-the-tool-reports-who-pressed-the-button.md)**
+  (built on `feat/guided-first-invoice`, **not deployed**). `/` now asks the app's own three questions —
+  business → client → items — then shows the finished invoice. Four **new** names, all
+  `surface=web_free_tool`:
+  - **`free_invoice_tool_opened`** (`method` = `cta_press|deep_link`) — the tool was opened, and by which
+    door. **0164 specified this and it was never built**, so between that deploy and 0165 nothing counted
+    how many people pressed "Create invoice": `free_invoice_page_view` said somebody landed and nothing at
+    all said anybody pressed. `deep_link` is arriving on a URL that already says `#create` — a reload, a
+    bookmark or a shared link, where nobody was persuaded of anything.
+  - **`free_invoice_step_reached`** (`step` = `client|items|done`) — first time only, one name with the
+    step as a parameter (§1.1). ⚠️ **`business` is deliberately NOT a value**: reaching step 1 *is* the
+    tool opening and already has a row, and two names for one moment is one press counted twice (§1.11).
+    So the funnel is `free_invoice_page_view` → `free_invoice_tool_opened` → these three, and the
+    denominator of "reached the client step" is the `tool_opened` count. `done` is the finished-invoice
+    screen being shown, **not** a PDF — the download is its own press and its own row.
+  - **`free_invoice_logo_choice`** (`choice` = `kept|change_opened|skipped`) — what the person did with the
+    mark generated from their business name. The app has generated one silently since long before this
+    page existed. `change_opened` is the file picker **opening** and nothing more (§1.14); whether a file
+    was then chosen is `has_logo` on `free_invoice_completed`.
+  - **`free_invoice_store_badge_click`** (`destination` = `play_store|app_store`) — a landing badge pressed
+    by somebody who has **not** made an invoice. A separate name from `free_invoice_install_offer_click`,
+    which is pressed by somebody who already got a PDF: one id for both would put two populations under one
+    name (§1.4) and raise the offer's numbers with nothing saying so. `app_store` is declared and nothing
+    renders it as a link.
+  - 0163's names and meanings are unchanged; the guided flow and the full editor share **one** draft
+    (`useFreeInvoice`), so nothing fires twice.
 - **Money/ads:** `premium_click`, `watch_ad_click`, `ad_request`, `ad_loaded`, `ad_shown`,
   `ad_dismissed`, `ad_load_failed`, `ad_show_failed`, `ad_load_crashed`, `ad_dialog_dismissed`,
   **`ad_impression_value`** (3,112 firings / 582 devices — what an impression actually paid, from
