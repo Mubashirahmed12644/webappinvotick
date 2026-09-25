@@ -157,7 +157,19 @@ const sections: LegalSection[] = [
           Google and Apple handle payment and refunds under their own terms. Deleting the app or your Invotick account does
           not cancel a subscription.
         </li>
-        <li>What Premium includes is described on the Premium screen in the app. Today its main benefit is removing ads.</li>
+        {/*
+          Kept literally true, and re-checked whenever the tier of a feature moves (decision 0170; the
+          owner, 2026-09-25: "har jagha sach ho"). "Its main benefit is removing ads" stopped being the
+          whole truth on 2026-09-21, when 1.4.8 (versionCode 107, the build most phones are on today)
+          took the Invotick footer off a premium account's documents, and the server took it off every
+          share link of a premium owner — old links included. Premium also puts the business's own
+          footer in that band, but only from 1.4.9, which is not released: that clause lands with the
+          release, not before it.
+        */}
+        <li>
+          What Premium includes is described on the Premium screen in the app. Today it removes the ads, and it takes the
+          Invotick footer off the documents you make and off every invoice link you have shared.
+        </li>
       </ul>
     ),
   },

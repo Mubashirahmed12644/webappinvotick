@@ -87,8 +87,9 @@ export default function LandingPage() {
           ONE account word, not two.
 
           0165 demoted "Create account" from a button to a link, which fixed the weight but not the
-          contradiction: the page's own promise, three lines below, reads *"No account, no
-          watermark, nothing to install."* Two account words above that sentence make the screen
+          contradiction: the page's own promise, three lines below, reads *"No account, no cost,
+          nothing to install."* (it read "no watermark" until 0170, which was not true of the PDF this
+          tool produces). Two account words above that sentence make the screen
           argue with itself before the visitor has read any of it. Invoice Fly's equivalent screen
           carries exactly one word — "Log in" — and on this they are right.
 
