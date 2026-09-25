@@ -251,7 +251,9 @@ export function useFreeInvoice() {
     if (!file.type.startsWith("image/")) return setLogoError("Please choose an image file.");
     if (file.size > MAX_LOGO_BYTES) return setLogoError("Logo must be under 2MB.");
     const reader = new FileReader();
-    reader.onload = () => set({ logoDataUrl: String(reader.result) });
+    // `uploaded` is the honest word here and it is the ONLY place that sets it: every other logo
+    // on this page is the mark we generate from the business name.
+    reader.onload = () => set({ logoDataUrl: String(reader.result), logoSource: "uploaded" });
     reader.readAsDataURL(file);
   }
 

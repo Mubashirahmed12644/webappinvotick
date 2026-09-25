@@ -245,6 +245,24 @@ export const GUIDED_STEPS = ["client", "items", "done"] as const;
 export const LOGO_CHOICES = ["kept", "change_opened", "skipped"] as const;
 
 /**
+ * Where the logo on a finished invoice came from.
+ *
+ * A parameter on `free_invoice_completed`, beside the `has_logo` that was already there — never a
+ * new event name (§1.1). It exists because the guided step stopped asking *Keep · Change · Skip*
+ * and now keeps the generated mark quietly, the way the Android app always has. That removed two
+ * real presses, so `free_invoice_logo_choice` stopped sending `kept` and `skipped`: there is no
+ * press left to report, and an event fired for something nobody did is noise, not data.
+ *
+ * Both values stay in `LOGO_CHOICES` above. Rows sent before this change carry them, and a value
+ * removed from the list would make its own history unreadable (§1.8).
+ *
+ * Absent means unknown, and that covers two real cases: an invoice with no logo at all, and a draft
+ * restored from a browser that stored one before this field existed. It is never filled with a
+ * guess (§1.7).
+ */
+export const LOGO_SOURCES = ["generated", "uploaded"] as const;
+
+/**
  * Where a landing store badge sends them.
  *
  * `app_store` is declared and **nothing renders it as a link today** — there is no Invotick listing
@@ -388,6 +406,9 @@ const PARAM_SCHEMA: Record<WebEventName, Record<string, ParamRule>> = {
     // phone, the client email, ship-to, PO number, notes and terms. A count, because which ones
     // were filled has never changed a decision and nine more keys on every row would.
     optional_fields: { kind: "count", max: 9, required: true },
+    // Our mark or their file — see `LOGO_SOURCES`. Absent when there is no logo, and absent on a
+    // draft stored before this key existed; never defaulted to either value.
+    logo_source: { kind: "enum", values: LOGO_SOURCES, required: false },
   },
 
   free_invoice_pdf_download: {
