@@ -9,7 +9,7 @@ import { cn } from "@/lib/cn";
 import { isComplete } from "@/lib/free-invoice/funnel";
 import { initialsFor, logoMarkDataUrl } from "@/lib/free-invoice/logo-mark";
 import { trackWebEvent } from "@/lib/analytics/client";
-import { useFreeInvoice } from "./useFreeInvoice";
+import type { useFreeInvoice } from "./useFreeInvoice";
 import { GuidedInvoiceCard } from "./GuidedInvoiceCard";
 import { FreeInvoiceTool } from "./FreeInvoiceTool";
 import { BackupModal } from "./BackupModal";
@@ -97,10 +97,51 @@ function stepFromHash(hash: string): Step {
   return 1;
 }
 
-export function GuidedFirstInvoice() {
-  const fi = useFreeInvoice();
-  const [step, setStep] = useState<Step>(1);
+interface GuidedProps {
+  /**
+   * The one draft on the page. It is passed in rather than created here since the onboarding
+   * (0167) needs the same one: a second `useFreeInvoice()` would mean two debounced autosaves
+   * racing over one IndexedDB row and every funnel event firing twice.
+   */
+  fi: ReturnType<typeof useFreeInvoice>;
+  /**
+   * False while the onboarding is on screen. An inactive copy must not answer `popstate` or push
+   * history — two components writing to one history stack is a Back button that means whichever of
+   * them ran last.
+   */
+  active?: boolean;
+  /** Where to begin. The onboarding has already asked for the business, so it hands over at 2. */
+  initialStep?: Step;
+  /** Ring the client block once, the first time somebody arrives from the onboarding. */
+  coachClient?: boolean;
+  /**
+   * Hands the page's one file input up to the parent, so the onboarding's "Choose image" opens
+   * the same picker. There is exactly one `<input type="file">` on the page and this is how a
+   * screen that is not its owner reaches it.
+   */
+  exposeLogoPicker?: (open: () => void) => void;
+}
+
+export function GuidedFirstInvoice({ fi, active = true, initialStep = 1, coachClient = false, exposeLogoPicker }: GuidedProps) {
+  const [rawStep, setStep] = useState<Step>(initialStep);
   const [advanced, setAdvanced] = useState(false);
+  /**
+   * The coach-mark on the client block, and it is dismissed by the first thing the person does.
+   *
+   * It exists to point at one control once. A hint that has to be dismissed on its own is a second
+   * thing to press before the first thing can be pressed, which on a four-tap screen is a tax.
+   */
+  const [coach, setCoach] = useState(coachClient);
+
+  /**
+   * The step actually on screen.
+   *
+   * Derived rather than pushed into state by an effect: the onboarding hands over at step 2, and
+   * "never show a step earlier than the one we were handed" is a fact about this render, not a
+   * state change to schedule. Setting it from an effect would be a second render for something
+   * already knowable in the first — and React's own lint rule says so.
+   */
+  const step: Step = active && rawStep < initialStep ? initialStep : rawStep;
   /**
    * The mark we generated, kept so a later edit of the name can refresh it.
    *
@@ -160,9 +201,37 @@ export function GuidedFirstInvoice() {
    * keyboard that springs open on a Back press is the page fighting the reader — the same rule the
    * first render already keeps.
    */
+  const activeRef = useRef(active);
+  activeRef.current = active;
+
+  /**
+   * The step this screen OPENS on gets its row too.
+   *
+   * Without this the onboarding handed over straight into the client step and
+   * `free_invoice_step_reached step=client` never fired — so "reached the client step" read zero
+   * while everybody was reaching it, and the biggest drop in the funnel would have been an
+   * artefact of the hand-over rather than anything a person did. Measured, not guessed: the row
+   * was absent from a full run before this existed.
+   *
+   * `reachedRef` is the same first-time guard `goTo` uses, so a step this reports is never
+   * reported again and a step `goTo` already reported is not reported here.
+   */
+  useEffect(() => {
+    if (!active || step === 1) return;
+    if (reachedRef.current.has(step)) return;
+    reachedRef.current.add(step);
+    trackWebEvent("free_invoice_step_reached", { step: STEP_EVENT[step] });
+  }, [active, step]);
+
   useEffect(() => {
     function onPop(event: PopStateEvent) {
+      if (!activeRef.current) return;
       const state = event.state as { fiStep?: unknown } | null;
+      // Only entries this screen owns. The onboarding pushes its own hashes, and reading one of
+      // those through `stepFromHash` would answer 1 — quietly rewinding the invoice to a step the
+      // person never pressed Back to.
+      const ownsHash = (Object.values(STEP_HASH) as string[]).includes(window.location.hash);
+      if (typeof state?.fiStep !== "number" && !ownsHash) return;
       const asked =
         typeof state?.fiStep === "number" ? (state.fiStep as Step) : stepFromHash(window.location.hash);
       movedRef.current = true;
@@ -210,7 +279,7 @@ export function GuidedFirstInvoice() {
       reachedRef.current.add(next);
       trackWebEvent("free_invoice_step_reached", { step: STEP_EVENT[next] });
     }
-    if (next !== step) {
+    if (next !== step && activeRef.current) {
       try {
         window.history.pushState({ fiStep: next }, "", STEP_HASH[next]);
       } catch {
@@ -275,6 +344,12 @@ export function GuidedFirstInvoice() {
   function openLogoPicker() {
     logoInputRef.current?.click();
   }
+
+  useEffect(() => {
+    exposeLogoPicker?.(openLogoPicker);
+    // The callback closes over a ref, so it never goes stale and this runs once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /**
    * Focus, right now, inside the caller's gesture. `preventScroll` because the step's own
@@ -382,6 +457,27 @@ export function GuidedFirstInvoice() {
                 <Done label={inv.businessName} onEdit={() => goTo(1)} />
 
                 <Question>Who is it for?</Question>
+                {/*
+                  The coach-mark, the way the design draws it: everything else dimmed, the one
+                  block a person has to act on left lit, and a line of plain words under it. It is
+                  shown once, on arrival from the onboarding, and the first press of anything
+                  clears it — including a press on the field itself, which is the whole point.
+                */}
+                <div className={cn("relative", coach && "z-20")}>
+                  {coach && (
+                    <>
+                      <button
+                        type="button"
+                        aria-label="Got it"
+                        onClick={() => setCoach(false)}
+                        className="fixed inset-0 z-10 bg-[rgba(10,12,22,0.62)]"
+                      />
+                      <div className="pointer-events-none absolute -inset-2 z-20 rounded-[var(--radius-md)] ring-4 ring-white/90" />
+                      <p className="absolute inset-x-0 top-full z-20 mt-4 rounded-[var(--radius-md)] bg-white px-3.5 py-3 text-sm font-extrabold leading-snug text-[#0d4dc0] shadow-xl">
+                        Type who this invoice is for. A name is enough — the rest can wait.
+                      </p>
+                    </>
+                  )}
                 <TextField
                   id="fi-client-name"
                   className={FIELD_CLEARS_BAR}
@@ -393,6 +489,7 @@ export function GuidedFirstInvoice() {
                     fi.noteTyping("client", e.target.value);
                     fi.set({ clientName: e.target.value });
                   }}
+                  onFocus={() => setCoach(false)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && hasClient) {
                       e.preventDefault();
@@ -400,6 +497,7 @@ export function GuidedFirstInvoice() {
                     }
                   }}
                 />
+                </div>
                 <p className="mt-2 text-sm text-[var(--color-on-surface-variant)]">
                   Email, phone and address — later, whenever you like.
                 </p>

@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { flushSync } from "react-dom";
 import { GuidedFirstInvoice } from "@/components/free-invoice/GuidedFirstInvoice";
+import { Onboarding } from "@/components/free-invoice/Onboarding";
+import { useFreeInvoice } from "@/components/free-invoice/useFreeInvoice";
 import { trackWebEvent } from "@/lib/analytics/client";
 import { InvoiceGlimpse } from "./InvoiceGlimpse";
 import { StoreBadges } from "./StoreBadges";
@@ -80,9 +83,61 @@ export function LandingExperience() {
   // shared link renders WITH the form open on the very first client render — no flash of the hero,
   // and no state set from inside an effect.
   const [pressed, setPressed] = useState(false);
+  /**
+   * The one draft on the page, held HERE because two things now render it: the onboarding and the
+   * invoice screen. A second `useFreeInvoice()` would give the page two debounced autosaves racing
+   * over one IndexedDB row and would fire every funnel event twice — the danger 0165 named when
+   * the guided flow and the full editor were split, arriving by a new road.
+   */
+  const fi = useFreeInvoice();
+  /**
+   * False while the onboarding is on screen, true once it is done. Exactly one of the two owns the
+   * history stack at a time; two components pushing entries would make Back mean whichever of them
+   * ran last.
+   */
+  const [onboarded, setOnboarded] = useState(false);
+  /** The page's one file input lives inside the invoice screen; the onboarding borrows it. */
+  const logoPickRef = useRef<() => void>(() => {});
+
+  /**
+   * The hand-over is a history entry like every other step, so Back out of the invoice screen
+   * returns to the onboarding's last screen rather than stranding somebody on a hidden panel.
+   */
+  function finishOnboarding() {
+    try {
+      window.history.pushState({ fiStep: 2, onboarded: true }, "", "#create-client");
+    } catch {
+      // No entry, but the hand-over still happens. Only Back across it is lost.
+    }
+    setOnboarded(true);
+  }
+
+  /**
+   * Which of the two owns the page after a Back or Forward.
+   *
+   * Read from the entry's own state where there is one, and from the hash otherwise — a hash the
+   * invoice screen owns means the invoice screen, and anything else means the onboarding.
+   */
+  useEffect(() => {
+    function onPop(event: PopStateEvent) {
+      const state = event.state as { onboarded?: unknown } | null;
+      const hash = window.location.hash;
+      const toolOwns = hash === "#create-client" || hash === "#create-items" || hash === "#create-done";
+      setOnboarded(state?.onboarded === true || toolOwns);
+    }
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
   const hashOpen = useSyncExternalStore(
     subscribeToHash,
-    () => window.location.hash === "#create",
+    // `startsWith`, not equality: the onboarding and the invoice screen each push one history
+    // entry per step (`#create-send`, `#create-trade`, `#create-client`, …) so that Back means one
+    // step back. They are all the same door, and a link to any of them opens the tool.
+    //
+    // ⚠️ This was written as equality until 2026-09-25 while the comment above already claimed
+    // `startsWith`. A script that edited this file threw before it wrote, so 0166's doc landed and
+    // its code did not, and a reload on `#create-client` rendered the hero instead of the tool.
+    () => window.location.hash.startsWith("#create"),
     () => false,
   );
   const open = pressed || hashOpen;
@@ -111,24 +166,19 @@ export function LandingExperience() {
   }, [open, pressed]);
 
   /**
-   * Only a PRESS scrolls and takes focus.
+   * Only a PRESS scrolls.
    *
-   * Arriving on `#create` deliberately does neither: a page that jumps and pops the keyboard open
-   * before the reader has done anything is a page fighting them. The press is different — they
-   * asked for the form, so the form is where they are put, and the first field is the one they
-   * need.
-   *
-   * This runs after the commit that removes `hidden`. Focusing an element that is still hidden does
-   * nothing at all, and does it silently.
+   * Arriving on `#create` deliberately does not: a page that jumps before the reader has done
+   * anything is a page fighting them. The press is different — they asked for the tool, so the
+   * tool is where they are put.
    */
-  useEffect(() => {
-    if (!pressed) return;
-    document.getElementById("create")?.scrollIntoView({ behavior: "smooth", block: "start" });
-    document.getElementById("fi-business-name")?.focus({ preventScroll: true });
-  }, [pressed]);
-
   function reveal() {
-    setPressed(true);
+    // `flushSync`, so the section is un-`hidden` before this handler returns and anything it then
+    // touches is really in the document. The onboarding's first screen is a value slide with no
+    // field, so nothing is focused here; each later step takes focus inside its own gesture, which
+    // is the only way iOS Safari keeps the keyboard open (`Onboarding.go`).
+    flushSync(() => setPressed(true));
+    document.getElementById("create")?.scrollIntoView({ behavior: "smooth", block: "start" });
     try {
       if (window.location.hash !== "#create") {
         window.history.replaceState(null, "", "#create");
@@ -217,7 +267,32 @@ export function LandingExperience() {
         press.
       */}
       <section id="create" aria-label="Invoice generator" hidden={!open} className="scroll-mt-4">
-        <GuidedFirstInvoice />
+        {/*
+          The onboarding (decision 0167) — three value slides, then the four questions, then the
+          first invoice. Unlike the invoice screen below it holds no markup a crawler needs: every
+          heading in it is a screen somebody walks through, not content about the product. It is
+          still `hidden` rather than unmounted, so its draft and the invoice screen's stay one.
+        */}
+        <div hidden={onboarded}>
+          <Onboarding fi={fi} onDone={finishOnboarding} onPickLogo={() => logoPickRef.current()} />
+        </div>
+
+        {/*
+          Always rendered, hidden until the onboarding is done. Its markup is what the crawler reads
+          on the page that ranks for "free invoice generator", and unmounting it would take
+          `#fi-paper` with it — which is what the PDF export clones.
+        */}
+        <div hidden={!onboarded}>
+          <GuidedFirstInvoice
+            fi={fi}
+            active={onboarded}
+            initialStep={2}
+            coachClient
+            exposeLogoPicker={(openPicker) => {
+              logoPickRef.current = openPicker;
+            }}
+          />
+        </div>
       </section>
     </>
   );

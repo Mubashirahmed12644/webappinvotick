@@ -76,17 +76,50 @@ test("the finished invoice says which kind of logo it carries, and refuses to gu
   assert.equal(sanitiseParams("free_invoice_completed", { ...complete, logo_source: "theirs" }), null);
 });
 
-test("the logo choice keeps `kept` and `skipped` readable, though nothing sends them now", () => {
-  // The guided step stopped asking Keep / Change / Skip, so only `change_opened` is still a press.
-  assert.deepEqual(sanitiseParams("free_invoice_logo_choice", { choice: "change_opened" }), {
-    choice: "change_opened",
+test("the onboarding's steps are values on the ONE step event, not events of their own", () => {
+  // The whole "where do people leave the onboarding" question is this one parameter (§1.1).
+  for (const step of ["slide_2", "slide_3", "business", "industry", "logo_upload", "logo_made", "ready", "home"]) {
+    assert.deepEqual(sanitiseParams("free_invoice_step_reached", { step }), { step });
+  }
+  // The invoice steps are untouched — rows sent before the onboarding existed still read.
+  for (const step of ["client", "items", "done"]) {
+    assert.deepEqual(sanitiseParams("free_invoice_step_reached", { step }), { step });
+  }
+  // `slide_1` is the tool opening, which already has its own row. Two names for one moment would
+  // be one press counted twice (§1.11), so it is refused rather than quietly stored.
+  assert.equal(sanitiseParams("free_invoice_step_reached", { step: "slide_1" }), null);
+  assert.equal(sanitiseParams("free_invoice_step_reached", { step: "loading" }), null);
+  assert.equal(sanitiseParams("free_invoice_step_reached", {}), null);
+});
+
+test("the finished invoice names the trade, and only a trade the list knows", () => {
+  const complete = { items: 1, has_logo: "false", has_tax: "false", has_discount: "false", optional_fields: 0 };
+  assert.deepEqual(sanitiseParams("free_invoice_completed", { ...complete, industry: "welding" }), {
+    ...complete,
+    industry: "welding",
   });
-  // The other two stay in the code space: rows sent before that change carry them, and dropping a
-  // value from the list would make its own history unreadable (§1.8).
-  for (const choice of ["kept", "skipped"]) {
+  assert.deepEqual(sanitiseParams("free_invoice_completed", { ...complete, industry: "other" }), {
+    ...complete,
+    industry: "other",
+  });
+  // Absent for a draft started before the onboarding, and for anybody who never reached that step.
+  assert.deepEqual(sanitiseParams("free_invoice_completed", complete), complete);
+  // A trade the list cannot name is not a trade.
+  assert.equal(sanitiseParams("free_invoice_completed", { ...complete, industry: "astronaut" }), null);
+});
+
+test("every answer to the logo question is a value on one event", () => {
+  // `kept` and `skipped` became real presses again when the onboarding's made-logo screen brought
+  // back a Continue and a Skip; they had been kept in the code space through the release where
+  // nothing sent them, which is why that history is still readable (§1.8).
+  // `regenerated` is "try another design" — a repeated press that says something about the designs
+  // somebody rejected, which a single `kept` row cannot.
+  for (const choice of ["kept", "change_opened", "skipped", "regenerated"]) {
     assert.deepEqual(sanitiseParams("free_invoice_logo_choice", { choice }), { choice });
   }
+  // `changed` would be a claim about an outcome nobody watched: a cancelled picker looks identical.
   assert.equal(sanitiseParams("free_invoice_logo_choice", { choice: "changed" }), null);
+  assert.equal(sanitiseParams("free_invoice_logo_choice", {}), null);
 });
 
 test("a failed pdf keeps the error's class name and nothing that could be free text", () => {
@@ -130,18 +163,21 @@ test("the tool's open names its door, and the two doors are not interchangeable"
   assert.equal(sanitiseParams("free_invoice_tool_opened", { method: "button" }), null);
 });
 
-test("a step is a parameter, and `business` is deliberately not one of its values", () => {
+test("a step is a parameter, and whichever step is FIRST is never one of its values", () => {
   for (const step of ["client", "items", "done"]) {
     assert.deepEqual(sanitiseParams("free_invoice_step_reached", { step }), { step });
   }
-  // Reaching step 1 IS the tool opening and already has a row; a second name for one moment is one
-  // press counted twice (§1.11). So this value must never be accepted.
-  assert.equal(sanitiseParams("free_invoice_step_reached", { step: "business" }), null);
+  // The rule, which has not changed: reaching the FIRST screen IS the tool opening and already has
+  // a row, so it never gets a second name (§1.11). Which screen is first HAS changed — the value
+  // refused used to be `business`, and since the onboarding put three value slides in front of it
+  // the one refused is `slide_1`. `business` is now a real step somebody can leave at.
+  assert.equal(sanitiseParams("free_invoice_step_reached", { step: "slide_1" }), null);
+  assert.deepEqual(sanitiseParams("free_invoice_step_reached", { step: "business" }), { step: "business" });
   assert.equal(sanitiseParams("free_invoice_step_reached", {}), null);
 });
 
 test("the logo choice says what was pressed, never what came of it", () => {
-  for (const choice of ["kept", "change_opened", "skipped"]) {
+  for (const choice of ["kept", "change_opened", "skipped", "regenerated"]) {
     assert.deepEqual(sanitiseParams("free_invoice_logo_choice", { choice }), { choice });
   }
   // `changed` would claim an outcome the press cannot see — a cancelled picker looks identical

@@ -62,6 +62,15 @@ export function useFreeInvoice() {
   const [showClientDetails, setShowClientDetails] = useState(false);
   const [showInvoiceMeta, setShowInvoiceMeta] = useState(false);
   const [offerOpen, setOfferOpen] = useState(false);
+  /**
+   * The local database has been read and this draft is the real one.
+   *
+   * The onboarding's "One moment…" screen waits on exactly this and nothing else — there is no
+   * network call behind it, and if the read is instant (it nearly always is) that screen is never
+   * shown at all. False until the mount effect finishes, so it can never be mistaken for "there was
+   * nothing to restore".
+   */
+  const [restored, setRestored] = useState(false);
 
   const unsyncedCount = saved.filter((i) => !i.isSynced).length;
   // Progressive disclosure: keep cards compact, but auto-reveal the extra fields
@@ -119,6 +128,7 @@ export function useFreeInvoice() {
       if (active) setInv(active);
       // New visitor / blank draft: open in the country-based (or last-picked) currency.
       else setInv((prev) => (prev.id ? prev : { ...prev, id: uuid(), invoiceNumber: nextInvoiceNumber(), currency: initialCurrency() }));
+      setRestored(true);
     })();
   }, []);
 
@@ -283,6 +293,7 @@ export function useFreeInvoice() {
     setBackupOpen,
     offerOpen,
     setOfferOpen,
+    restored,
     logoError,
     onLogoFile,
     showBizDetails,
