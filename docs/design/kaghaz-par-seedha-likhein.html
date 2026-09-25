@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kaghaz Par Seedha Likhein — A/B challenger</title>
+<!--
+  KAGHAZ PAR SEEDHA LIKHEIN  ("write straight onto the paper")
+
+  The owner rejected the three directions shown on 2026-09-25 as the default design, and then
+  singled THIS one out to keep:
+
+      "ye design — kaghaz per seedha likhny wala — kaam tm apny memory per save rakhna,
+       isko ham a/b testing zaroor kerna chain gy."
+
+  So it is not the default; it is the A/B challenger against whatever ships. This file is the
+  drawing itself, preserved in git rather than in a scratchpad. Decision: docs/decisions/0167.
+
+  The idea in one line: there is no form. The screen IS the invoice, and the empty values are
+  dotted blanks inside the paper. You type the business name where it will print, the client name
+  under "Bill To", the work in the first ruled row of the table. The keyboard's next key walks you
+  along the document. There is no progress bar: the progress is how much ink is on the paper.
+
+  Nothing here is application code. Self-contained on purpose — open it in any browser.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,400;0,600;0,700;0,800;0,900&display=swap" rel="stylesheet">
+<style>
+/* ===================== PAGE CHROME ===================== */
+:root{
+  --pg-bg:#f3f2f7; --pg-card:#fff; --pg-ink:#1c1b1f; --pg-mute:#5c5866;
+  --pg-rule:#dedbe6; --pg-brand:#0d4dc0; --pg-soft:#e5ecff; --fit:1;
+}
+@media (prefers-color-scheme:dark){
+  :root{ --pg-bg:#111114; --pg-card:#1b1b20; --pg-ink:#e8e5ee; --pg-mute:#a9a4b6;
+         --pg-rule:#33313c; --pg-brand:#aec6ff; --pg-soft:#1d2c50; }
+}
+/* No min() inside a multiplication: calc(Npx * var(--fit)) is dropped as invalid when --fit
+   itself holds a min(), which silently kills every width that uses it. Plain breakpoint instead. */
+@media (max-width:409px){ :root{ --fit:calc((100vw - 34px)/375); } }
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--pg-bg);color:var(--pg-ink);font-family:Nunito,ui-sans-serif,system-ui,sans-serif;
+  -webkit-font-smoothing:antialiased;line-height:1.55}
+.wrap{max-width:1180px;margin:0 auto;padding:26px 17px 90px}
+h1{font-size:clamp(23px,5vw,33px);font-weight:900;letter-spacing:-.02em;margin:0 0 6px}
+h2{font-size:clamp(19px,4vw,25px);font-weight:900;letter-spacing:-.015em;margin:0 0 8px}
+p{margin:0 0 10px}
+.kicker{font-size:11px;font-weight:900;letter-spacing:.16em;text-transform:uppercase;color:var(--pg-brand)}
+.lead{color:var(--pg-mute);font-size:15px;max-width:64ch}
+.card{background:var(--pg-card);border:1px solid var(--pg-rule);border-radius:16px;padding:17px 16px;margin:0 0 16px}
+.ur{font-size:15px;line-height:1.68}
+.numlist{margin:0;padding-left:1.15em;font-size:14.5px}
+.numlist li{margin-bottom:8px}
+.cost{font-size:13.5px;color:var(--pg-mute);border-left:3px solid var(--pg-brand);padding-left:11px;margin-top:10px}
+.tag{display:inline-block;font-size:10.5px;font-weight:900;letter-spacing:.11em;text-transform:uppercase;
+  padding:3px 9px;border-radius:999px;background:var(--pg-soft);color:var(--pg-brand);vertical-align:middle}
+hr.sep{border:0;border-top:1px solid var(--pg-rule);margin:30px 0 0}
+.swipehint{font-size:11.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--pg-mute);margin:22px 0 7px}
+.strip{display:flex;gap:16px;overflow-x:auto;scroll-snap-type:x mandatory;padding:4px 0 12px;-webkit-overflow-scrolling:touch}
+.strip::-webkit-scrollbar{height:7px}
+.strip::-webkit-scrollbar-thumb{background:var(--pg-rule);border-radius:9px}
+.col{flex:0 0 auto;scroll-snap-align:center;width:calc(399px * var(--fit))}
+.slot{width:calc(399px * var(--fit));height:calc(858px * var(--fit))}
+.slot > .phone{transform:scale(var(--fit));transform-origin:top left}
+.slotlbl{font-size:11px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:var(--pg-brand);margin:0 0 6px}
+.cap{font-size:12.5px;color:var(--pg-mute);margin:9px 0 14px;max-width:calc(399px * var(--fit))}
+.cap b{color:var(--pg-ink);font-weight:800}
+
+/* ===================== PHONE ===================== */
+.phone{width:399px;height:858px;background:#0b0b0d;border-radius:44px;padding:12px;box-shadow:0 22px 50px -24px rgba(0,0,0,.6)}
+.screen{position:relative;width:375px;height:834px;border-radius:33px;overflow:hidden;display:flex;flex-direction:column;
+  font-family:Nunito,ui-sans-serif,system-ui,sans-serif;background:var(--bg);color:var(--on)}
+.statusbar{height:22px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 18px;
+  font-size:11px;font-weight:800;color:var(--on);opacity:.85;background:var(--bg)}
+.app{flex:1;min-height:0;display:flex;flex-direction:column;position:relative;overflow:hidden}
+.screen[data-theme="light"]{--bg:#fafafa;--surface:#fff;--on:#1c1b1f;--on-var:#49454f;--outline:#79747e;
+  --outline-var:#cac4d0;--sv:#eceaf1;--brand:#0d4dc0;--brand-on:#fff;--brand-c:#d6e2ff;--on-brand-c:#001a48;--desk:#e9e7ef}
+.screen[data-theme="dark"]{--bg:#131316;--surface:#1c1b1f;--on:#e5e1e6;--on-var:#c7c5d0;--outline:#8e9099;
+  --outline-var:#45464f;--sv:#2a2930;--brand:#aec6ff;--brand-on:#002e6a;--brand-c:#00429b;--on-brand-c:#d8e2ff;--desk:#0c0c0f}
+
+/* ===================== THE PAPER =====================
+   A phone-native re-set of src/components/invoice/InvoiceDocument.tsx — the one render engine.
+   Its colours are FIXED in both themes: an invoice is white paper, and white paper is what gets
+   sent. On a dark screen the sheet is the only bright thing, like a document under a lamp. */
+.sheet{--ink:#1c1b1f;--pb:#0d4dc0;--pbon:#fff;background:#fff;color:var(--ink);font-size:12px;
+  display:flex;flex-direction:column;border-radius:0}
+.sheet.lift{box-shadow:0 14px 34px -18px rgba(0,26,72,.55),0 0 0 1px rgba(0,0,0,.05)}
+.band{background:var(--pb);min-height:76px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;padding:12px 16px}
+.mark{width:46px;height:46px;flex:none;border-radius:7px;background:rgba(255,255,255,.2);color:#fff;
+  display:flex;align-items:center;justify-content:center;font-weight:900;font-size:17px;letter-spacing:.02em}
+.mark.dash{background:transparent;border:1.5px dashed rgba(255,255,255,.72);font-size:11px;font-weight:800;
+  letter-spacing:0;line-height:1.1;text-align:center;padding:3px}
+.band-title{font-weight:900;font-size:25px;line-height:1;color:#fff;letter-spacing:0}
+.paper-body{padding:12px 16px 0;display:flex;flex-direction:column;flex:1;min-height:0}
+.meta{display:flex;flex-wrap:wrap;gap:10px 14px}
+.meta > div{flex:1 1 44%;min-width:120px}
+.lbl{font-size:12.5px;font-weight:800;color:var(--ink);margin:0 0 2px}
+.val{font-size:12px;font-weight:600;margin:0;line-height:1.3;overflow-wrap:anywhere}
+.val.sm{font-size:11px;font-weight:500;color:#4a4752}
+/* THE IDEA: an empty value is a dotted blank INSIDE the paper; the active one turns brand and
+   carries the caret. Nothing is a form field with a box around it. */
+.blank{display:inline-block;min-width:92px;border-bottom:1.5px dotted #b9b5c4;height:14px;vertical-align:-2px}
+.blank.live{border-bottom-color:var(--pb);border-bottom-style:solid;border-bottom-width:2px;position:relative}
+.blank.live::after{content:"";position:absolute;left:1px;top:-9px;width:1.5px;height:17px;background:var(--pb)}
+.details{margin-top:11px;display:flex;flex-wrap:wrap;gap:2px 16px}
+.details span{font-size:11.5px;font-weight:600}
+.itbl{width:100%;border-collapse:collapse;table-layout:fixed;margin-top:11px;border:1px solid var(--pb)}
+.itbl th{background:var(--pb);color:var(--pbon);font-size:10.5px;font-weight:800;padding:5px 7px;text-align:left}
+.itbl th.r,.itbl td.r{text-align:right}
+.itbl td{padding:6px 7px;font-size:11px;font-weight:700;vertical-align:top;line-height:1.3}
+.itbl tr.z td{background:rgba(13,77,192,.05)}
+.itbl td.desc{overflow-wrap:anywhere}
+.itbl td.desc .qty{font-weight:600;color:#5b5766;font-size:10px;margin-top:2px}
+.itbl td.amt{font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.itbl tr.empty td{height:22px}
+.totals-wrap{display:flex;justify-content:flex-end;margin-top:-1px}
+.totals{border:1px solid var(--pb);width:66%;min-width:198px;max-width:100%}
+.trow{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:2px 8px;padding:3px 9px;
+  background:rgba(13,77,192,.05);font-size:11px;font-weight:700}
+.trow span:last-child{font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.trow--total{background:rgba(13,77,192,.16);color:var(--pb);font-size:12.5px;font-weight:800;padding:6px 9px}
+.trow--paid{background:rgba(13,77,192,.34);color:var(--ink);font-size:12.5px;font-weight:800;padding:6px 9px}
+.trow--due{background:var(--pb);color:var(--pbon);font-size:13.5px;font-weight:800;padding:7px 9px}
+.paper-foot{margin-top:auto;padding-top:10px}
+.paper-foot .rule{border-top:1px solid #e0e0e0}
+.fbar{background:#f5f5f5;min-height:50px;margin-top:7px;display:flex;flex-wrap:wrap;align-items:center;
+  justify-content:space-between;gap:6px 10px;padding:7px 11px}
+.ftile{width:32px;height:32px;border-radius:5px;background:#fff;flex:none;display:flex;align-items:center;
+  justify-content:center;font-size:12px;font-weight:900;color:#0d4dc0}
+.fL{display:flex;align-items:center;gap:9px;min-width:0}
+.fL p{margin:0;font-size:9.5px;font-weight:700;color:#212121;line-height:1.2}
+.fL p.t{font-size:7.5px;font-weight:500;color:#666;margin-top:1px}
+.fR{display:flex;align-items:center;gap:7px}
+.fR .t1{font-size:8px;color:#666;text-align:right;margin:0}
+.fR .t2{font-size:9.5px;font-weight:800;color:#0d4dc0;text-align:right;margin:1px 0 0}
+.qr{width:32px;height:32px;border-radius:5px;flex:none;
+  background:repeating-conic-gradient(#1c1b1f 0 25%, #fff 0 50%) 0 0/9px 9px;border:2px solid #fff}
+.dim{opacity:.44;transition:opacity .2s}
+
+/* ===================== APP CHROME ===================== */
+.topbar{flex:none;display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:var(--bg)}
+.logo{font-size:17px;font-weight:900;letter-spacing:-.02em;color:var(--on)}
+.topbar .mini{font-size:12.5px;font-weight:700;color:var(--on-var)}
+.scrollarea{flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;background:var(--bg)}
+.desk{background:var(--desk);flex:0 1 auto;overflow:hidden;min-height:96px}
+.fadebot{position:relative}
+.fadebot::after{content:"";position:absolute;left:0;right:0;bottom:0;height:44px;pointer-events:none;
+  background:linear-gradient(to bottom,rgba(233,231,239,0),var(--desk) 84%)}
+.screen[data-theme="dark"] .fadebot::after{background:linear-gradient(to bottom,rgba(12,12,15,0),var(--desk) 84%)}
+.qhelp{font-size:12.5px;color:var(--on-var);margin:8px 0 0}
+.hero{padding:22px 16px 6px;background:var(--bg)}
+.hero h1{font-size:27px;line-height:1.14;font-weight:900;letter-spacing:-.025em;margin:0;color:var(--on)}
+.hero h1 em{font-style:normal;color:var(--brand)}
+.hero p{font-size:13.5px;color:var(--on-var);margin:9px 0 0}
+.stick{flex:none;background:var(--bg);border-top:1px solid var(--outline-var);padding:9px 16px 14px}
+.btn{display:flex;align-items:center;justify-content:center;min-height:50px;width:100%;background:var(--brand);
+  color:var(--brand-on);font-size:16px;font-weight:800;border-radius:10px;padding:8px 14px;text-align:center}
+.btn.ghost{background:transparent;color:var(--brand);border:0;font-size:14px;font-weight:800;min-height:38px;border-radius:0}
+/* the total, in the sheet's own TOTAL treatment: a FACT, not a button.
+   One filled element per screen -- the button below is the only thing painted to be pressed. */
+.factrow{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:2px 10px;
+  background:rgba(13,77,192,.14);color:var(--brand);padding:7px 10px;margin-bottom:9px}
+.screen[data-theme="dark"] .factrow{background:rgba(174,198,255,.16)}
+.factrow .k{font-size:11px;font-weight:900;letter-spacing:.1em;text-transform:uppercase}
+.factrow .m{font-size:19px;font-weight:900;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.cursel{display:inline-flex;align-items:center;gap:3px;border:1px solid currentColor;border-radius:999px;
+  padding:1px 7px;font-size:10px;font-weight:800;margin-left:7px;opacity:.85}
+
+/* ===================== KEYBOARD ===================== */
+.kb{flex:none;height:412px;background:#d4d3d9;padding:10px 5px 0;display:flex;flex-direction:column;gap:14px}
+.screen[data-theme="dark"] .kb{background:#26252b}
+.kb .sug{height:46px;display:flex;align-items:center;justify-content:space-around;font-size:14px;font-weight:700;color:#3c3b42}
+.screen[data-theme="dark"] .kb .sug{color:#cfcdd6}
+.kb .krow{display:flex;gap:6px;justify-content:center}
+.kb b{display:flex;align-items:center;justify-content:center;height:58px;flex:1;background:#fff;border-radius:6px;
+  font-size:19px;font-weight:500;color:#111;box-shadow:0 1px 0 rgba(0,0,0,.28)}
+.screen[data-theme="dark"] .kb b{background:#4a4952;color:#f2f1f6}
+.kb b.w{flex:1.6;font-size:13px;font-weight:700;background:#b3b2ba}
+.screen[data-theme="dark"] .kb b.w{background:#37363d}
+.kb b.sp{flex:5}
+.kb b.go{flex:2.1;background:#0d4dc0;color:#fff;font-size:14px;font-weight:800}
+.screen[data-theme="dark"] .kb b.go{background:#aec6ff;color:#002e6a}
+.kb.pad .krow b{height:64px;font-size:22px;font-weight:600}
+.kbhome{margin-top:auto;height:34px;display:flex;align-items:center;justify-content:center;flex:none}
+.kbhome i{width:134px;height:5px;border-radius:3px;background:rgba(0,0,0,.42);display:block}
+.screen[data-theme="dark"] .kbhome i{background:rgba(255,255,255,.45)}
+
+/* ===================== 1.5x FONT ===================== */
+.screen.big .statusbar{font-size:16px}
+.screen.big .band-title{font-size:37px}
+.screen.big .mark{width:64px;height:64px;font-size:25px}
+.screen.big .mark.dash{font-size:16px}
+.screen.big .lbl{font-size:18.5px}
+.screen.big .val{font-size:18px}
+.screen.big .val.sm{font-size:16.5px}
+.screen.big .blank{min-width:130px;height:20px}
+.screen.big .details span{font-size:17px}
+.screen.big .itbl th{font-size:15.5px}
+.screen.big .itbl td{font-size:16.5px}
+.screen.big .itbl td.desc .qty{font-size:15px}
+.screen.big .trow{font-size:16.5px}
+.screen.big .trow--total,.screen.big .trow--paid{font-size:18.5px}
+.screen.big .trow--due{font-size:20px}
+.screen.big .qhelp{font-size:18.5px}
+.screen.big .btn{font-size:24px;min-height:64px}
+.screen.big .btn.ghost{font-size:21px;min-height:48px}
+.screen.big .factrow .k{font-size:16.5px}
+.screen.big .factrow .m{font-size:28px}
+.screen.big .cursel{font-size:15px}
+.screen.big .hero h1{font-size:38px}
+.screen.big .hero p{font-size:19px}
+.screen.big .logo{font-size:24px}
+.screen.big .topbar .mini{font-size:18px}
+.screen.big .fL p{font-size:14px}
+.screen.big .fL p.t{font-size:11px}
+.screen.big .fR .t1{font-size:12px}
+.screen.big .fR .t2{font-size:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<p class="kicker">Invotick · Design · A/B challenger · 25 Sep 2026</p>
+<h1>Kaghaz Par Seedha Likhein</h1>
+<p class="lead ur"><b>Koi form hai hi nahi. Screen hi invoice hai.</b> Khali jagahein kaghaz ke andar nuqton wali lakeer hain — business ka naam wahan likhein jahan chhapega, client ka naam “Bill To” ke neeche, kaam ka naam table ki pehli line mein. Keyboard ka “next” aap ko kaghaz par aage le jata hai. Total saamne seerhi mein barhta rehta hai. <b>Koi progress patti nahi</b> — progress yeh hai ke kaghaz par kitni siyahi aa gayi.</p>
+
+<div class="card">
+  <h2>Yeh file kyun mehfooz ki gayi <span class="tag">A/B challenger</span></h2>
+  <p class="ur" style="color:var(--pg-mute);margin-top:6px">Malik ne 2026-09-25 ko teeno design default ke taur par rad kiye, magar <b>isi ek ko alag se rakha</b>:
+  <em>“ye design — kaghaz per seedha likhny wala — kaam tm apny memory per save rakhna, isko ham a/b testing zaroor kerna chain gy.”</em>
+  Is liye yeh default nahi, <b>muqable ka doosra raasta</b> hai. Poori tafseel: <code>docs/decisions/0167</code>.</p>
+  <p class="cost ur"><b>Kharcha aur khatra:</b> lagbhag <b>4–5 din</b>. Har khana kaghaz ke andar likhna parega; jo line likhi ja rahi ho usay keyboard ke upar laana parega; bare font (1.5×) aur Urdu/Arabic (ulta rukh) ke liye apna alag imtehan chahiye.</p>
+</div>
+
+<hr class="sep">
+<p class="swipehint">Poora safar · light · ungli se side par kheenchein &rarr;</p>
+<div class="strip" id="light"></div>
+
+<p class="swipehint">Keyboard khuli hui · asli jagah sirf 375 × 400</p>
+<div class="strip" id="kb"></div>
+
+<p class="swipehint">Dark mode · kaghaz safed hi rehta hai</p>
+<div class="strip" id="dark"></div>
+
+<p class="swipehint">Bara font (1.5×) · woh imtehan jis mein hamari layout pehle chhe dafa nakaam hui hai</p>
+<div class="strip" id="big"></div>
+
+<div class="card" style="margin-top:20px">
+  <h2>Usool jo is design mein bhi nahi toote</h2>
+  <ol class="numlist ur" style="margin-top:8px">
+    <li><b>Koi ishtihaar nahi</b> — kahin koi khali jagah bhi nahi chhori gayi.</li>
+    <li><b>Koi account, koi sign-up nahi</b> invoice ban-ne se pehle.</li>
+    <li><b>Raqam kabhi kati nahi</b> — zaroorat par agli line par, aur “$” apne number se kabhi juda nahi hota.</li>
+    <li><b>Ek hi chamakta button</b> har screen par. Total ek haqeeqat hai (halka neela), button nahi.</li>
+    <li><b>Dark mein bhi kaghaz safed</b> — jo aap bhej rahe hain woh safed kaghaz hai.</li>
+    <li><b>Keyboard aage le jata hai</b>, aur total chipki patti ke peeche kabhi nahi chhupta.</li>
+  </ol>
+</div>
+
+</div>
+
+<script>
+/* ===================== REAL CONTENT — never a placeholder ===================== */
+const D={ biz:"GIFTAT ENGINEERING (PVT) LTD", initials:"GE",
+ bizAddr:"12-C Quaid Block, Gulberg III, Lahore", bizPhone:"+92 42 3577 1140",
+ client:"Northgate Coffee Roasters Ltd", clientAddr:"Unit 4, Sundar Industrial Estate, Lahore",
+ num:"INV-107023", issue:"Sep 25, 2026", due:"Oct 9, 2026",
+ items:[{d:"Site survey, structural drawings and steel fabrication for the mezzanine floor at Gulberg warehouse",q:1,p:6240.00,a:6240.00},
+        {d:"Powder coating and on-site installation",q:2,p:717.77,a:1435.54}],
+ total:7675.54 };
+const M=n=>"$"+n.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+const esc=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
+
+/* ===================== THE PAPER ===================== */
+function paper(o={}){
+  const dim=k=>(o.focus&&o.focus!==k)?" dim":"";
+  const items=o.items||[];
+  const rows=o.rows===undefined?3:o.rows;
+  const total=items.reduce((s,i)=>s+i.a,0);
+  const blank=(live,w)=>'<span class="blank'+(live?' live':'')+'" style="min-width:'+(w||92)+'px"></span>';
+
+  const bizCell=o.biz?'<p class="val">'+esc(o.biz)+'</p>'
+    :(o.blanks?'<p class="val">'+blank(o.live==="biz",118)+'</p>':'<p class="val" style="color:#b6b2bf">&mdash;</p>');
+  const clientCell=o.client?'<p class="val">'+esc(o.client)+'</p>'
+    :(o.blanks?'<p class="val">'+blank(o.live==="client",112)+'</p>':'<p class="val" style="color:#b6b2bf">&mdash;</p>');
+
+  let tbody="";
+  items.forEach((it,i)=>{
+    tbody+='<tr class="'+(i%2===1?"z":"")+'">'
+      +'<td>'+(i+1)+'</td>'
+      +'<td class="desc">'+esc(it.d)+'<div class="qty">'+it.q+' &times; '+M(it.p)+'</div></td>'
+      +'<td class="amt r">'+M(it.a)+'</td></tr>';
+  });
+  if(o.blanks&&o.live==="item"){
+    const i=items.length;
+    tbody+='<tr class="'+(i%2===1?"z":"")+'"><td>'+(i+1)+'</td>'
+      +'<td class="desc">'+blank(true,128)+'</td><td class="amt r">'+blank(false,56)+'</td></tr>';
+  }
+  for(let k=items.length+(o.blanks&&o.live==="item"?1:0);k<rows;k++){
+    tbody+='<tr class="empty '+(k%2===1?"z":"")+'"><td></td><td></td><td></td></tr>';
+  }
+
+  const totalsHtml=o.totals===false?"":
+   '<div class="totals-wrap'+dim("items")+'"><div class="totals">'
+   +'<div class="trow"><span>SUB TOTAL</span><span>'+M(total)+'</span></div>'
+   +'<div class="trow"><span>DISCOUNT</span><span>'+M(0)+'</span></div>'
+   +'<div class="trow"><span>TAX</span><span>'+M(0)+'</span></div>'
+   +'<div class="trow trow--total"><span>TOTAL</span><span>'+M(total)+'</span></div>'
+   +'<div class="trow trow--paid"><span>AMOUNT PAID</span><span>'+M(0)+'</span></div>'
+   +'<div class="trow trow--due"><span>BALANCE DUE</span><span>'+M(total)+'</span></div>'
+   +'</div></div>';
+
+  const footHtml=o.footer?
+   '<div class="paper-foot"><div class="rule"></div><div class="fbar">'
+   +'<div class="fL"><div class="ftile">IT</div><div><p>Invoice generated using Invotick</p>'
+   +'<p class="t">Create professional invoices in seconds</p></div></div>'
+   +'<div class="fR"><div><p class="t1">Scan to download Invotick</p>'
+   +'<p class="t2">gw.invotick.com/r/2/GE7Q</p></div><div class="qr"></div></div>'
+   +'</div></div>':"";
+
+  let markHtml="";
+  if(o.logo==="mark") markHtml='<div class="mark">'+D.initials+'</div>';
+  else if(o.logo==="dash") markHtml='<div class="mark dash">+ Add<br>logo</div>';
+  else markHtml='<div class="mark" style="background:rgba(255,255,255,.12)"></div>';
+
+  return '<div class="sheet '+(o.lift?"lift":"")+'" style="'+(o.style||"")+'">'
+   +'<div class="band'+dim("biz")+'">'+markHtml+'<div class="band-title">INVOICE</div></div>'
+   +'<div class="paper-body">'
+   +  '<div class="meta">'
+   +    '<div class="'+dim("biz").trim()+'"><p class="lbl">From</p>'+bizCell
+   +       ((!o.biz)?"":'<p class="val sm">'+D.bizAddr+'</p><p class="val sm">Phone: '+D.bizPhone+'</p>')+'</div>'
+   +    '<div class="'+dim("client").trim()+'"><p class="lbl">Bill To</p>'+clientCell
+   +       ((!o.client)?"":'<p class="val sm">'+D.clientAddr+'</p>')+'</div>'
+   +  '</div>'
+   +  '<div class="details'+dim("none")+'"><p class="lbl" style="flex:1 1 100%">Invoice Details</p>'
+   +     '<span>Invoice #: '+D.num+'</span><span>Issue: '+D.issue+'</span><span>Due: '+D.due+'</span></div>'
+   +  '<table class="itbl'+dim("items")+'"><thead><tr><th style="width:9%">S#</th><th>Description</th>'
+   +     '<th class="r" style="width:33%">Amount</th></tr></thead><tbody>'+tbody+'</tbody></table>'
+   +  totalsHtml + footHtml
+   +'</div></div>';
+}
+
+/* ===================== KEYBOARDS ===================== */
+const status='<div class="statusbar"><span>9:41</span><span>5G &nbsp;&#9646;&#9646;&#9646;</span></div>';
+const kbText=go=>'<div class="kb"><div class="sug"><span>Gulberg</span><span>Engineering</span><span>Northgate</span></div>'
+ +'<div class="krow"><b>q</b><b>w</b><b>e</b><b>r</b><b>t</b><b>y</b><b>u</b><b>i</b><b>o</b><b>p</b></div>'
+ +'<div class="krow" style="padding:0 14px"><b>a</b><b>s</b><b>d</b><b>f</b><b>g</b><b>h</b><b>j</b><b>k</b><b>l</b></div>'
+ +'<div class="krow"><b class="w">&#8679;</b><b>z</b><b>x</b><b>c</b><b>v</b><b>b</b><b>n</b><b>m</b><b class="w">&#9003;</b></div>'
+ +'<div class="krow"><b class="w">123</b><b class="sp"></b><b class="go">'+go+'</b></div><div class="kbhome"><i></i></div></div>';
+/* An iPhone decimal pad has NO return key -- drawn honestly, with a backspace.
+   That is exactly why the sticky bar below must always be there. */
+const kbNum='<div class="kb pad"><div class="sug"><span>&nbsp;</span></div>'
+ +'<div class="krow"><b>1</b><b>2</b><b>3</b></div><div class="krow"><b>4</b><b>5</b><b>6</b></div>'
+ +'<div class="krow"><b>7</b><b>8</b><b>9</b></div><div class="krow"><b>.</b><b>0</b><b class="w">&#9003;</b></div>'
+ +'<div class="kbhome"><i></i></div></div>';
+
+/* ===================== THE DIRECTION =====================
+   Step 1 = business, 2 = client, 3 = the work, 4 = done. Step 0 is the landing.
+   KBSCROLL: when the keyboard is up the sheet scrolls so the line being written sits above it --
+   that is what the real screen would do, and it is the whole reason this idea is expensive. */
+const KBSCROLL={1:20, 2:20, 3:190};
+function d3(step, kb){
+  const kbHtml = kb ? (step===3 ? kbNum : kbText("next")) : "";
+
+  if(step===0){
+    return '<div class="desk" style="padding:0;flex:1;min-height:0;display:flex;flex-direction:column">'
+     +'<div class="topbar" style="background:var(--desk)"><span class="logo">Invotick</span><span class="mini">Sign in</span></div>'
+     +'<div class="hero" style="background:var(--desk);padding-top:6px">'
+     +'<h1>Kaghaz par seedha likhein.<br><em>Yehi aap ka invoice hai.</em></h1>'
+     +'<p>No account. No watermark.</p></div>'
+     +'<div class="fadebot" style="padding:12px 12px 0;background:var(--desk);flex:1;overflow:hidden">'
+     + paper({biz:D.biz,client:D.client,items:D.items,logo:"mark",rows:3,lift:true,style:"max-height:430px;overflow:hidden"})
+     +'</div></div>'
+     +'<div class="stick"><div class="btn">Start writing &nbsp;&rarr;</div>'
+     +'<div class="btn ghost">Get it on Google Play</div></div>';
+  }
+
+  const live = step===1?"biz":step===2?"client":"item";
+  const o = {
+    blanks:true, live: step===4?null:live, logo: step>=1?"mark":"dash",
+    biz: step>=2 ? D.biz : null,
+    client: step>=3 ? D.client : null,
+    items: step>=4 ? D.items : (step===3 ? [D.items[0]] : []),
+    rows:3, footer: step===4, lift:true,
+    style:"flex:1;min-height:0;overflow:hidden"
+  };
+  if(step===4){ o.biz=D.biz; o.client=D.client; o.items=D.items; o.blanks=false; o.logo="dash"; o.rows=2; }
+
+  const label = step===1 ? "Business ka naam yahan likhein"
+              : step===2 ? "Client ka naam &mdash; &ldquo;Bill To&rdquo; ke neeche"
+              : step===3 ? "Kaam ka naam, phir price" : "";
+
+  const bar = step===4
+   ? '<div class="btn">Share invoice</div><div class="btn ghost">Change template &amp; colour</div>'
+   : step===3
+   ? '<div class="factrow"><span class="k">Total <span class="cursel">USD &#9662;</span></span>'
+     +'<span class="m">'+M(D.items[0].a)+'</span></div><div class="btn">Preview &amp; download</div>'
+   : '<div class="btn">Next</div>';
+
+  const hint = step<4 ? '<p class="qhelp" style="padding:0 16px;margin:7px 0 0;font-weight:700">'+label+'</p>' : "";
+  const sc = kb && KBSCROLL[step] ? KBSCROLL[step] : 0;
+
+  return '<div class="scrollarea"><div class="desk fadebot" style="padding:10px 12px 0;flex:1;min-height:0;'
+   +'overflow:hidden;display:flex;flex-direction:column">'
+   +'<div class="sheetscroll" style="margin-top:-'+sc+'px;flex:1;min-height:0;display:flex;flex-direction:column">'
+   + paper(o) + '</div></div>' + hint + '</div>'
+   +'<div class="stick">'+bar+'</div>' + kbHtml;
+}
+
+/* ===================== BUILD ===================== */
+function phone(theme,inner,extra){
+  return '<div class="phone"><div class="screen '+(extra||"")+'" data-theme="'+theme+'">'+status
+   +'<div class="app">'+inner+'</div></div></div>';
+}
+function col(theme,inner,label,cap,extra){
+  return '<div class="col"><p class="slotlbl">'+label+'</p><div class="slot">'+phone(theme,inner,extra)+'</div>'
+   +'<p class="cap">'+cap+'</p></div>';
+}
+const CAP_LIGHT=[
+ "<b>Landing</b> &mdash; screen hi kaghaz hai. Ek hi button: likhna shuru karein.",
+ "<b>Step 1 &mdash; Business.</b> Naam &ldquo;From&rdquo; ki nuqton wali lakeer par likha ja raha hai. Koi form hai hi nahi.",
+ "<b>Step 2 &mdash; Client.</b> Cursor khud &ldquo;Bill To&rdquo; par chala gaya. Koi progress patti nahi &mdash; progress yeh hai ke kaghaz par kitni siyahi aayi.",
+ "<b>Step 3 &mdash; Kaam.</b> Line table ke khaali khane mein likhi ja rahi hai, aur total saamne seerhi mein barh raha hai.",
+ "<b>Step 4 &mdash; Tayyar.</b> Nuqte khatam, kaghaz mukammal, footer patti aa gayi, aur ek hi chamakta button."
+];
+const CAP_KB=[
+ "<b>Step 1, keyboard khuli.</b> Kaghaz upar khisak jata hai taake jo line likhi ja rahi hai woh keyboard ke upar rahe.",
+ "<b>Step 2, keyboard khuli.</b> Header patti upar chipki rehti hai &mdash; pata rehta hai ke aap invoice hi par hain.",
+ "<b>Step 3, number pad.</b> Price kaghaz ke khane mein hi likhi ja rahi hai; total neeche patti mein. iPhone ke number pad par return key hoti hi nahi (dekhein &mdash; sirf backspace), isi liye neeche ki patti hamesha maujood hai."
+];
+const CAP_DARK=[
+ "<b>Dark &mdash; step 1.</b> App ka rang andhera, kaghaz safed. Jo bhejna hai woh safed kaghaz hai.",
+ "<b>Dark &mdash; step 3.</b> Total halke neele mein &mdash; yeh ek haqeeqat hai, button nahi. Button sirf ek.",
+ "<b>Dark &mdash; tayyar.</b> Andhere mein kaghaz akela chamakta hai, jaise lamp ke neeche."
+];
+const CAP_BIG=[
+ "<b>Bara font (1.5×), step 1.</b> Naam agli line par jata hai, kata nahi. Nuqton wali lakeer bhi sath barhti hai.",
+ "<b>Bara font (1.5×), step 3.</b> Chaudah lafzon ki line poori, raqam poori, total apne nishaan ($) ke saath &mdash; kuch bhi aadha nahi.",
+ "<b>Bara font, dark, tayyar.</b> BALANCE DUE aur uska nishaan kabhi alag nahi hote."
+];
+document.getElementById("light").innerHTML=[0,1,2,3,4]
+  .map((s,i)=>col("light",d3(s,false),"Step "+(s===0?"0 · landing":s),CAP_LIGHT[i])).join("");
+document.getElementById("kb").innerHTML=[1,2,3]
+  .map((s,i)=>col("light",d3(s,true),"Step "+s+" · keyboard",CAP_KB[i])).join("");
+document.getElementById("dark").innerHTML=[1,3,4]
+  .map((s,i)=>col("dark",d3(s,false),"Dark · step "+s,CAP_DARK[i])).join("");
+document.getElementById("big").innerHTML=
+   col("light",d3(1,false),"1.5× · step 1",CAP_BIG[0],"big")
+ + col("light",d3(3,false),"1.5× · step 3",CAP_BIG[1],"big")
+ + col("dark", d3(4,false),"1.5× · dark · tayyar",CAP_BIG[2],"big");
+</script>
+</body>
+</html>
