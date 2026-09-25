@@ -68,6 +68,11 @@ export interface FreeInvoice {
   // origin is reported as unknown, never as `typed` (AGENTS-EVENTS.md §1.7). Local only: the backup
   // sync maps named fields, so this never leaves the browser.
   origin?: InvoiceOrigin;
+  // The trade the onboarding asked for (`industries.ts` id). It picks the invoice design and the
+  // glyph on the generated mark, and it rides on `free_invoice_completed` so we can see which
+  // trades actually finish an invoice. Optional and never defaulted: a draft made before the
+  // onboarding existed has none, and absent means unknown (AGENTS-EVENTS.md §1.7). Local only.
+  industry?: string;
   // Bookkeeping
   createdAt: number;
   updatedAt: number;

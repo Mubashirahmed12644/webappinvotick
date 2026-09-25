@@ -79,6 +79,9 @@ export function completionParams(inv: FreeInvoice): Record<string, string | numb
     // draft stored before the field existed carries no answer, and inventing one would report a
     // file somebody chose as a mark we made.
     ...(inv.logoDataUrl && inv.logoSource ? { logo_source: inv.logoSource } : {}),
+    // The trade, only when one was picked. It is a join-free answer to "which trades finish an
+    // invoice"; a draft from before the onboarding has none, and none is never guessed at.
+    ...(inv.industry ? { industry: inv.industry } : {}),
     has_tax: (parseFloat(inv.taxRate) || 0) > 0 ? "true" : "false",
     has_discount: (parseFloat(inv.discountValue) || 0) > 0 ? "true" : "false",
     optional_fields: OPTIONAL_FIELDS.filter((k) => String(inv[k] ?? "").trim()).length,

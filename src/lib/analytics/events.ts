@@ -219,16 +219,44 @@ export const TOOL_OPEN_METHODS = ["cta_press", "deep_link"] as const;
 /**
  * The step the person **advanced to**, first time only.
  *
- * `business` is deliberately not here: reaching step 1 is the tool opening, and that already has a
- * row (`free_invoice_tool_opened`). One action, one event (§1.1) — so a funnel of this flow reads
- * `free_invoice_page_view` → `free_invoice_tool_opened` → these three, in that order, and the
- * denominator of "reached the client step" is the `tool_opened` count.
+ * **This one parameter is the whole "where do people leave" question**, which is why the onboarding
+ * added values to it rather than events of its own (§1.1). A name per step would make "how far did
+ * they get" an OR across eleven counters, and the first one anybody forgot would lower the number
+ * in silence.
+ *
+ * Two moments deliberately have **no** value, and both for the same reason:
+ *
+ * - **`slide_1`** — reaching the first slide *is* the tool opening, and that already has a row
+ *   (`free_invoice_tool_opened`). Two names for one moment is one press counted twice (§1.11).
+ * - **The "One moment…" screen** — it appears only if opening the local database is slow enough to
+ *   see, so a missing row would mean either "fast" or "they left", which are opposite facts. How
+ *   long the open took is a timing question, not a funnel step.
+ *
+ * ⚠️ **`business` used to be excluded for the `slide_1` reason** and is now a value, because the
+ * business field stopped being step 1 the day the slides went in front of it. Rows from before the
+ * onboarding shipped therefore never carry it — absent is "this visitor never saw that flow", not
+ * "they did not reach it". Split any funnel spanning that deploy by date.
  *
  * `done` is the finished-invoice screen being shown, **not** a PDF: the download is its own press
  * and its own row (`free_invoice_pdf_download`), and the gap between the two is the last drop
  * before this surface's G1 moment.
  */
-export const GUIDED_STEPS = ["client", "items", "done"] as const;
+export const GUIDED_STEPS = [
+  // The onboarding (decision 0167), in the order a person meets them. Added, never renamed: rows
+  // sent before it existed carry only the last three, and that is exactly what they meant then.
+  "slide_2",
+  "slide_3",
+  "business",
+  "industry",
+  "logo_upload",
+  "logo_made",
+  "ready",
+  "home",
+  // The invoice itself, unchanged since 0165.
+  "client",
+  "items",
+  "done",
+] as const;
 
 /**
  * What the person did with the mark we generated from their business name.
@@ -242,7 +270,15 @@ export const GUIDED_STEPS = ["client", "items", "done"] as const;
  * Not capped to once a visit. Each of the three is a deliberate press, and somebody who opens the
  * picker, cancels, and then keeps the generated mark has done two things, not one.
  */
-export const LOGO_CHOICES = ["kept", "change_opened", "skipped"] as const;
+export const LOGO_CHOICES = [
+  "kept",
+  "change_opened",
+  "skipped",
+  // "Try another" on the made-logo step (0167). A real, repeated press: somebody who cycles four
+  // designs before keeping one has told us something about the first three that a single `kept`
+  // row cannot. Not capped, for the same reason `change_opened` is not.
+  "regenerated",
+] as const;
 
 /**
  * Where the logo on a finished invoice came from.
@@ -261,6 +297,28 @@ export const LOGO_CHOICES = ["kept", "change_opened", "skipped"] as const;
  * guess (§1.7).
  */
 export const LOGO_SOURCES = ["generated", "uploaded"] as const;
+
+/**
+ * The trade the onboarding asked for, on the row that reports a finished invoice.
+ *
+ * It is here rather than on the industry step itself because the question worth answering is
+ * **which trades finish an invoice**, not which trades were tapped — and a parameter on the event
+ * that already reports the finish answers it without a join (§1.1).
+ *
+ * The values are written out here rather than imported, because this module is loaded by Node's
+ * own test runner and must stay free of runtime imports. `industries.test.ts` asserts the two
+ * lists are identical, so they cannot drift in silence — a stronger guarantee than a shared
+ * import, because drift fails loudly instead of compiling. Absent means unknown, which covers a draft started before the onboarding
+ * existed and a visitor who never reached that step (§1.7).
+ */
+export const INDUSTRY_VALUES = [
+  "welding", "carpentry", "construction", "electrical", "plumbing", "painting", "roofing",
+  "cleaning", "landscaping", "automotive", "transport", "it_services", "web_design", "design",
+  "photography", "marketing", "consulting", "accounting", "legal", "real_estate",
+  "construction_eng", "medical", "beauty", "fitness", "education", "events", "food", "retail",
+  "wholesale", "manufacturing", "agriculture", "textiles", "security", "printing", "hvac",
+  "salon_mobile", "other",
+] as const;
 
 /**
  * Where a landing store badge sends them.
@@ -409,6 +467,9 @@ const PARAM_SCHEMA: Record<WebEventName, Record<string, ParamRule>> = {
     // Our mark or their file — see `LOGO_SOURCES`. Absent when there is no logo, and absent on a
     // draft stored before this key existed; never defaulted to either value.
     logo_source: { kind: "enum", values: LOGO_SOURCES, required: false },
+    // Which trade finished an invoice. Absent for a draft started before the onboarding existed,
+    // and for anybody who never reached that step.
+    industry: { kind: "enum", values: INDUSTRY_VALUES, required: false },
   },
 
   free_invoice_pdf_download: {
