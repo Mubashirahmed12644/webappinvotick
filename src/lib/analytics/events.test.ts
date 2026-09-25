@@ -54,6 +54,41 @@ test("completed keeps every required parameter, and source stays off when unknow
   assert.equal(sanitiseParams("free_invoice_completed", { ...complete, optional_fields: 99 }), null);
 });
 
+test("the finished invoice says which kind of logo it carries, and refuses to guess", () => {
+  const complete = {
+    items: 1,
+    has_logo: "true",
+    has_tax: "false",
+    has_discount: "false",
+    optional_fields: 0,
+  };
+  // The mark we draw from the business name, and a file they chose. Both are real answers.
+  for (const logo_source of ["generated", "uploaded"]) {
+    assert.deepEqual(sanitiseParams("free_invoice_completed", { ...complete, logo_source }), {
+      ...complete,
+      logo_source,
+    });
+  }
+  // Absent is the answer for an invoice with no logo and for a draft stored before the field
+  // existed. It is optional, so the row still arrives — with the question simply unanswered (§1.7).
+  assert.deepEqual(sanitiseParams("free_invoice_completed", complete), complete);
+  // A third word invented by a caller is not a third kind of logo.
+  assert.equal(sanitiseParams("free_invoice_completed", { ...complete, logo_source: "theirs" }), null);
+});
+
+test("the logo choice keeps `kept` and `skipped` readable, though nothing sends them now", () => {
+  // The guided step stopped asking Keep / Change / Skip, so only `change_opened` is still a press.
+  assert.deepEqual(sanitiseParams("free_invoice_logo_choice", { choice: "change_opened" }), {
+    choice: "change_opened",
+  });
+  // The other two stay in the code space: rows sent before that change carry them, and dropping a
+  // value from the list would make its own history unreadable (§1.8).
+  for (const choice of ["kept", "skipped"]) {
+    assert.deepEqual(sanitiseParams("free_invoice_logo_choice", { choice }), { choice });
+  }
+  assert.equal(sanitiseParams("free_invoice_logo_choice", { choice: "changed" }), null);
+});
+
 test("a failed pdf keeps the error's class name and nothing that could be free text", () => {
   assert.deepEqual(
     sanitiseParams("free_invoice_pdf_download", { outcome: "failed", exception_class: "TypeError" }),

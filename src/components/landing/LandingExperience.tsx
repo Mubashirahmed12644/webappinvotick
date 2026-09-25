@@ -62,7 +62,11 @@ import { StoreBadges } from "./StoreBadges";
  *
  * Opening the tool writes `#create` with `replaceState`, so a reload or a shared link lands with the
  * form already open — and the browser never leaves the page. It is deliberately `replaceState` and
- * not `pushState`: the back button belongs to "where I came from", not to "I closed a panel".
+ * not `pushState`: from step 1, Back belongs to "where I came from", not to "I closed a panel".
+ *
+ * **Each guided step after the first does push one**, so Back inside the flow means one step back
+ * rather than out of the page — `GuidedFirstInvoice`'s `STEP_HASH`. Those hashes all begin
+ * `#create`, which is what the snapshot below tests, so every one of them is still a door in.
  */
 /** The hash is the browser's state, not React's, so React is told to read it rather than copy it. */
 function subscribeToHash(onChange: () => void) {

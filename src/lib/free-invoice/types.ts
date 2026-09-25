@@ -13,6 +13,9 @@ export interface FreeLineItem {
 
 export type InvoiceOrigin = "typed" | "sample" | "sample_edited";
 
+/** Where the logo came from. Mirrors `LOGO_SOURCES` in `lib/analytics/events.ts`. */
+export type LogoSource = "generated" | "uploaded";
+
 export interface FreeInvoice {
   id: string; // stable UUID assigned at creation — the dedup key for later sync
   // Your business
@@ -21,6 +24,11 @@ export interface FreeInvoice {
   businessEmail: string;
   businessPhone: string;
   logoDataUrl: string | null; // client-side data URL (<=2MB), never uploaded pre-signup
+  // Our generated mark, or a file they chose. Reported as `logo_source` on
+  // `free_invoice_completed`, which is the only reason it is stored at all. Optional and never
+  // defaulted: a draft saved before this field existed has none, and no logo has none either —
+  // absent means unknown on both counts (AGENTS-EVENTS.md §1.7). Local only, like `origin`.
+  logoSource?: LogoSource;
   // Invoice meta
   invoiceNumber: string;
   issueDate: string; // YYYY-MM-DD
