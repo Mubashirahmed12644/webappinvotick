@@ -5,7 +5,13 @@ import { platformFromUserAgent, type ViewerPlatform } from "@/lib/analytics/plat
 import { APP_STORE_URL, landingPlayUrl } from "@/lib/free-invoice/install";
 
 /**
- * The two store badges under the landing's one CTA.
+ * The store badges, which live in the **site footer**.
+ *
+ * They sat under the landing's one CTA until 2026-09-25. Invoice Fly's own page puts theirs at the
+ * very bottom — App Store and Google Play after Pricing / Blog / Help Center, just above the
+ * copyright — and carries no store button above the fold at all. That is the right call for a page
+ * whose job is to get a stranger into an invoice: a button above the fold that leads to a store is
+ * a way out of that. Everything below is unchanged; only the address is new.
  *
  * ## Three things this component exists to get right
  *
@@ -34,7 +40,7 @@ type Store = "play" | "app_store";
 /** The device does not change while the page is open, so there is nothing to subscribe to. */
 const noSubscription = () => () => {};
 
-export function StoreBadges({ onBadgeClick }: { onBadgeClick?: (store: Store) => void }) {
+export function StoreBadges({ onBadgeClick }: { onBadgeClick?: (store: Store) => void } = {}) {
   // `null` on the server and through hydration: "we have not looked yet", which renders as the
   // level desktop order. It is never a claim that the device IS a desktop (§1.7 — absent means
   // unknown). `useSyncExternalStore` is how React is told that the server and the client honestly
@@ -137,28 +143,23 @@ function AppStoreBadge({ emphasis, order }: { emphasis: Emphasis; order: number 
     );
   }
 
+  // No listing, so no badge — a sentence instead.
+  //
+  // It used to be a full-size badge wearing a "Soon" pill, and pressing it did nothing. A control
+  // that cannot be pressed costs more than the space it takes: it spends the visitor's belief in
+  // every other button on the screen, including the one that matters. Drawn as a badge it looked
+  // like a promise the page could not keep; drawn as a line it is simply true.
+  //
+  // It keeps its `order`, so on an iPhone it still comes first — decision 0164's device-aware
+  // ordering, unchanged. The day `APP_STORE_URL` exists, the branch above renders the real badge in
+  // exactly that position and this line is gone.
   return (
-    <div
+    <p
       style={{ order }}
-      className={shell(emphasis, false)}
-      role="note"
-      aria-label="Invotick for iPhone is coming soon to the App Store"
+      className="py-1 text-center text-[13px] text-[var(--color-on-surface-variant)] sm:self-center sm:text-start"
     >
-      <AppleGlyph muted />
-      <span className="min-w-0 flex-1 leading-tight">
-        <span className="block text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--color-on-surface-variant)]">
-          On the
-        </span>
-        <span className="block truncate text-[15px] font-extrabold text-[var(--color-on-surface-variant)]">
-          App Store
-        </span>
-      </span>
-      {/* The pill wraps under the label rather than squeezing it, so at a large font scale the
-          store's name stays whole and this moves instead. */}
-      <span className="shrink-0 rounded-full bg-[var(--color-surface-variant)] px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-[var(--color-on-surface-variant)]">
-        Soon
-      </span>
-    </div>
+      iPhone app coming soon.
+    </p>
   );
 }
 
