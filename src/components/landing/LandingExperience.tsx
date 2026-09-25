@@ -7,7 +7,6 @@ import { Onboarding } from "@/components/free-invoice/Onboarding";
 import { useFreeInvoice } from "@/components/free-invoice/useFreeInvoice";
 import { trackWebEvent } from "@/lib/analytics/client";
 import { InvoiceGlimpse } from "./InvoiceGlimpse";
-import { StoreBadges } from "./StoreBadges";
 
 /**
  * The hybrid landing — option C of decision 0164, with 0165's fixes measured on the live site.
@@ -216,6 +215,32 @@ export function LandingExperience() {
               Three questions, then download the PDF. No account, no watermark, nothing to install.
             </p>
           )}
+
+          {/*
+            Two facts, and both of them ours.
+
+            Invoice Fly's first screen carries 4.8 stars, "125,000 small businesses" and a press
+            band — earned, and **we cannot copy any of it**: there is no Play rating for Invotick at
+            all, so no number here was invented. These two are true and were already being said on
+            the first value slide, where a visitor only sees them after pressing the button.
+
+            The second one is the point. "96% never made an account" is not a claim about the
+            promise this page makes — it is **proof of it**, in the sentence directly above.
+
+            One line, not a box: at a 1.5× font scale a two-column box becomes three lines and
+            pushes the button down, while a line simply wraps. `gap-y` carries the wrap.
+          */}
+          {!open && (
+            <p className="mx-auto mt-3 flex max-w-[42ch] flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[13px] text-[var(--color-on-surface-variant)] sm:text-sm lg:mx-0 lg:justify-start">
+              <span>
+                <b className="font-extrabold text-[var(--color-on-surface)]">4,000+</b> businesses
+              </span>
+              <span aria-hidden="true" className="opacity-40">·</span>
+              <span>
+                <b className="font-extrabold text-[var(--color-on-surface)]">96%</b> never made an account
+              </span>
+            </p>
+          )}
         </div>
 
         {/*
@@ -241,16 +266,24 @@ export function LandingExperience() {
                 <path d="M5 12h14M13 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </button>
-            {/* The badges stay with the button, above the glimpse on a phone: "or get the app" is
-                the second choice this page offers, and it belongs beside the first one rather than
-                after 320 px of decoration. */}
-            <StoreBadges
-              onBadgeClick={(store) =>
-                trackWebEvent("free_invoice_store_badge_click", {
-                  destination: store === "play" ? "play_store" : "app_store",
-                })
-              }
-            />
+            {/*
+              The store badges are NOT here any more — they are in the site footer.
+
+              0165 put them beside the button, reasoning that "or get the app" is the second choice
+              this page offers. The evidence says otherwise, and it is Invoice Fly's own page:
+              their App Store and Google Play badges sit at the very bottom, in the footer, after
+              Pricing / Blog / Help Center and just above the copyright. Above the fold they carry
+              **no** store button at all.
+
+              The reason is the one this page is judged on: its job is to get a stranger into an
+              invoice, and every button above the fold that leads somewhere else is a way out of
+              that. Measured here: the badge block ran 331 → 505 px and pushed the sample invoice
+              — the one thing their first screen does not have at all — to the very bottom edge of
+              a 375×812 phone. Moving it down brings the invoice fully inside the fold.
+
+              The badges themselves are unchanged, including the device-aware ordering of 0164.
+              Only where they sit has changed.
+            */}
           </div>
         )}
 

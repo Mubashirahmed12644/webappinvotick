@@ -84,24 +84,24 @@ export default function LandingPage() {
           Invotick
         </span>
         {/*
-          Two plain text links, and neither is a button.
+          ONE account word, not two.
 
-          "Create account" was an outlined button in the most valuable corner of a page that
-          promises "no sign-up", so the first thing an arriving stranger was offered was the one
-          thing the page says they do not need. One filled element per screen is the owner's rule,
-          and on this page that element is "Create invoice" — everything else gives way to it.
+          0165 demoted "Create account" from a button to a link, which fixed the weight but not the
+          contradiction: the page's own promise, three lines below, reads *"No account, no
+          watermark, nothing to install."* Two account words above that sentence make the screen
+          argue with itself before the visitor has read any of it. Invoice Fly's equivalent screen
+          carries exactly one word — "Log in" — and on this they are right.
 
-          It is demoted rather than removed: somebody who already has an account arrives here too,
-          and taking their way in would be a worse trade than a quiet link.
+          Nothing is closed off. A returning user signs in here, and somebody who decides they want
+          an account is offered one **after** the PDF (decision 0163), at the moment there is a
+          reason for it. `/signup` is untouched and still reachable from there.
         */}
-        <div className="flex items-center gap-1">
-          <Link href="/login" className="whitespace-nowrap rounded-[var(--radius-sm)] px-3 py-2 text-sm font-semibold text-[var(--color-on-surface-variant)] hover:bg-[var(--color-surface-variant)] hover:text-[var(--color-on-surface)]">
-            Sign in
-          </Link>
-          <Link href="/signup" className="whitespace-nowrap rounded-[var(--radius-sm)] px-3 py-2 text-sm font-semibold text-[var(--color-on-surface-variant)] hover:bg-[var(--color-surface-variant)] hover:text-[var(--color-on-surface)]">
-            Create account
-          </Link>
-        </div>
+        <Link
+          href="/login"
+          className="whitespace-nowrap rounded-[var(--radius-sm)] px-3 py-2 text-sm font-semibold text-[var(--color-on-surface-variant)] hover:bg-[var(--color-surface-variant)] hover:text-[var(--color-on-surface)]"
+        >
+          Sign in
+        </Link>
       </nav>
 
       <main className="mx-auto max-w-[1400px] px-4 pb-20 pt-8 sm:px-6 sm:pt-12">
