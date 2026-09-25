@@ -209,10 +209,18 @@ export function LandingExperience() {
           </h1>
           {/* The page's ONE promise. Two lines on a phone, deliberately: the first draft ran to
               four, and four lines of grey text is 160 px between the headline and the one button
-              this page has. */}
+              this page has.
+
+              "no watermark" was removed on 2026-09-25 (decision 0170). It was not true: the free
+              tool's PDF is a bitmap of this very preview (lib/free-invoice/pdf.ts), and the preview
+              renders <InvoiceDocument> with no hideInvotickFooter, so every downloaded PDF carries
+              the Invotick band — logo, "Invoice generated using Invotick", the gw.invotick.com link
+              and the QR. Proven by scripts/checks/free-tool-footer.check.tsx. The app's paywall sells
+              the absence of that exact band as "Clean PDF", so the two screens were arguing with each
+              other. "no cost" is true and is the thing the visitor came to hear. */}
           {!open && (
             <p className="mx-auto mt-3 max-w-[42ch] text-[15px] leading-relaxed text-[var(--color-on-surface-variant)] sm:mt-4 sm:text-lg lg:mx-0">
-              Three questions, then download the PDF. No account, no watermark, nothing to install.
+              Three questions, then download the PDF. No account, no cost, nothing to install.
             </p>
           )}
 

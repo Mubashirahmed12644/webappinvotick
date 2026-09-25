@@ -16,7 +16,10 @@ export const FAQ_ITEMS: FaqItem[] = [
   },
   {
     q: "Can I download my invoice as a PDF?",
-    a: "Yes. Every invoice can be downloaded as a clean, print-ready PDF in one click — no watermark and no sign-up required.",
+    // 0170: "no watermark" was false. The free tool's PDF carries the Invotick footer band, and that
+    // band is deliberate — it is the growth surface that tells the client where the invoice was made
+    // (G2). So the answer names it instead of denying it.
+    a: "Yes. Every invoice can be downloaded as a print-ready PDF in one click, with no sign-up. The PDF carries a small Invotick line at the bottom of the page so your client can see where it was made.",
   },
   {
     q: "Is my data private?",
