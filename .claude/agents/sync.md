@@ -1222,6 +1222,61 @@ Memory is dated observation. Verify any file:line against the code before relyin
     - Guards: `AnApologyNeedsALossTest`, `AnApologyIsOncePerAccountTest`, `TheSyncIconSaysWhatIsTrueTest`,
       `OnlyThreeMomentsStopThePersonTest`, 3 cases in `GuestWorkCoordinatorTest`, `APullSaysWhatIsArrivingTest`.
 
+46. **A refusal that proves the server holds a record is written on the record, every record carries its own
+    journey, and the phone says when work is stuck** (the owner's two tags, 2026-09-25: *"Phone ke paas ye tag hone
+    chahiye — `senttoserver` … aur `receivedbyserver`"*). App branch `fix/149-the-servers-answer-settles-the-record`
+    off `VC_108_VN_149` `9fc45814`, 8 commits, pushed. **Not merged, not released.** Unit 1236/1236 across 214 files,
+    from a 1182/1182 baseline; `:data:connectedDebugAndroidTest` 10/10 on a real SM-G998B (Android 15).
+    - **`STALE_CONFLICT` on a create settles the record**, not only the queue row: PENDING_CREATE → PENDING_UPDATE
+      (`RecordStateDao`, `RecordsTheServerHolds`, called from `NonRetryablePass`). `NonRetryablePass` held no entity
+      write at all, so the row stayed PENDING_CREATE for ever and the orphan scan — which reads the **record's**
+      state — rebuilt a fresh CREATE whenever the queued UPDATE was lost. That is the permanence in M2.
+    - **A stale UPDATE is unchanged and pinned so.** Its `data.serverRecord` IS on the wire (the update path passes
+      `stored`; the **create** path passes `{ null }`, so the copy the triage expected there is not sent at all).
+      Applying it would write the server's content over an unsent edit — contract L6 and 0058 say a divergence is
+      reported, never resolved in silence. Guard: `aStaleUpdateLeavesTheUsersOwnCopyAlone`.
+    - **`reviveWaitingOn` keeps its missing ceiling.** The triage proposed giving it its siblings' ceiling; that
+      would undo 0108 and strand the work it rescues. The defect was the **claim**: it fires from the success branch
+      of the product and payment-method handlers, and nine handlers left an applied row PENDING, so the orphan scan
+      re-sent those parents and the server stored each copy — every child collected +5 attempts per push, for ever
+      (line `43a9e342`, 19,517). A handler now asks only where this answer moved the parent out of a pending state.
+      The SQL also extends the ladder (`maxRetries + extra`) instead of rewriting it to `retryCount + extra`.
+    - **`RESYNC_REQUIRED` joins `NON_RETRYABLE`** — the one refusal in the contract that could be raised and then
+      retried for ever. Only answered while the version rule is on, which it is not, so no production row carries it.
+    - **`record_journey`** (Room 6 → 7, `@AutoMigration`, one new table, `7.json` committed, `6.json` kept): keyed
+      `(entityType, entityId)`, so it survives every destruction and rebuild of a queue row. `sentAt` set with
+      `answerAt` null **is** the middle state ("I gave it to the server and never heard back"), written **before**
+      the request leaves; a push that threw writes nothing, and that silence is the state. `answer` is an enum, never
+      a boolean: `STALE_CONFLICT` is `STORED` for the record while staying a refusal for the queue. `STORED` is only
+      ever written from what the server said — never inferred, never from a timeout, never from an unknown status.
+      **A record with no journey reads as UNKNOWN, never as "not sent"** (`AnUpdateToV7KnowsNothingAboutAnyRecordTest`,
+      proved to bite); otherwise the first launch after the update offers every phone's whole history.
+      `UserMigrationDao.migrateAllUserData` **clears** the table at a change of identity — a carried-over STORED would
+      stop the phone for good (0133's situation). `record_journey` is excluded from rule 43's legacy guest move: it
+      has no owner column and a composite key, the one shape `LegacyFileRows.schemaOf` cannot describe.
+    - **A record refused the same way 50 times running stops, is quarantined, and is counted**
+      (`queue_refused_repeatedly`). FAILED, never TERMINAL, so it stays on the phone, counts in the stuck backlog, and
+      0108 can still release it. 50 is a number to confirm, not a law.
+    - **The top bar says it** (0159's surface): `FailureReason.STUCK`, warning icon and "Try now", the sheet gives the
+      count and says the rows are safe here. A running sync shows ahead of it, a live failure keeps its own reason
+      (a removed phone is never offered a retry), and offline stays offline. Guest `40722914` carried 334 such
+      operations from 2026-09-16 and was never told.
+    - **`auth_action` on every whole-call row and on `guest_auth`**: `reauth_attempted|reauth_ok|reauth_refused|
+      gate_closed`, absent when the run met no refused pass. 87 devices met HTTP 401 in 30 days, 67 came back and 20
+      did not, and nothing told them apart. Both halves of the recovery already existed; only the record was missing.
+    - **`HeldRecordRecovery`** for the phones already stuck: a TERMINAL verdict carrying one of the server's two
+      "already holds"/"older than server state" sentences settles the record, re-queues nothing, and says
+      `queue_settled_as_held`. Never a record refused for ownership (0136's ground), NOT_FOUND, IMMUTABLE_RECORD or
+      INVALID_UUID — those mean the server does **not** hold it.
+    - **Corrections to the 2026-09-24 triage, from the code:** the header, background, tax, signature and stamp
+      handlers do **not** need a `findForPull` fallback — their gather lookup is already `WHERE id = :id` with no
+      deleted and no owner filter (`AGatheredRowIsNeverMissedTest` pins it over all 21 groups); `closeMissingRow` is
+      not reachable as a loop for the same reason; and `data.serverRecord` is **not** on a stale create.
+    - **Still open, and it needs the backend:** the `INVALID_REFERENCE`-masked population (~60 users). The server
+      resolves references before answering "I already hold this", so those phones never receive a stale answer. The
+      contract for the bounded reconcile extension (`ids` in, `held` out, ≤200 ids, id + version) is written up for
+      whoever takes the backend half; the app degrades safely while it does not exist.
+
 ## Established 2026-09-12, while planning the receipt number
 
 The plan is `docs/SYNC-RECEIPT-NUMBER-PLAN.md`. Each line says how it is known.
