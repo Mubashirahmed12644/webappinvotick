@@ -1,4 +1,4 @@
-# 0174 — The share page reads its labels from the table, and only the invoice's own sentences are translated live
+# 0175 — The share page reads its labels from the table, and only the invoice's own sentences are translated live
 
 - **Date:** 2026-09-26
 - **Status:** built, not merged, not deployed. Web `Webinvotick`, branch `fix/share-page-labels-from-table` off
