@@ -1316,6 +1316,24 @@ Memory is dated observation. Verify any file:line against the code before relyin
       for the sign-in screen (0098). `excludedPaths` is kept, but it may now only narrow, never widen.
     - Also removed: the `runBlocking { logout() }` inside the interceptor's own suspend context.
 
+48. **A guest from the 1.3 era is a guest, whatever its old `is_guest` said** (2026-09-26, diagnosis; no code change).
+    - **Found:** 10 guest phones refused on every sync in the 7 days to 2026-09-26, and none asked for a new guest pass.
+      All but one hold a guest whose id is the phone's own device id (SHA-256 of ANDROID_ID; only builds before
+      `4d74d2b8`, 2026-02-03, made guest ids that way). The old `saveSession` wrote `is_guest = false` on a guest's own
+      sign-in, and `SessionRepositoryImpl.migrateLegacySession` reads anything but `true` as an account.
+    - **Proof it is read as an account, not a guess:** `42775e63` (1.4.8) called `/v2/auth/drain-token` 3 times and
+      `5a653b6d` once; `DrainTokenKeeper` returns before that call for a guest. 0 guest sign-ins from either.
+    - **Up to 1.4.8 an "account" never recovers:** STEP 0 and `onSyncUnauthorized` are guest-only, and the 401 raises
+      the account's expiry flag instead, seen only if the app is opened. These phones run background sync only.
+    - **The cure is 1.4.9:** `SessionManager.asThePassSays` (`650e2efb`, written for 1.4.7's device links) restores a
+      session whose own pass says `role = GUEST` as the guest. It is in every 1.4.9 build (108–113), in none up to 107.
+      Pinned by `AGuestsPassMakesAGuestSessionTest` (app `fix/149-a-guest-pass-is-a-guest-session` `ef75e996`): 5 of 6
+      cases fail with the correction disabled. Never narrow that correction to device links.
+    - **Not this:** the "Guest ID must be a valid UUID" refusals (113 in 72 h) are **one** phone, `8a468245`, and none of
+      the stuck guests. Its analytics are refused at the same moments for a `userId` that is not a UUID, so the phone's
+      owner id is malformed; which build and what shape is unknown until the server logs the refused id's shape (length,
+      dash count, masked).
+
 ## Established 2026-09-12, while planning the receipt number
 
 The plan is `docs/SYNC-RECEIPT-NUMBER-PLAN.md`. Each line says how it is known.
