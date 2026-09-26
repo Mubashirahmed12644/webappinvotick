@@ -1,11 +1,12 @@
 /* eslint-disable @next/next/no-img-element */
-import { showsInvotickFooter } from "@/lib/invotick-footer";
+import { footerMode, type OwnFooter } from "@/lib/invotick-footer";
 import type { InvoiceRenderData } from "@/lib/data";
-import { formatMoney, formatDate, hexToRgba, contrastText } from "@/lib/format";
+import { formatMoney, formatDate, hexToRgba, contrastText, onTint, blendOnWhite } from "@/lib/format";
 import { imageProxyUrl } from "@/lib/image";
 import { BRAND_LOGO } from "@/lib/givens";
 import { LABELS, labelsFor, type InvoiceLabels } from "@/lib/invoice-labels";
 import { SummaryLeftFitted } from "./SummaryLeftFitted";
+import { QrSvg } from "./QrSvg";
 
 // Faithful invoice document — mirrors the mobile app's rendered PDF:
 // full-bleed header image + logo + title, decorative themed background,
@@ -196,8 +197,16 @@ export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hide
                 <TotalRow rowKey="shipping" label={labels.shipping} value={formatMoney(data.shippingCost, cur)} tint={hexToRgba(color, 0.05)} />
                 {/* TOTAL — light tint + accent text, the lowest of three rungs on an invoice. On an
                     estimate it is the only figure that matters and the last row in the box, so it
-                    takes the hero treatment BALANCE DUE would have had. */}
-                <div className="flex items-center justify-between px-3 py-2 text-[15px] font-extrabold" style={isEstimate ? { backgroundColor: color, color: onColor } : { backgroundColor: hexToRgba(color, 0.16), color }}>
+                    takes the hero treatment BALANCE DUE would have had.
+
+                    The text is `onTint`, not the raw accent. Written literally this row was the
+                    accent on a 16% wash of itself: 5.7:1 for the default blue, but 1.99:1 if a
+                    seller picks cyan and 1.18:1 for yellow. `onTint` keeps the hue and walks the
+                    lightness down until the pair clears AA, so the row still reads as accent-on-
+                    accent for every colour rather than only for the one that was tested. The
+                    estimate branch already did the right thing with `onColor`; this is the invoice
+                    branch catching up. */}
+                <div className="flex items-center justify-between px-3 py-2 text-[15px] font-extrabold" style={isEstimate ? { backgroundColor: color, color: onColor } : { backgroundColor: hexToRgba(color, 0.16), color: onTint(color, 0.16) }}>
                   <span>{labels.total}</span>
                   <span>{formatMoney(data.total, cur)}</span>
                 </div>
@@ -207,7 +216,7 @@ export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hide
                     estimate TOTAL is the last row, so it takes the dark hero treatment instead. */}
                 {!isEstimate && (
                   <>
-                    <div className="flex items-center justify-between px-3 py-2 text-[15px] font-extrabold" style={{ backgroundColor: hexToRgba(color, 0.34), color: "#1c1b1f" }}>
+                    <div className="flex items-center justify-between px-3 py-2 text-[15px] font-extrabold" style={{ backgroundColor: hexToRgba(color, 0.34), color: contrastText(blendOnWhite(color, 0.34)) }}>
                       <span>{labels.amountPaid}</span>
                       <span>{formatMoney(data.amountPaid ?? 0, cur)}</span>
                     </div>
@@ -251,9 +260,9 @@ export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hide
 
         {/* Footer — pinned to the bottom of the sheet (mt-auto). Hidden when the paging frame
             renders one footer per A4 page instead (multi-page invoices). */}
-        {!hideFooter && showsInvotickFooter(data) && (
+        {!hideFooter && footerMode(data) !== "none" && (
           <div className="mt-auto">
-            <InvoiceFooter qrDataUrl={qrDataUrl} labels={labels} />
+            <InvoiceFooter qrDataUrl={qrDataUrl} labels={labels} {...ownFooterProps(data)} />
           </div>
         )}
       </div>
@@ -263,14 +272,32 @@ export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hide
 
 // Invotick branding footer — rendered at the bottom of every A4 page (see A4PagedFrame).
 // `pageLabel` ("Page 1 of 3") is the multi-page pagination line, shown centred under the band.
-export function InvoiceFooter({ qrDataUrl, pageLabel, labels = LABELS }: { qrDataUrl?: string | null; pageLabel?: string; labels?: InvoiceLabels }) {
+//
+// `own` (decision 0151) draws the business's own footer in the SAME band: every size, gap, colour and
+// position below is shared, and only what sits in each slot changes — logo tile, message, name line,
+// "Contact us", contact line, QR tile. An empty slot keeps its space, so the band never reflows.
+// `control` is the app preview's Remove / Edit button; no other caller passes it, so the share page,
+// its print and every image of the document are drawn without it.
+export function InvoiceFooter({ qrDataUrl, pageLabel, labels = LABELS, own, businessLogo, accent = "#0D4DC0", control }: { qrDataUrl?: string | null; pageLabel?: string; labels?: InvoiceLabels; own?: OwnFooter | null; businessLogo?: string | null; accent?: string; control?: FooterControl | null }) {
   // Pixel-parity with the native promotional footer (SharedComponents.drawPromotionalFooter), whose
   // sizes are all fractions of the sheet width. On the 794px A4 sheet those resolve to:
   //   band height 0.12·W ≈ 95, icon/QR 0.65·band ≈ 62, inner pad 0.6·32 ≈ 19, line gap 0.35·32 ≈ 11.
   // Font sizes: generated 0.016·W, tagline 0.011·W, scan 0.0144·W, link 0.0168·W (bold).
   const tile = 62;
+  const tileStyle = { width: tile, height: tile, borderRadius: tile * 0.15, background: "#fff", overflow: "hidden", flex: "none" } as const;
+  const emptySlot = { width: tile, height: tile, flex: "none" } as const;
+  // The QR's finder-pattern corners sat under the tile's own rounded clip (radius tile*0.15 ≈ 9.3px)
+  // and got cut. Same outer tile, but the QR is inset by at least that radius so no module is clipped —
+  // this padding never touches the logo tile, which keeps its own look.
+  const qrPad = Math.ceil(tile * 0.15);
+  const qrTileStyle = { ...tileStyle, padding: qrPad, boxSizing: "border-box" } as const;
+  const qrInner = tile - 2 * qrPad;
+  const logoUrl = own && own.showLogo !== false ? imageProxyUrl(businessLogo) : null;
+  const initials = own && own.showLogo !== false && !logoUrl ? own.initials?.trim() || null : null;
+  // Two lines at most for what the business typed: the band's height is fixed (it is the layout).
+  const clamp2 = { display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", overflowWrap: "anywhere" } as const;
   return (
-    <div>
+    <div style={control ? { position: "relative" } : undefined}>
       {/* #E0E0E0 divider, an 11px gap, then the flat #F5F5F5 band (square corners, no shadow). */}
       <div style={{ borderTop: "1px solid #E0E0E0" }} />
       <div
@@ -278,32 +305,192 @@ export function InvoiceFooter({ qrDataUrl, pageLabel, labels = LABELS }: { qrDat
         style={{ backgroundColor: "#F5F5F5", height: 95, marginTop: 11, paddingLeft: 19, paddingRight: 19 }}
       >
         {/* LEFT — app icon on a white rounded tile (native draws a white round-rect then the icon), + text. */}
-        <div className="flex items-center" style={{ gap: 19 }}>
-          <div style={{ width: tile, height: tile, borderRadius: tile * 0.15, background: "#fff", overflow: "hidden", flex: "none" }}>
-            <img src={BRAND_LOGO} alt="Invotick" style={{ width: tile, height: tile, objectFit: "contain" }} />
-          </div>
-          <div>
-            <p style={{ fontSize: 12.7, fontWeight: 700, color: "#212121", lineHeight: 1.2 }}>{labels.footerGenerated}</p>
-            <p style={{ fontSize: 8.7, color: "#666666", lineHeight: 1.2, marginTop: 2 }}>{labels.footerTagline}</p>
+        <div className="flex items-center" style={own ? { gap: 19, minWidth: 0 } : { gap: 19 }}>
+          {!own ? (
+            <div style={tileStyle}>
+              <img src={BRAND_LOGO} alt="Invotick" style={{ width: tile, height: tile, objectFit: "contain" }} />
+            </div>
+          ) : logoUrl ? (
+            <div style={tileStyle}>
+              <img src={logoUrl} alt="" style={{ width: tile, height: tile, objectFit: "contain" }} />
+            </div>
+          ) : initials ? (
+            <div style={{ ...tileStyle, display: "flex", alignItems: "center", justifyContent: "center", color: accent, fontSize: 22, fontWeight: 800, letterSpacing: 0.5 }}>
+              {initials}
+            </div>
+          ) : (
+            <div style={emptySlot} />
+          )}
+          <div style={own ? { minWidth: 0, maxWidth: 330 } : undefined}>
+            {!own ? (
+              <>
+                <p style={{ fontSize: 12.7, fontWeight: 700, color: "#212121", lineHeight: 1.2 }}>{labels.footerGenerated}</p>
+                <p style={{ fontSize: 8.7, color: "#666666", lineHeight: 1.2, marginTop: 2 }}>{labels.footerTagline}</p>
+              </>
+            ) : (
+              <>
+                {own.message && <p style={{ fontSize: 12.7, fontWeight: 700, color: "#212121", lineHeight: 1.2, ...clamp2 }}>{own.message}</p>}
+                {own.businessLine && <p style={{ fontSize: 8.7, color: "#666666", lineHeight: 1.2, marginTop: 2, ...clamp2 }}>{own.businessLine}</p>}
+              </>
+            )}
           </div>
         </div>
         {/* RIGHT — "Scan…" over a fading gradient rule over the bold primary link, then a rounded QR tile. */}
-        <div className="flex items-center" style={{ gap: 12 }}>
-          <div style={{ textAlign: "end" }}>
-            <p style={{ fontSize: 11.4, color: "#666666", lineHeight: 1.3 }}>{labels.footerScan}</p>
-            <div style={{ height: 1, margin: "3px 0", background: "linear-gradient(to right, transparent, #DDDDDD 20%, #DDDDDD 80%, transparent)" }} />
-            <p style={{ fontSize: 13.3, fontWeight: 700, color: "#0D4DC0", lineHeight: 1.3 }}>https://gw.invotick.com/r/2/RefCode</p>
-          </div>
-          {qrDataUrl && (
-            <div style={{ width: tile, height: tile, borderRadius: tile * 0.15, background: "#fff", overflow: "hidden", flex: "none" }}>
-              <img src={qrDataUrl} alt="QR" style={{ width: tile, height: tile, objectFit: "contain" }} />
+        <div className="flex items-center" style={own ? { gap: 12, minWidth: 0 } : { gap: 12 }}>
+          {!own ? (
+            <div style={{ textAlign: "end" }}>
+              <p style={{ fontSize: 11.4, color: "#666666", lineHeight: 1.3 }}>{labels.footerScan}</p>
+              <div style={{ height: 1, margin: "3px 0", background: "linear-gradient(to right, transparent, #DDDDDD 20%, #DDDDDD 80%, transparent)" }} />
+              <p style={{ fontSize: 13.3, fontWeight: 700, color: "#0D4DC0", lineHeight: 1.3 }}>https://gw.invotick.com/r/2/RefCode</p>
             </div>
+          ) : own.contactLine ? (
+            <div style={{ textAlign: "end", minWidth: 0, maxWidth: 360 }}>
+              <p style={{ fontSize: 11.4, color: "#666666", lineHeight: 1.3 }}>{labels.footerContact ?? LABELS.footerContact}</p>
+              <div style={{ height: 1, margin: "3px 0", background: "linear-gradient(to right, transparent, #DDDDDD 20%, #DDDDDD 80%, transparent)" }} />
+              <p style={{ fontSize: 13.3, fontWeight: 700, color: "#0D4DC0", lineHeight: 1.3, ...clamp2 }}>{own.contactLine}</p>
+            </div>
+          ) : null}
+          {!own ? (
+            qrDataUrl && (
+              <div style={qrTileStyle}>
+                <img src={qrDataUrl} alt="QR" style={{ width: qrInner, height: qrInner, objectFit: "contain" }} />
+              </div>
+            )
+          ) : own.qrText ? (
+            <div style={qrTileStyle}>
+              <QrSvg text={own.qrText} size={qrInner} />
+            </div>
+          ) : (
+            <div style={emptySlot} />
           )}
         </div>
       </div>
       {pageLabel && <div className="pb-1 text-center text-[11px] font-medium text-gray-400">{pageLabel}</div>}
+      {control && <FooterControlButton control={control} />}
     </div>
   );
+}
+
+/**
+ * The app preview's button on the footer (decision 0151): a round × for a free account (it opens the
+ * paywall), a round pencil for a premium one (it opens the footer sheet). ICON ONLY — the owner,
+ * 2026-09-21, on the 1.4.9 device test: the "Remove ×" / "Edit" pill sat on the QR and the "Scan to
+ * download" line. The words stay as the button's accessible name (`aria-label`), which TalkBack and
+ * VoiceOver read, and nowhere on the page.
+ *
+ * **Neither the icon nor its touch target may touch the QR or the text, not even partly** (the owner).
+ * The geometry, in sheet px on the 794 px sheet, measured from the band's top-right corner (x to the
+ * right, y down). The band is 95 tall. The QR tile is 62 square, 19 in from the band's right edge and
+ * centred in the band, so it spans x −81…−19, y 16.5…78.5. The text sits left of the QR and starts
+ * lower: a two-line contact line starts at y 19.5. The page's right margin is x 0…32. The document above
+ * the footer ends at y −12 (1 px rule + 11 px gap).
+ *
+ * - **The icon:** centre (15, 0), on the band's top edge in the right margin, radius at most 16. So it
+ *   spans x −1…31, y −16…16. That is 17 px clear of the sheet's edge, 19.2 px from the document's
+ *   corner (0, −12) and 34.8 px from the QR's corner (−19, 16.5).
+ * - **The touch target:** 48dp square, its bottom edge at y 16 — above the QR's top edge (16.5) and
+ *   above every line of text. Its right edge is the sheet's edge, which clips. So at any scale it lies
+ *   over the right margin, the empty top strip of the band and the empty space above the band, never
+ *   over the QR or the text. It sits just under the draggable signature and stamp (z 19 against their
+ *   20), so a signature dragged into that corner still answers its own finger.
+ *
+ * On screen the icon is 24dp, capped at those 16 px (≈16dp at a phone's ≈0.49 scale), and the target is
+ * 48dp to the finger at any zoom.
+ *
+ * The page is paper: `#fff` in the app's light and dark themes alike, so the colours are fixed. White on
+ * #0D4DC0 is 7.3:1 and white on #374151 is 10.3:1; a white ring and a soft shadow lift both off the band.
+ */
+export type FooterControl = {
+  kind: "remove" | "edit";
+  /** Its accessible name, from the app (translated there): "Remove footer" / "Edit footer". Never drawn. */
+  label: string;
+  /** How much the sheet is scaled on screen (screen px per sheet px). */
+  scale: number;
+  onPress: () => void;
+};
+
+/** The numbers above, for the check that proves the icon and its target cover nothing. Sheet px. */
+export const FOOTER_CONTROL_GEOMETRY = {
+  /** The band's top edge below the footer box's top: the 1 px rule plus the 11 px gap. */
+  bandTop: 12,
+  bandHeight: 95,
+  /** The QR tile: its side and the band's padding to its right. */
+  qrTile: 62,
+  qrRightPad: 19,
+  /** The icon's centre, from the band's top-right corner: right, and down. */
+  dx: 15,
+  dy: 0,
+  /** The largest icon radius that touches nothing drawn (see the note on [FooterControl]). */
+  maxRadius: 16,
+  /** The touch target's bottom edge, below the band's top: above the QR's top edge (16.5). */
+  targetBottom: 16,
+  /** The page's right margin: the sheet's edge, from the band's right edge. */
+  sheetEdge: 32,
+  /** The icon, and the finger, in screen dp. */
+  iconDp: 24,
+  touchDp: 48,
+} as const;
+
+/** Where the icon and its touch target go, in sheet px relative to the footer box's top-right corner. */
+export function footerControlLayout(scale: number) {
+  const g = FOOTER_CONTROL_GEOMETRY;
+  const k = 1 / Math.max(scale || 1, 0.05);
+  const radius = Math.min(g.maxRadius, (g.iconDp / 2) * k);
+  const touch = g.touchDp * k;
+  const cx = g.dx; // from the band's right edge, rightwards
+  const cy = g.bandTop + g.dy; // from the footer box's top, downwards
+  // Right edge on the sheet's edge, bottom edge above the QR: the target grows left and up only.
+  const boxLeft = g.sheetEdge - touch;
+  const boxTop = g.bandTop + g.targetBottom - touch;
+  return { k, radius, touch, cx, cy, boxLeft, boxTop };
+}
+
+export function FooterControlButton({ control }: { control: FooterControl }) {
+  const edit = control.kind === "edit";
+  const { k, radius, touch, cx, cy, boxLeft, boxTop } = footerControlLayout(control.scale);
+  const d = radius * 2;
+  const glyph = d * 0.56;
+  return (
+    <button
+      type="button"
+      aria-label={control.label}
+      data-footer-control={control.kind}
+      onPointerDown={(e) => e.stopPropagation()}
+      onClick={(e) => { e.stopPropagation(); control.onPress(); }}
+      style={{
+        position: "absolute", left: `calc(100% + ${boxLeft}px)`, top: boxTop, width: touch, height: touch,
+        padding: 0, margin: 0, border: 0, background: "transparent", cursor: "pointer", zIndex: 19,
+        touchAction: "manipulation", WebkitTapHighlightColor: "transparent",
+      }}
+    >
+      <span
+        aria-hidden
+        data-footer-control-icon=""
+        style={{
+          position: "absolute", left: cx - boxLeft - radius, top: cy - boxTop - radius, width: d, height: d,
+          borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
+          background: edit ? "#0D4DC0" : "#374151", color: "#FFFFFF",
+          boxShadow: `0 0 0 ${1.5 * k}px #FFFFFF, 0 ${1 * k}px ${3 * k}px rgba(0,0,0,0.25)`,
+        }}
+      >
+        {edit ? (
+          <svg width={glyph} height={glyph} viewBox="0 0 24 24" aria-hidden fill="none" stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+          </svg>
+        ) : (
+          <svg width={glyph} height={glyph} viewBox="0 0 24 24" aria-hidden fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round">
+            <path d="M6 6l12 12" /><path d="M18 6L6 18" />
+          </svg>
+        )}
+      </span>
+    </button>
+  );
+}
+
+/** The props that switch [InvoiceFooter] to the business's own footer, when the document carries one. */
+export function ownFooterProps(data: InvoiceRenderData): { own?: OwnFooter | null; businessLogo?: string | null; accent?: string } {
+  if (footerMode(data) !== "own") return {};
+  return { own: data.ownFooter, businessLogo: data.business?.logo, accent: data.color || "#0D4DC0" };
 }
 
 function TotalRow({ label, value, tint, rowKey }: { label: string; value: string; tint: string; rowKey?: string }) {

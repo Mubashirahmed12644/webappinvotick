@@ -21,6 +21,10 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: "#0D4DC0",
+  // Belt to the CSS braces: `color-scheme: only light` in globals.css is the rule browsers honour,
+  // and this is the meta tag they read before the stylesheet arrives. Together they close the window
+  // in which a page with no stated opinion can be algorithmically darkened.
+  colorScheme: "only light",
 };
 
 export default function RootLayout({
