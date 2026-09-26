@@ -176,3 +176,54 @@ every ad back with no release — which is what the kill-switch is for.
   exercised is in the branch's report, and a reasoned verdict is not a measurement.
 - `att_prompt_shown` / `att_decision`, above.
 - Whether this goes into 1.4.9 is the owner's call. Nothing is merged.
+
+## The owner's rules, 2026-09-26 (added the same day)
+
+Three things the owner decided while this branch was being made ready for 1.4.9. His words, then what was built.
+
+**1. "lets start and add business ki tooltip consent ky uper aa rhi hy isko fix kero."** A coaching tooltip must
+never draw on top of Google's consent form or Apple's tracking alert.
+- Both are native, so no composable can call `CoversTheScreens()` for them (decision 0171). They now take the
+  cover through **`SystemPrompt`** (`core/ads` commonMain, `SystemPromptScreen.kt`): held → one `ScreenCover`,
+  free → released. It replaces `IosSystemPrompt` and is shared with Android, whose SDK shows the form in a
+  dialog window of its own.
+- Every ending releases it: answered, closed, failed, thrown. The 4 s wait does not, because the form is
+  still up.
+- `ACoachTooltipNeverDrawsOverACoverTest` fails the build when a native question is presented from a file that
+  never claims `SystemPrompt`.
+- Simulator, before: the tooltip sat over the form and hid its "Learn more" row. After: the form alone, and the
+  tooltip back on Create Invoice once the form is answered.
+
+**2. "gdpr ka consent world wide country main nahi ana chahye, just required countries main aye."** The form
+appears only where the law requires it.
+- The one thing in our code that can make Google ask everybody is a debug geography. It is now chosen by
+  **`ConsentDebugGeography.forBuild`**, where the build type decides. A release gets `NONE` on both platforms,
+  and `ConsentDebugGeographyTest` pins that. On iOS the Swift side also compiles the override only under
+  `#if DEBUG`.
+- The launch arguments are `-InvotickForceEeaConsent` and `-InvotickForceNotEeaConsent`, in debug builds only.
+- Simulator, fresh install each time:
+  - EEA: form shown.
+  - Not EEA: no form, and the splash ad was shown.
+  - No override, from Pakistan: no form, and ads were shown.
+- One cost was seen, and it is not a form. On a fresh install in Pakistan the status lookup answered at 3.3 s,
+  0.9 s after the splash had decided. So that first cold start's splash ad was skipped (`consent_pending`).
+  Android is designed the same way, and the owner can weigh it.
+- The AdMob console message's targeting cannot be seen from here. It is the owner's check.
+
+**3. "consent ads ko band nhi kerta, ye sirf personalized ads lany ki ajazat leta hy — is sy match rate acha hota
+hy and quality ads milty hain."** Consent decides personalised or not, never ads or not.
+- **Any answer allows ads**: yes, no or partial. The gate follows Google's `canRequestAds()`, and nothing reads
+  the choice for gating.
+- **A banner already showing when the answer lands is left alone.** Its next request is the normal refresh.
+- **An empty banner slot loads on the answer**, whenever the answer lands, before or after the 4 s wait.
+- That is **`ConsentAdsSwitch`** (commonMain). It only ever opens, and it is fed by `ConsentFlowRecord`'s real
+  end (0174), not by the wait.
+- The request is the existing `ad_request type=banner trigger=new_view`. No new event, and no new value.
+- Simulator: the person refused 49 s into the form, and the row said `outcome=denied timed_out=true`. 120 ms
+  later there was one banner request, and the banner was shown on the same screen. Before, the slot stayed
+  empty and the row said `dismissed` at 4,002 ms.
+- iOS now writes 0174's row the same way Android does.
+
+Branches (`invoice-kmp-app`), not merged:
+- `fix/149-consent-form-covers-the-screens` is common + Android only, on top of the release.
+- `feat/ios-gdpr-consent` contains it, plus iOS.
