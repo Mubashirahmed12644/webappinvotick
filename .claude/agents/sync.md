@@ -1225,7 +1225,11 @@ Memory is dated observation. Verify any file:line against the code before relyin
 46. **A refusal that proves the server holds a record is written on the record, every record carries its own
     journey, and the phone says when work is stuck** (the owner's two tags, 2026-09-25: *"Phone ke paas ye tag hone
     chahiye — `senttoserver` … aur `receivedbyserver`"*). App branch `fix/149-the-servers-answer-settles-the-record`
-    off `VC_108_VN_149` `9fc45814`, 8 commits, pushed. **Not merged, not released.** Unit 1236/1236 across 214 files,
+    off `VC_108_VN_149` `9fc45814`, 8 commits, pushed. **MERGED 2026-09-25, not released.** This line read "not
+    merged" until 2026-09-26, which sent an agent to redo finished work. The proof, so the next reader does not have to
+    take it on trust: merge commit `e5d0658b` on `VC_113_VN_149`; `git log <branch> ^9d072965` lists **0** commits; and
+    `git merge-tree 9d072965 <branch>` yields `e4c2d072`, byte-identical to `9d072965`'s own tree (against `3d081be7`
+    it yields `bfc2e0b1`, that commit's tree). Unit 1236/1236 across 214 files,
     from a 1182/1182 baseline; `:data:connectedDebugAndroidTest` 10/10 on a real SM-G998B (Android 15).
     - **`STALE_CONFLICT` on a create settles the record**, not only the queue row: PENDING_CREATE → PENDING_UPDATE
       (`RecordStateDao`, `RecordsTheServerHolds`, called from `NonRetryablePass`). `NonRetryablePass` held no entity
@@ -1276,6 +1280,41 @@ Memory is dated observation. Verify any file:line against the code before relyin
       resolves references before answering "I already hold this", so those phones never receive a stale answer. The
       contract for the bounded reconcile extension (`ids` in, `held` out, ≤200 ids, id + version) is written up for
       whoever takes the backend half; the app degrades safely while it does not exist.
+
+47. **A 401 signs somebody out only when it came from our own backend and a real stored account session is what was
+    refused** (2026-09-26). App branch `fix/149-only-our-own-backend-signs-anyone-out` `ba272f79`, off
+    `VC_113_VN_149` `9d072965`. **Not merged, not released.** Unit 1294/1294 across 222 files, from a 1283/1283
+    baseline; the 11 new cases are `OnlyOurOwnBackendSignsAnyoneOutTest`, **7 of which were red before the fix**.
+    - **The app has one `HttpClient`** (`platformModule.<platform>.kt`), so `AuthInterceptorPlugin` sees every call it
+      makes. Four of them are not our backend, and each one could sign a user out: `excahnge.invotick.com`
+      (its own `X-Internal-Token`, 401 on a bare `!=` in the exchange service's `InternalTokenAuthFilter`),
+      `gw.invotick.com/v2/analytics/track`, `ipinfo.io/json`, `translate.googleapis.com`.
+    - **`excludedPaths` was the whole defence and was wrong in three places at once:** it named
+      `v1/analytics/track` while the app has sent **v2** for a year, and it had never heard of `sync/reconcile`,
+      `guest-work`, or the rates host. A list has to be updated by whoever adds the next call; it was not.
+    - **The generic branch read `sessionManager.isGuest`,** which reads the in-memory flow — `Loading` until the first
+      restore lands, and **`Loading` answers false**. So a rates fetch in the first seconds of a cold start took a
+      **guest** down the sign-out branch. The sync branch had been given `restoreNow()` for exactly this reason, with a
+      comment explaining the trap; the generic one was left with the old read. Both read storage now.
+    - **What a guest lost, from the code:** `logout()` does **not** touch the database — the invoices stay in
+      `invotick_v2.db`. It removes `session_guest_id` and deletes the guest's pass from the vault
+      (`SessionRepositoryImpl.clearPrefs`). The phone then lands on the login screen (`SplashViewModel`: `isFirstOpen`
+      is false, so no guest is re-minted there), and "Continue as guest" mints a **fresh random UUID**
+      (`LoginAsGuestOfflineUseCase`) because `restoreNow().ownerId` is null. Every read is `WHERE userId = :userId`, so
+      the new guest sees an empty app and **no screen anywhere can reach the old owner's rows**. The returning-accounts
+      offer (0144) does not help: its only two callers are the fresh-install splash path and Add account.
+    - **Three gates now, narrowest cause last**, and gates 1 and 3 hold with `excludedPaths` empty:
+      1. `isOurOwnBackend(host)` — by **host**, compared against `NetworkConfig.BASE_URL` read at request time (it is a
+         `var`; capturing it is its own trap). An unreadable base URL signs nobody out.
+      2. `CALLS_THAT_RECOVER_THEIR_OWN_PASS` — push, pull, **and now reconcile and guest-work**, which were in no list
+         at all. A guest is signed back in, an account is asked to sign in, neither is signed out.
+      3. Only `SessionState.Authenticated`, from `restoreNow()`. "Not a guest" is what let `Loading` through.
+    - **The one entry proven stale is fixed at its root**, not left to the host gate: analytics is matched without its
+      version number (`ANALYTICS_WHATEVER_VERSION`) and covers `denylist` as well as `track`. The gateway not being
+      `BASE_URL` is a configuration accident; point a build's base at it and the `v1`/`v2` hole would be back.
+    - **Deliberately unchanged:** a registered user whose token really is dead is still signed out, keeping their email
+      for the sign-in screen (0098). `excludedPaths` is kept, but it may now only narrow, never widen.
+    - Also removed: the `runBlocking { logout() }` inside the interceptor's own suspend context.
 
 ## Established 2026-09-12, while planning the receipt number
 
