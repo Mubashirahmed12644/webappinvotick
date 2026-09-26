@@ -88,3 +88,4 @@ Numbering: next free number, zero-padded to 4.
 - [0171 — A coaching tooltip draws nothing while anything covers the screens](0171-a-coaching-tooltip-draws-nothing-while-anything-covers-the-screens.md)
 - [0172 — The sheet back-stack crash is already fixed, and the second fix is refused](0172-the-sheet-back-stack-crash-is-already-fixed-and-the-second-fix-is-refused.md)
 - [0173 — The iPhone asks Google's consent question before Apple's](0173-the-iphone-asks-googles-consent-question-before-apples.md)
+- [0174 — The share page reads its labels from the table, and only the invoice's own sentences are translated live](0174-the-share-page-reads-its-labels-from-the-table.md)

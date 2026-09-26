@@ -1,83 +1,30 @@
-import { LABELS, LABEL_KEYS, type InvoiceLabels } from "./invoice-labels";
-import { isRtl } from "./translate";
 import type { InvoiceRenderData } from "./data";
+import type { TranslatedInvoice } from "./translate-document";
 
-export type TranslatedInvoice = {
-  data: InvoiceRenderData;
-  labels: InvoiceLabels;
-  dir: "ltr" | "rtl";
-};
+export type { TranslatedInvoice };
 
 /**
- * Translate a shared invoice into [target] (a Google language code): the structural labels AND the
- * seller's own text (business/client names + addresses, item descriptions, notes). Numbers, dates,
- * currency and the invoice number are left untouched. Calls the server route `/api/translate` in ONE
- * batch. Best-effort — on any failure the original text is kept (only the direction flips for RTL).
+ * Translate a shared invoice into [target] in the browser — the share page (`/i/{token}`) and the
+ * app's Online tab (`/embed/render`).
+ *
+ * The work is `translateDocument`, the same function `/api/translate-invoice` runs, so there is one
+ * answer to "which words, from where": the LABELS come from the committed table (the one the app's
+ * own copy is generated from), and only the invoice's free text — item descriptions, notes, payment
+ * instructions, terms — goes to `/api/translate`. Names, addresses, numbers and dates never do.
+ *
+ * The table is loaded on the first pick rather than with the page: most readers never change the
+ * language, and they should not download 24 languages of headings to read one invoice.
  */
 export async function translateInvoice(data: InvoiceRenderData, target: string): Promise<TranslatedInvoice> {
-  if (target === "en") return { data, labels: LABELS, dir: "ltr" };
-  const dir: "ltr" | "rtl" = isRtl(target) ? "rtl" : "ltr";
-
-  const labelValues = LABEL_KEYS.map((k) => LABELS[k]);
-  const c = data.client;
-  // Seller data strings — FIXED order so we can put the translations back positionally.
-  const dataStrings: string[] = [
-    data.business?.name ?? "",
-    c?.name ?? "",
-    c?.companyName ?? "",
-    c?.addressLine1 ?? "",
-    c?.city ?? "",
-    c?.country ?? "",
-    ...data.items.map((it) => it.name ?? ""),
-    data.notes ?? "",
-    data.paymentInstructions ?? "",
-    data.terms ?? "",
-  ];
-
-  let translated: string[];
-  try {
+  const { translateDocument } = await import("./translate-document");
+  return translateDocument(data, target, async (texts, lang) => {
     const res = await fetch("/api/translate", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ texts: [...labelValues, ...dataStrings], target }),
+      body: JSON.stringify({ texts, target: lang }),
     });
-    if (!res.ok) return { data, labels: LABELS, dir };
-    translated = ((await res.json()) as { texts: string[] }).texts;
-    if (!Array.isArray(translated) || translated.length !== labelValues.length + dataStrings.length) {
-      return { data, labels: LABELS, dir };
-    }
-  } catch {
-    return { data, labels: LABELS, dir };
-  }
-
-  // Rebuild labels.
-  const labels = {} as InvoiceLabels;
-  LABEL_KEYS.forEach((k, i) => {
-    labels[k] = translated[i] || LABELS[k];
+    if (!res.ok) return null;
+    const out = ((await res.json()) as { texts?: unknown }).texts;
+    return Array.isArray(out) ? (out as string[]) : null;
   });
-
-  // Rebuild data (same order the strings were pushed).
-  let p = labelValues.length;
-  const next = translated;
-  const out: InvoiceRenderData = { ...data };
-  if (out.business) out.business = { ...out.business, name: next[p] || out.business.name };
-  p += 1;
-  if (out.client) {
-    out.client = {
-      ...out.client,
-      name: next[p] || out.client.name,
-      companyName: out.client.companyName ? next[p + 1] || out.client.companyName : out.client.companyName,
-      addressLine1: out.client.addressLine1 ? next[p + 2] || out.client.addressLine1 : out.client.addressLine1,
-      city: out.client.city ? next[p + 3] || out.client.city : out.client.city,
-      country: out.client.country ? next[p + 4] || out.client.country : out.client.country,
-    };
-  }
-  p += 5;
-  out.items = data.items.map((it, i) => ({ ...it, name: next[p + i] || it.name }));
-  p += data.items.length;
-  out.notes = data.notes ? next[p] || data.notes : data.notes;
-  out.paymentInstructions = data.paymentInstructions ? next[p + 1] || data.paymentInstructions : data.paymentInstructions;
-  out.terms = data.terms ? next[p + 2] || data.terms : data.terms;
-
-  return { data: out, labels, dir };
 }

@@ -8,8 +8,10 @@ import type { InvoiceRenderData } from "@/lib/data";
 
 /**
  * Shared-invoice viewer with a language picker. The invoice ships in its original language; picking a
- * language translates the labels AND the seller's text (via /api/translate) and re-renders the same
- * A4 frame — mirrored for RTL languages (Arabic/Farsi).
+ * language takes the labels from our committed table — the same words the app shows the sender — and
+ * sends only the invoice's free text (item descriptions, notes, payment instructions, terms) to
+ * /api/translate, then re-renders the same A4 frame, mirrored for RTL languages (Arabic/Farsi).
+ * Decision 0174.
  */
 export function SharedInvoiceViewer({ data, qrDataUrl }: { data: InvoiceRenderData; qrDataUrl?: string | null }) {
   const [lang, setLang] = useState("en");
