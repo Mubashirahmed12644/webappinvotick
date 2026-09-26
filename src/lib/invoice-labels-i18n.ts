@@ -893,14 +893,14 @@ export const ESTIMATE_LABEL_TRANSLATIONS: Record<string, Partial<InvoiceLabels>>
     "invoiceDetails": "รายละเอียดประมาณการ",
     "invoiceNo": "ประมาณ #",
     "dueDate": "ใช้ได้ถึงวันที่",
-    "footerGenerated": "การประมาณการที่สร้างขึ้นโดยใช้ Invotic"
+    "footerGenerated": "การประมาณการที่สร้างขึ้นโดยใช้ Invotick"
   },
   "hi": {
     "invoice": "अनुमान",
     "invoiceDetails": "अनुमान विवरण",
     "invoiceNo": "अनुमान #",
     "dueDate": "तक वैध",
-    "footerGenerated": "इनवोटिक का उपयोग करके अनुमान तैयार किया गया"
+    "footerGenerated": "Invotick का उपयोग करके अनुमान तैयार किया गया"
   },
   "am": {
     "invoice": "ግምት",
@@ -984,7 +984,7 @@ export const ESTIMATE_LABEL_TRANSLATIONS: Record<string, Partial<InvoiceLabels>>
     "invoiceDetails": "અંદાજ વિગતો",
     "invoiceNo": "અંદાજ #",
     "dueDate": "સુધી માન્ય",
-    "footerGenerated": "Invotic નો ઉપયોગ કરીને જનરેટ કરેલ અંદાજ"
+    "footerGenerated": "Invotick નો ઉપયોગ કરીને જનરેટ કરેલ અંદાજ"
   },
   "ms": {
     "invoice": "Anggaran",
@@ -998,6 +998,6 @@ export const ESTIMATE_LABEL_TRANSLATIONS: Record<string, Partial<InvoiceLabels>>
     "invoiceDetails": "अनुमान विवरण",
     "invoiceNo": "अनुमान #",
     "dueDate": "सम्म मान्य",
-    "footerGenerated": "Invotic प्रयोग गरेर उत्पन्न अनुमान"
+    "footerGenerated": "Invotick प्रयोग गरेर उत्पन्न अनुमान"
   }
 };

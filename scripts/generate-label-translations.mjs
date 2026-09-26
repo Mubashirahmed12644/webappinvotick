@@ -100,7 +100,12 @@ for (const code of codes) {
   });
   const estTexts = (await estRes.json())?.texts;
   if (Array.isArray(estTexts) && estTexts.length === estEntries.length) {
-    estOut[code] = Object.fromEntries(estEntries.map(([k], i) => [k, estTexts[i] || estEntries[i][1]]));
+    // The same brand repair as above. Leaving it off here cut the name in the estimate's footer in
+    // th, gu and ne ("Invotic") and transliterated it in hi; scripts/checks/share-labels.check.tsx
+    // now fails on any footer line that does not spell "Invotick" whole.
+    estOut[code] = Object.fromEntries(
+      estEntries.map(([k], i) => [k, (estTexts[i] || estEntries[i][1]).replace(/\bInvot[a-zA-Z]{0,4}\b/g, "Invotick")]),
+    );
   } else {
     console.warn(`  ${code}: estimate overrides FAILED — that language will say "invoice" on estimates`);
   }
