@@ -15,14 +15,33 @@
  * than it read.
  *
  *   node scripts/apply-label-overrides.mjs
+ *   APP_REPO=<an invoice-kmp-app worktree> node scripts/apply-label-overrides.mjs
+ *
+ * Paths are resolved from this file, not from the shell's folder, so it runs from anywhere. The app
+ * is `APP_REPO`, or the checkout at `~/Documents/Invotick/invoice-kmp-app`. It lived at
+ * `~/Documents/invoice-kmp-app` until the repos moved into one folder; this script kept pointing
+ * there, so the app's copy was never regenerated after 0151 added `footerContact` — 24 languages
+ * showed the business's own footer heading as "Contact us" in English (decision 0175).
  */
-import { readFileSync, writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const WEB_TABLE = "src/lib/invoice-labels-i18n.ts";
-const OVERRIDES = "src/lib/invoice-labels-overrides.ts";
-const APP_TABLE =
-  "/Users/ahmedmubashir/Documents/invoice-kmp-app/core/common/src/commonMain/kotlin/" +
-  "invotick/invoicemaker/core/common/model/InvoiceLabelTranslations.kt";
+const WEB_ROOT = fileURLToPath(new URL("..", import.meta.url));
+const WEB_TABLE = join(WEB_ROOT, "src/lib/invoice-labels-i18n.ts");
+const OVERRIDES = join(WEB_ROOT, "src/lib/invoice-labels-overrides.ts");
+const APP_REPO = process.env.APP_REPO ?? "/Users/ahmedmubashir/Documents/Invotick/invoice-kmp-app";
+const APP_TABLE = join(
+  APP_REPO,
+  "core/common/src/commonMain/kotlin/invotick/invoicemaker/core/common/model/InvoiceLabelTranslations.kt",
+);
+// Checked before anything is written: a wrong app path used to fail only AFTER the web table had
+// been rewritten, leaving the two copies apart — the exact state this script exists to prevent.
+if (!existsSync(dirname(APP_TABLE))) {
+  console.error(`REFUSING TO WRITE: no app checkout at ${APP_REPO} (set APP_REPO)`);
+  process.exit(1);
+}
 
 /** The generated file writes JSON-shaped objects, so they can be parsed as JSON. */
 function readGenerated(src, name) {
@@ -129,6 +148,11 @@ writeFileSync(
 );
 console.log(`wrote ${WEB_TABLE}`);
 
+// The web table's git blob id, stamped into the app's copy. The app's test reads that exact blob out
+// of this repository and compares it with the Kotlin maps, so a hand edit, a partial run or a copy
+// made from a table that was never committed turns the app's suite red.
+const tableBlob = execFileSync("git", ["-C", WEB_ROOT, "hash-object", WEB_TABLE], { encoding: "utf8" }).trim();
+
 const ktMap = (obj) =>
   Object.entries(obj)
     .map(
@@ -157,6 +181,10 @@ writeFileSync(
 //
 // The values below carry ${applied} human corrections from a per-language review of every label in an
 // invoice context — see the overrides file for what was wrong and why.
+//
+// web-table-blob: ${tableBlob}
+// (git blob of Webinvotick/src/lib/invoice-labels-i18n.ts this was generated from; checked by
+// InvoiceLabelTableIsTheWebsTest in :data)
 val INVOICE_LABEL_TRANSLATIONS: Map<String, Map<String, String>> = mapOf(
 ${ktMap(table)}
 )
