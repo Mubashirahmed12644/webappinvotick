@@ -20,6 +20,7 @@
   - ⚠️ **`invoice_shared` is not live yet** — it exists only on `feat/presentation-json-migration`
     and `fix/analytics-reliable-delivery`, not on `origin/main` or the released `VC_90_VN_140`.
     Until it ships, G1 cannot be measured from production.
-  - `payment_added` is live (`EditInvoiceViewModel`).
+  - `payment_added` is live (`EditInvoiceViewModel`). **Wrong (2026-09-26):** it had never fired — 0 rows ever — because
+    that sender was unreachable; fixed from 1.4.9 by [0174](0174-a-payment-is-reported-when-it-is-written-and-a-timeout-is-not-an-answer.md).
   - Repeat-use is computed from data, not a new event.
   - The reporting surface already exists: the admin panel's `funnel-analysis` page.
