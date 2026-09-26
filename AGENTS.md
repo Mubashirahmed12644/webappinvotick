@@ -336,6 +336,14 @@ the list is wrong, not the app.**
 - **G1 primary — proof an invoice is real:** **`invoice_shared_success`** (fires only on a **confirmed**
   share: the user picks a target app in the OS chooser, tagged `mode` + `target`; **live since 1.4.1**)
   and `payment_added`. `estimate_shared` is the estimate twin.
+  ⚠️ **`payment_added` has never fired: 0 rows since 2026-01-01**, against 419 payments created in the 30 days to
+  2026-09-26. Its one sender was a list change behind an intent nothing dispatches. **Fixed from 1.4.9** (decision
+  [0174](docs/decisions/0174-a-payment-is-reported-when-it-is-written-and-a-timeout-is-not-an-answer.md), app branch
+  `fix/149-payment-and-consent-events-tell-the-truth`, **not merged**):
+  - fires once the payment is **written**, from the create-invoice save, the edit-invoice save and the Payments screen;
+  - `source` = `create_invoice|edit_invoice|payments_screen`, `invoice_count` = invoice rows written. A receipt the
+    Payments screen splits over N invoices is **one** row with `invoice_count=N`. No amount, reference or id;
+  - so until 1.4.9 spreads, **G1's payment leg reads zero because nothing measured it**, not because nobody paid.
 - **Form-typing proxies:** `business_form_text_typed`, `client_form_text_add`, `item_form_text_add` —
   fired **once per form**, on the first non-blank keystroke in the *name* field. They prove the user
   started typing, **not** that the data was real. Plus `client_add_success` and `Item_added`.
@@ -543,6 +551,13 @@ the list is wrong, not the app.**
     **`error_code`** only where UMP gave one (absent means not applicable, never zero — §1.7).
     `denied` and `partial` are two words on purpose: refusing everything and allowing device
     storage but not personalisation are different answers with different revenue.
+  - **`timed_out`** (`true|false`, decision
+    [0174](docs/decisions/0174-a-payment-is-reported-when-it-is-written-and-a-timeout-is-not-an-answer.md)): whether
+    the ad-moment had stopped waiting (4 s) before the flow ended. Absent on `privacy_options`. Until 0174 the 4 s
+    timeout **wrote the row itself**, as `dismissed`, while the person was still reading the form, and their answer
+    was then dropped. A row with `entry=first_ad_moment`, `outcome=dismissed`, `elapsed_ms` ≈ 4,000 and no
+    `timed_out` key is **our timeout, not the person**. No store build has sent one: the only row in production is the
+    iOS Simulator's (build 26, debug).
   - **Only an EEA/UK phone can produce a `consent_form` view.** Everywhere else UMP answers
     NOT_REQUIRED, no form is ever shown, and the only `consent_decision` those phones send is
     `outcome=not_required`. A count of `consent_form` is a count of European users, not of users.

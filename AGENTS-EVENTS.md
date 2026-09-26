@@ -540,6 +540,32 @@ every iOS batch. iOS sends its build number (15) as `appVersionCode`, which is b
 testers read as zero while every batch was answered 200. The floor is now Android's: Web and iOS are
 exempt.
 
+### 1.24 An event fires where the fact becomes true, and a wait running out is not an answer. *(decided 2026-09-26)*
+
+*(Numbered 1.24 because 1.19–1.23 live on `feat/m3-theme-and-label-verification` and are not on `main` yet.)*
+Decision [0174](docs/decisions/0174-a-payment-is-reported-when-it-is-written-and-a-timeout-is-not-an-answer.md).
+Two defects, one shape: the event was sent from a place where the thing it names had not happened.
+
+> **`payment_added`, 0 rows ever.** Half of G1 (0006). Its sender was a list change in memory, behind an intent
+> nothing dispatched; the three places that **write** a payment sent nothing. 419 payments in 30 days, 0 events. The
+> name was in the vocabulary, the decision and the panel catalogue the whole time, which is what hid it.
+>
+> **`consent_decision`, `dismissed` for a person who pressed Consent.** A 4 s wait for UMP started before the form
+> appeared. When it ran out, the flow wrote its one row with what UMP held then (nothing chosen yet), and the real
+> answer arrived as a second row and was dropped.
+
+The rules:
+- **Send a result where it becomes true**: after the write, after the store answers, after the form closes. Never on
+  the press that asks for it, and never on an in-memory change that can still be thrown away.
+- **A timer we own is a fact about us.** It may release a waiting screen or ad, but it never writes the user's
+  answer. Record it as a parameter on the row the real ending writes (`timed_out=true`), not as an `outcome`: with one
+  row per flow, an `outcome=timeout` replaces the answer it was meant to sit beside.
+- **Every place that performs the action reports it, and only one file spells the name.** Enforced for payments by
+  `EveryPaymentWrittenIsReportedTest`, which walks the repository, so the fourth place that writes a payment fails
+  the build the day it is written.
+- **Before trusting a G1 leg, count its rows against the table it describes** (`payments`, `shared_invoice`). A
+  name with zero rows next to a table with hundreds is a dead sender, not a behaviour.
+
 ### 1.10 Layers
 
 `intent.screen` · `intent.action` · `response.outcome` · `response.gate` · `response.interruption` ·
