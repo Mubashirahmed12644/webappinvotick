@@ -540,6 +540,17 @@ every iOS batch. iOS sends its build number (15) as `appVersionCode`, which is b
 testers read as zero while every batch was answered 200. The floor is now Android's: Web and iOS are
 exempt.
 
+> **The three pairs 0037 left open, answered by the owner on 2026-09-26.** (1) `Item_added` beside the Add
+> button's `add_item_added`: *"Nateeja-event banao"* — it became the **result** (§1.24), sent once the line is on the
+> document, with the parameters §1.11.1 said were lost. (2) `client_form_saved` + `client_add_success`: *"Dono rakho,
+> alag cheezein hain"* — the client was saved; a client was put on the invoice. (3) `invoice_screen_close` +
+> `Create_Invoice_Backpress_click`: *"Aik event, sab maloomat us me"* — the coded one goes, its parameters move.
+> Two lessons from applying it. **A press and its result are two facts, and the check is told the pair, never the
+> name**: `DuplicatePressCheck.isPressAndItsResult` lists `add_item_added` + `Item_added` and the client form's
+> Save/Update tap + either client event, so the same result beside any other tap is still reported. And **count what
+> the old event covered before choosing what reads it**: `Create_Invoice_Backpress_click` was named for the back
+> gesture but fired on the ✕ too (162 of 459 pairs), so the backend reads both methods (§1.25).
+
 ### 1.24 An event fires where the fact becomes true, and a wait running out is not an answer. *(decided 2026-09-26)*
 
 *(Numbered 1.24 because 1.19–1.23 live on `feat/m3-theme-and-label-verification` and are not on `main` yet.)*
@@ -565,6 +576,23 @@ The rules:
   the build the day it is written.
 - **Before trusting a G1 leg, count its rows against the table it describes** (`payments`, `shared_invoice`). A
   name with zero rows next to a table with hundreds is a dead sender, not a behaviour.
+
+### 1.25 A parameter that changes without a redraw is read at the tap. *(decided 2026-09-26)*
+
+Decision [0037](docs/decisions/0037-the-ui-layer-owns-the-press.md) addendum. An auto tap's parameters are built
+while the button is **composed**, and a button is redrawn only when something it shows changes. That is right for
+`had_input` (the form changing redraws the screen) and wrong for anything that moves on its own: `ms_on_screen` built
+that way says how long the screen had been open at its **last redraw**, which can be minutes before the press.
+
+- A parameter the screen cannot see change goes in `paramsAtTap` (`guardedTrackedClick`, `TrackedIconButton`), a
+  function read when the finger lands. The top bar's ✕ reads a screen's close details through
+  `LocalSheetCloseDetails` this way. Pinned by `TheCloseEventReadsItsDetailsAtTheTapTest`, which moves the clock
+  without a recomposition and presses the ✕.
+- **When a coded event goes, its parameters move with it to every route of the survivor**, and the routes are counted
+  first. `invoice_screen_close` has three (✕, system back, "Discard Everything"); all three carry
+  `has_changes`, `item_count`, `has_client`, `has_business` and `ms_on_screen` from 1.4.9.
+- A backend signal that read the old name keeps it (§1.8) and adds the new shape — never one or the other — and a
+  press that old builds report under both names is counted once (`GREATEST`, not `+`).
 
 ### 1.10 Layers
 

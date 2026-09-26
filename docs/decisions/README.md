@@ -57,7 +57,7 @@ Numbering: next free number, zero-padded to 4.
 | [0034](0034-a-page-costs-what-it-shows.md) | A page costs what it shows, not what the database holds | decided, being applied |
 | [0035](0035-a-build-must-not-be-able-to-take-the-database.md) | A build must not be able to take the database | partly done, one number still to measure |
 | [0036](0036-a-delete-must-say-what-it-is-deleting.md) | A delete must say what it is deleting (sync contract gap G2) | decided, not yet built |
-| [0037](0037-the-ui-layer-owns-the-press.md) | The UI layer owns the press; the coded `trackClick` twin goes | decided, in app branch |
+| [0037](0037-the-ui-layer-owns-the-press.md) | The UI layer owns the press; the coded `trackClick` twin goes. Addendum 2026-09-26: `Item_added` is the item's result, the client pair stays, one event for leaving the invoice screen | decided; addendum on app + backend branches, not merged |
 | [0038](0038-the-hold-shows-one-branded-loader-not-a-picture-of-the-screen.md) | The hold shows one branded loader, not a picture of the screen it is heading to (reverses 0031's remedy) | decided, in app branch |
 | [0039](0039-language-is-read-from-the-session-not-re-sent-per-event.md) | Language is read from the session, not re-sent per event; the session row is written from any batch | decided, in backend tree |
 | [0040](0040-the-system-splash-draws-the-mark-we-are-about-to-draw.md) | The system splash draws the mark we are about to draw; we cannot paint sooner than the platform, only paint the same thing | decided, in app branch |
