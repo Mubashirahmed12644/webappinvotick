@@ -53,7 +53,7 @@ const doc: InvoiceRenderData = {
   shippingCost: 0,
   total: 1500,
   color: "#0D4DC0",
-  toggles: { sender: true, receiver: true },
+  toggles: { title: true, sender: true, receiver: true, items: true, total: true, notes: true, payment: true, terms: true },
   business: { name: "Ahmed Traders", addressLine1: "12 Mall Road", city: "Lahore", country: "Pakistan" },
   client: {
     name: "Bilal Khan",
@@ -160,8 +160,8 @@ for (const [name, table] of [["invoice", LABEL_TRANSLATIONS], ["estimate", ESTIM
 
 // 5. The rendered share page, the way a client reads it.
 for (const [lang, words] of [
-  ["zh-CN", ["销售方", "购买方", "扫描下载 Invotick", "使用 Invotick 生成的发票"]],
-  ["ar", [LABEL_TRANSLATIONS.ar.from!, LABEL_TRANSLATIONS.ar.billTo!, LABEL_TRANSLATIONS.ar.footerScan!]],
+  ["zh-CN", ["销售方", "购买方", "折扣", "采购订单号", "扫描下载 Invotick", "使用 Invotick 生成的发票", `${LIVE}Cotton fabric`, `${LIVE}Thank you for your business`]],
+  ["ar", [LABEL_TRANSLATIONS.ar.from!, LABEL_TRANSLATIONS.ar.billTo!, LABEL_TRANSLATIONS.ar.colDisc!, LABEL_TRANSLATIONS.ar.footerScan!, `${LIVE}Cotton fabric`]],
 ] as const) {
   const t = await translateInvoice(doc, lang);
   const html = renderToStaticMarkup(<A4PagedFrame data={t.data} labels={t.labels} dir={t.dir} />);
