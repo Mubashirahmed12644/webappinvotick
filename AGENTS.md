@@ -505,6 +505,24 @@ the list is wrong, not the app.**
   ⚠️ **`app_open_ad_loaded` is gone from the app** — 4 firings on 1 device, and `ad_loaded` carries
   everything it did plus `type`, `ad_request_id` and `ad_source`. Old rows keep the name; nothing
   new arrives under it, so a query that still reads it is measuring history only.
+- **Store rating sheet, from the release after 1.4.9** (decision
+  [0176](docs/decisions/0176-the-stores-rating-sheet-is-requested-after-the-nth-share-and-nothing-is-asked-first.md);
+  app branch `feat/store-review-after-share` @ `d90a7908`, **not merged, not released**).
+  - **`store_review_requested`**, coded, one per request, on Android and iOS. Nothing is asked of the user first,
+    and our own feedback dialog (stars → WhatsApp) is never connected to it.
+  - When: after the Nth `invoice_shared_success` since the last request (Remote Config `store_review_after_shares`,
+    default 2), once the app has been in front 2 s with no ad, sheet, dialog or native question on screen. Never on the
+    install's first launch, never within `store_review_cooldown_days` (default 90), never when `store_review_enabled`
+    is `false`. All three keys are read as text, so an absent key keeps its default.
+  - Sent when the request's end is known: on Android when Play's flow ends or fails, on iOS once the alert (if any)
+    has gone, because iOS answers nothing.
+  - `trigger` (`invoice_share`), `share_count`, `share_threshold` (N in effect).
+  - `outcome`: `flow_ended`, `request_failed` or `launch_failed`. **Absent on iOS** — absent is unknown (§1.7).
+  - `flow_ms` on `flow_ended` only: how long Play's flow ran. Play never says whether a card was shown or whether the
+    user rated, so neither is recorded anywhere.
+  - `error_code` + `error` (Play's `ReviewErrorCode` and its word) on `request_failed`; `reason` (`no_screen`,
+    `prompt_taken`, our own check) on `launch_failed`; `exception_class` where something threw.
+  - A `request_failed` spends no cooldown, so it can repeat once per share on a phone without Play.
 - **Notifications:** `notification_permission_shown` / `_allowed` / `_denied`
 - **Parameters added 2026-09-04 (release after 1.4.2, branch `VC_93_VN_142`):** `app_cold_start.prev_exit`
   (`crash|anr|crash_native|user_request|low_memory|…|unknown`, API ≥ 30 only) + `prev_exit_ms_ago`;
