@@ -93,3 +93,4 @@ Numbering: next free number, zero-padded to 4.
 - [0176 — The store's rating sheet is requested after the Nth confirmed share, and nothing is asked first](0176-the-stores-rating-sheet-is-requested-after-the-nth-share-and-nothing-is-asked-first.md)
 - [0177 — Every Save says "Save" and dims when there is nothing new to keep](0177-every-save-says-save-and-dims-when-there-is-nothing-to-keep.md)
 - [0178 — An error a person reads is a plain sentence, and it is counted (`error_shown`)](0178-an-error-a-person-reads-is-a-plain-sentence-and-it-is-counted.md)
+- [0179 — A sign-in failure is told apart from the server's sentence](0179-a-sign-in-failure-is-told-apart-from-the-servers-sentence.md)
