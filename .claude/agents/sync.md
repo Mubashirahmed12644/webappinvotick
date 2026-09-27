@@ -1360,6 +1360,29 @@ Memory is dated observation. Verify any file:line against the code before relyin
     - **Open:** the server revives a soft-deleted row when a later-timed live copy arrives through any sync update —
       the owner's decision whether the backend should refuse an un-delete through sync.
 
+50. **A delete stays a delete: no sync copy brings a deleted record back** (the owner, 2026-09-27: "Haan, delete
+    hamesha delete"). Backend `fix/a-delete-stays-deleted`: test `9a520c7` (4 of 9 red on `e3d54e4`), fix `0db0c0e`;
+    suite 1539/1539. **LIVE 2026-09-27** (`0db0c0ea` healthy). No migration.
+    - **What was broken.** All 21 updates stored `isDeleted = dto.isDeleted ?: existing.isDeleted` and judged the copy by
+      time alone, so a phone that edited a record offline later than another phone (or the web) deleted it set
+      `is_deleted` back to 0 for everyone; a create reusing the id did the same through the update. Rule 23's revival.
+    - **Measured 2026-09-27 (read-only):** 0 rows in all 21 tables live while carrying a delete stamp — the shape a
+      revival leaves. Deletes in the 30 days to then: invoices 500, lines 808, products 988, clients 24, estimates 18,
+      payments 14.
+    - **The rule.** `AbstractSyncV2Support.refuseRevival`: a live copy of a record the server holds deleted is refused,
+      whatever its time, as `ALREADY_DELETED` with `data.deletedAt` — in every update after the ownership check and
+      before the clock, and in every create that finds the caller's own row (another account's row keeps its old answer,
+      so no stranger learns an id exists). Unchanged: a deleted copy, deleting a live record, deleting a deleted record
+      (quiet success). One WARN line, never ERROR.
+    - **Why `ALREADY_DELETED`:** every build since 1.3.9 treats it as non-retryable → TERMINAL, reported once.
+      `STALE_CONFLICT` loops on ≤ 1.4.1, re-queues a create as an update, and 1.4.9 files it as "server holds this".
+    - **Nothing restores a deleted record on purpose** (app, web, admin, account restore 0111, guest claim, date repair).
+      A future restore needs its own path, never a sync copy.
+    - **Payments included** — the owner's word covered every record; this is server behaviour, not the Payments screen.
+    - **Open:** the app half (phone applies the server's delete, soft) — owner said yes 2026-09-27, being built. Also: a
+      NEW line under a deleted invoice is still accepted (`resolveInvoice`); the Device sync card counts `ALREADY_DELETED`.
+    - Guards: `ADeleteStaysDeletedTest` (9 cases × 21 groups); the web-delete case in `AWebWriteReachesThePhonesTest`.
+
 ## Established 2026-09-12, while planning the receipt number
 
 The plan is `docs/SYNC-RECEIPT-NUMBER-PLAN.md`. Each line says how it is known.
