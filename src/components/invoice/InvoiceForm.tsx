@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { TextField } from "@/components/ui/TextField";
 import { cn } from "@/lib/cn";
 import { formatMoney } from "@/lib/format";
-import { discountTypeOf, typeWord, type DiscountType } from "@/lib/invoice-calc";
+import { computeLineItem, discountTypeOf, typeWord, type DiscountType } from "@/lib/invoice-calc";
 import { nextBusinessInvoiceNumber } from "@/lib/invoice-number";
 import {
   editBlocker,
@@ -342,7 +342,7 @@ export function InvoiceForm({
                   <input placeholder="Qty" inputMode="decimal" value={it.quantity} onChange={(e) => updateItem(it.id, { quantity: e.target.value })} className={cn(selectCls, "sm:col-span-2 h-9")} />
                   <input placeholder="Unit price" inputMode="decimal" value={it.unitPrice} onChange={(e) => updateItem(it.id, { unitPrice: e.target.value })} className={cn(selectCls, "sm:col-span-3 h-9")} />
                   <div className="flex items-center justify-end sm:col-span-2">
-                    <span className="text-sm font-bold text-[var(--color-on-surface)]">{fields ? formatMoney(fields.netPrice * fields.quantity, currency) : "—"}</span>
+                    <span className="text-sm font-bold text-[var(--color-on-surface)]">{fields ? formatMoney(computeLineItem({ quantity: fields.quantity, unitPrice: fields.unitPrice, netPrice: fields.netPrice }).lineTotal, currency) : "—"}</span>
                   </div>
                   <input placeholder="Discount" inputMode="decimal" value={it.discountValue} onChange={(e) => updateItem(it.id, { discountValue: e.target.value })} className={cn(selectCls, "sm:col-span-2 h-9")} />
                   <select value={it.discountType} onChange={(e) => updateItem(it.id, { discountType: e.target.value as DiscountType })} className={cn(selectCls, "sm:col-span-2 h-9")}>
