@@ -8,6 +8,7 @@ import { templateLook } from "./render-look";
 import { localDate, summarizeInvoices } from "./invoice-status";
 import { sortByOrder } from "./givens";
 import { savedItemsOf, type SavedInvoiceItem } from "./invoice-preview";
+import { computeLineItem, discountTypeOf } from "./invoice-calc";
 import type { Client, InvoiceStatus, InvoiceSummary } from "./types";
 
 interface RawInvoice {
@@ -541,9 +542,11 @@ export async function getInvoiceRenderData(id: string): Promise<InvoiceRenderDat
       quantity: num(it.quantity),
       unitPrice: num(it.unitPrice),
       discountValue: num(it.discountValue),
-      discountType: it.discountType ?? "PERCENTAGE",
+      // Read as the app reads it: a stored FIXED or AMOUNT is a flat amount, not a percentage.
+      discountType: discountTypeOf(it.discountType),
       taxRate: num(it.taxRate),
-      amount: num(it.netPrice) * num(it.quantity),
+      // The line's amount as every other surface computes it: net × quantity, to the cent, in decimal.
+      amount: computeLineItem({ quantity: num(it.quantity), unitPrice: num(it.unitPrice), netPrice: num(it.netPrice) }).lineTotal,
     }));
 
   // Colour, blocks, header and background come from the one function the invoice form's Preview

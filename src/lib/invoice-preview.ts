@@ -6,6 +6,9 @@ import type { Client, InvoiceStatus } from "./types";
 import {
   computeInvoiceTotals,
   computeLineItem,
+  DISCOUNT_ABOVE_PRICE,
+  DISCOUNT_ABOVE_SUBTOTAL,
+  discountExceeds,
   discountTypeOf,
   typeWord,
   type DiscountType,
@@ -213,8 +216,8 @@ const SKIP = Symbol("skip");
  *   server stores it as sent, 0.5 included. Until fix/rest-invoice-items-and-quantity (7dd2aec) it
  *   raised anything below 1 to 1, so the form refused those.
  * - A number the server would store as a different one is refused rather than sent: more than 2
- *   decimals (it keeps 2), and a discount past the price or past the subtotal (it stores the negative
- *   amount as 0.00).
+ *   decimals (it keeps 2), and a discount past the price or past the subtotal (the calculation would
+ *   stop it there, on the web as in the app, so part of what was typed would silently not be taken).
  */
 export function prepareInvoice<R extends FormRow>(input: {
   rows: R[];
@@ -251,7 +254,9 @@ export function prepareInvoice<R extends FormRow>(input: {
     invoiceTaxRate: input.taxRate,
     shippingCost,
   });
-  if (totals.discountedSubtotal < 0) problems.push("The discount is more than the subtotal.");
+  // The totals stop a discount at the subtotal, as the app's do; the form says so rather than send a
+  // discount that was not all taken.
+  if (discountExceeds(input.discountType, totals.subtotal, discountValue)) problems.push(DISCOUNT_ABOVE_SUBTOTAL);
   return { sent, totals, problems, rowProblems, discountValue, shippingCost };
 }
 
@@ -280,7 +285,11 @@ function rowProblem(row: FormRow, n: number): string | null | typeof SKIP {
   }
   if (decimalsOf(row.unitPrice) > 2) return `Item ${n}: the price can have at most 2 decimal places.`;
   if (decimalsOf(row.discountValue) > 2) return `Item ${n}: the discount can have at most 2 decimal places.`;
-  if (savedItemFields(row).netPrice < 0) return `Item ${n}: the discount is more than the price.`;
+  // A line's discount stops at its price in the calculation, as in the app. The form refuses one typed
+  // past it rather than send a discount that was not all taken; a saved line left as it was keeps its own.
+  if (!keptOf(row) && discountExceeds(row.discountType, typedNumber(row.unitPrice), typedNumber(row.discountValue))) {
+    return `Item ${n}: ${DISCOUNT_ABOVE_PRICE}`;
+  }
   return null;
 }
 
@@ -482,7 +491,8 @@ export function invoicePreviewData(p: InvoicePreviewInput): InvoiceRenderData {
     discountType: it.discountType ?? "PERCENTAGE",
     // The rate the item is sent with, which the saved invoice's page shows (num(it.taxRate)).
     taxRate: it.taxRate ?? 0,
-    amount: it.netPrice * it.quantity,
+    // net × quantity to the cent, in decimal, exactly as getInvoiceRenderData computes it.
+    amount: computeLineItem({ quantity: it.quantity, unitPrice: it.unitPrice, netPrice: it.netPrice }).lineTotal,
   }));
   const c = p.client;
 
