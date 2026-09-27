@@ -90,3 +90,4 @@ Numbering: next free number, zero-padded to 4.
 - [0173 — The iPhone asks Google's consent question before Apple's](0173-the-iphone-asks-googles-consent-question-before-apples.md)
 - [0174 — A payment is reported when it is written, and a timeout is not the user's answer](0174-a-payment-is-reported-when-it-is-written-and-a-timeout-is-not-an-answer.md)
 - [0175 — The share page reads its labels from the table, and only the invoice's own sentences are translated live](0175-the-share-page-reads-its-labels-from-the-table.md)
+- [0176 — The store's rating sheet is requested after the Nth confirmed share, and nothing is asked first](0176-the-stores-rating-sheet-is-requested-after-the-nth-share-and-nothing-is-asked-first.md)
