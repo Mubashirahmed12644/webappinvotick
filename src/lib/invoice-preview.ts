@@ -6,6 +6,8 @@ import type { Client, InvoiceStatus } from "./types";
 import {
   computeInvoiceTotals,
   computeLineItem,
+  DISCOUNT_ABOVE_PRICE,
+  DISCOUNT_ABOVE_SUBTOTAL,
   discountExceeds,
   discountTypeOf,
   typeWord,
@@ -254,7 +256,7 @@ export function prepareInvoice<R extends FormRow>(input: {
   });
   // The totals stop a discount at the subtotal, as the app's do; the form says so rather than send a
   // discount that was not all taken.
-  if (discountExceeds(input.discountType, totals.subtotal, discountValue)) problems.push("The discount is more than the subtotal.");
+  if (discountExceeds(input.discountType, totals.subtotal, discountValue)) problems.push(DISCOUNT_ABOVE_SUBTOTAL);
   return { sent, totals, problems, rowProblems, discountValue, shippingCost };
 }
 
@@ -286,7 +288,7 @@ function rowProblem(row: FormRow, n: number): string | null | typeof SKIP {
   // A line's discount stops at its price in the calculation, as in the app. The form refuses one typed
   // past it rather than send a discount that was not all taken; a saved line left as it was keeps its own.
   if (!keptOf(row) && discountExceeds(row.discountType, typedNumber(row.unitPrice), typedNumber(row.discountValue))) {
-    return `Item ${n}: the discount is more than the price.`;
+    return `Item ${n}: ${DISCOUNT_ABOVE_PRICE}`;
   }
   return null;
 }

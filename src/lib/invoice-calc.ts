@@ -9,11 +9,12 @@ export { discountTypeOf, typeWord, type DiscountType } from "./discount-type.ts"
 
 // ─── Money arithmetic ───────────────────────────────────────────────────────────────────────────
 //
-// Decimal, not binary floating point. The app adds invoices up in BigDecimal, rounding half away
-// from zero to the cent; this file used Number arithmetic and Math.round, and the two disagreed
-// whenever a figure landed on half a cent: 15 % of 14.50 is 2.175, which the app rounds to 2.18 and
-// Number arithmetic held as 2.1749999… and rounded to 2.17. So every figure below is an exact decimal
-// (a BigInt count of 10^-scale units), and a Number only on the way out.
+// Decimal, not binary floating point, and four decimals, not two. The owner, 2026-09-27: "Dikhny wala
+// figure round kr sakty ho but calculation wala nhi — infact calculation .0000 tak ho, but ager show .00
+// figure hain to .00 ky show krwaogy." So every figure below is an exact decimal (a BigInt count of
+// 10^-scale units) carried at four decimals, half away from zero — the app's toCalcAmount — and only
+// formatMoney (format.ts) rounds to two, for the reader. Number arithmetic used to hold 15 % of 14.50 as
+// 2.1749999… where the app holds 2.1750.
 
 /** An exact decimal: n × 10^-s. */
 interface Dec {
@@ -78,14 +79,14 @@ function cmp(a: Dec, b: Dec): number {
   return x < y ? -1 : x > y ? 1 : 0;
 }
 
-/** To the cent, half away from zero: the app's toMoneyAmount (RoundingMode.ROUND_HALF_AWAY_FROM_ZERO). */
+/** Four decimals, half away from zero: the app's toCalcAmount (RoundingMode.ROUND_HALF_AWAY_FROM_ZERO). */
 function money(d: Dec): Dec {
-  if (d.s <= 2) return { n: atScale(d, 2), s: 2 };
-  const unit = pow10(d.s - 2);
+  if (d.s <= 4) return { n: atScale(d, 4), s: 4 };
+  const unit = pow10(d.s - 4);
   const abs = d.n < B0 ? -d.n : d.n;
   let cents = abs / unit;
   if ((abs % unit) * B2 >= unit) cents += B1;
-  return { n: d.n < B0 ? -cents : cents, s: 2 };
+  return { n: d.n < B0 ? -cents : cents, s: 4 };
 }
 
 /** Between zero and [limit]; zero when [limit] itself is below zero. The app's DocumentTotals.atMost. */
@@ -125,7 +126,7 @@ export interface LineItemInput {
 export interface LineItemComputed {
   unitPrice: number;
   quantity: number;
-  discountAmount: number; // per unit, what was taken off
+  discountAmount: number; // per unit, what was taken off (four decimals, as every figure here)
   taxAmount: number; // per unit
   netPrice: number; // per unit (unit price − discount + tax)
   lineTotal: number; // netPrice × quantity
@@ -133,9 +134,9 @@ export interface LineItemComputed {
 
 /**
  * One line, per unit, then times its quantity. The same steps as the app's LineUnitPrice.of and
- * DocumentTotals.lineAmount, each figure to the cent:
+ * DocumentTotals.lineAmount, each figure at four decimals:
  * 1. the discount on the unit price (a percentage of it, or a flat amount per unit), never more than
- *    the price — so the discounted price stops at zero, as the app's always has;
+ *    the price — the form refuses a larger one (discountExceeds); this stop is the last safety net;
  * 2. the tax on the discounted price;
  * 3. the net unit price = price − discount + tax;
  * 4. the line's amount = net × quantity.
@@ -158,13 +159,17 @@ export function computeLineItem(item: LineItemInput): LineItemComputed {
   };
 }
 
+/** The words for a refused discount — the app's DiscountLimit.ABOVE_PRICE / ABOVE_SUBTOTAL, letter for letter. */
+export const DISCOUNT_ABOVE_PRICE = "Discount can't be more than the price.";
+export const DISCOUNT_ABOVE_SUBTOTAL = "Discount can't be more than the subtotal.";
+
 /**
- * How far a discount of [value] would take [base] below zero: true when it asks for more than there
- * is — a percentage above 100, or a flat amount above the base. The calculation stops such a discount
- * at the base; the invoice form refuses it instead, so the user sees what they typed was not taken.
+ * Whether a discount of [value] asks for more than [base]: a percentage above 100, or a flat amount above
+ * the base — the app's DiscountLimit.exceeds. Exactly 100 %, or exactly the base, is allowed. The owner,
+ * 2026-09-27: "Rok de aur bataye" — the form refuses such a discount and says why, on the web as in the app.
  */
 export function discountExceeds(type: DiscountType, base: string | number, value: string | number): boolean {
-  return cmp(amountOn(type, dec(base), dec(value)), dec(base)) > 0;
+  return type === "PERCENTAGE" ? cmp(dec(value), dec(100)) > 0 : cmp(dec(value), dec(base)) > 0;
 }
 
 export interface InvoiceTotalsInput {
@@ -188,9 +193,11 @@ export interface InvoiceTotals {
 }
 
 /**
- * The document's money rows, as the app's DocumentTotals.of adds them up: the subtotal is the sum of
- * the line amounts; the discount is taken on it (a percentage, or a flat amount), to the cent and never
- * more than the subtotal; the tax is the rate on what is left; then shipping.
+ * The document's money rows, as the app's DocumentTotals.of adds them up, every figure at four decimals:
+ * the subtotal is the sum of the line amounts; the discount is taken on it (a percentage, or a flat
+ * amount), never more than the subtotal; the tax is the rate on what is left; then shipping. Each row is
+ * shown as its own figure rounded to two, and the total as the precise total rounded to two, so a column
+ * can differ from the total by a paisa, as accounting software prints it.
  */
 export function computeInvoiceTotals(input: InvoiceTotalsInput): InvoiceTotals {
   const subtotal = input.items.reduce((acc, it) => add(acc, dec(computeLineItem(it).lineTotal)), ZERO);
