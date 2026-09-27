@@ -1383,6 +1383,30 @@ Memory is dated observation. Verify any file:line against the code before relyin
       NEW line under a deleted invoice is still accepted (`resolveInvoice`); the Device sync card counts `ALREADY_DELETED`.
     - Guards: `ADeleteStaysDeletedTest` (9 cases × 21 groups); the web-delete case in `AWebWriteReachesThePhonesTest`.
 
+51. **The server's delete is written on the phone: a live copy answered `ALREADY_DELETED` is soft-deleted here, at the
+    server's time** (the owner, 2026-09-27: "Haan, B par bhi delete", after confirming delete means soft delete on both
+    sides; backend half rule 50). App branch `fix/149-a-server-delete-is-applied-here` `c8259a17` (red `2b5c7bdf`),
+    merged into `VC_113_VN_149` 2026-09-27. **Not released.** Unit 1458/1459, 1 skipped (+14 new, 12 red first).
+    - **What was broken:** every build since 1.3.9 settled `ALREADY_DELETED` as TERMINAL and wrote nothing, so phone B kept
+      a live record that could never sync; its pull could not heal it because the row still claimed unsent work.
+    - **What is written** (`ServerDeletesHere` → `ServerDeleteDao.deleteAsTheServerHoldsIt`, from `NonRetryablePass`):
+      `isDeleted = 1`, `dateDeleted` = `data.deletedAt` (phone clock if absent), `SYNCED`. Only a live row changes;
+      content, `dateUpdated`, `version` untouched; one Room-checked UPDATE per table; **no SQL `DELETE` on this path**.
+    - **Children follow exactly as the phone's own delete takes them** (rule 23): an invoice's or estimate's live lines,
+      same time, each line's DELETE queued under its owner, same transaction. The document's own DELETE is never queued.
+    - **B's unsent edit is superseded:** the refused op stays TERMINAL; the record's other open CREATE/UPDATE are closed;
+      the orphan scan, the 0161 ask and the held-copy resend never re-offer it (they consider live rows only).
+    - **Payments and invoice-payment links are never written** — mirroring the phone's own payment delete would leave a
+      paid total counting a gone payment; that is the Payments review. Reported `payments_hold`.
+    - **Report:** `push_non_retryable` gains `delete_here` = `applied|already_deleted|not_on_phone|payments_hold|
+      not_written|failed`, on that stage only, absent when the switch is off. Amend 0050's table.
+    - **Switch:** `sync_apply_server_delete_enabled` (Remote Config string, on unless `false`, Android + iOS).
+    - **Screens:** lists drop the record at once; an open saved/preview/edit screen keeps what it loaded.
+    - **Open, owner's call:** a save on an edit screen already open writes `isDeleted = false` and revives the row here
+      until the next push re-applies the delete (bounded, flickers). Fix = `updateInvoice`/`updateEstimate` keep
+      `existing.isDeleted` — a Tier 1 save-path change.
+    - Guards: `AServerDeleteIsAppliedHereTest` (13), `SyncFailureEvidenceTest.deleteHereIsOneOfItsCodesOrItIsNotSent`.
+
 ## Established 2026-09-12, while planning the receipt number
 
 The plan is `docs/SYNC-RECEIPT-NUMBER-PLAN.md`. Each line says how it is known.
