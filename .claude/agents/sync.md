@@ -1334,6 +1334,32 @@ Memory is dated observation. Verify any file:line against the code before relyin
       owner id is malformed; which build and what shape is unknown until the server logs the refused id's shape (length,
       dash count, masked).
 
+49. **A copy the server holds, older than an edit it once refused here, is sent again once; a deleted one never**
+    (the owner, 2026-09-27: "Haan, sab aik dafa", on 0161's per-invoice breakdown). App branch
+    `fix/149-a-held-copy-is-sent-again-once` `3810384f` (red `e664981a`), merged into `VC_113_VN_149` 2026-09-27.
+    **Not released.** Unit 1444/1445, 1 skipped (baseline 1430 + 1 skipped; +14 new, 4 red first).
+    - **The case:** Ghana `28593589` (phone `02353a12`, 1.4.5). Signed up 2026-09-13 11:16:07 UTC; stamp `b55b1cc6` made
+      11:14:23 as a guest; invoice shared 11:23:25 → server v3 `updated_at` 11:23:25.095, no stamp. Stamp added 11:25:57,
+      signature 11:26:21; both pushes refused OWNERSHIP_VIOLATION. R1 (21:05) moved the stamp; nothing sent the invoice
+      again. Cameroon `8f9c68a7` the same (server v2 13:53:53.044; stamp 13:53:59; refused 13:54:19).
+    - **What is sent:** in `AskTheServerWhatItHolds`, a record held **live** is sent again as an **UPDATE**, once, under
+      the account that owns it here today, only when: its newest queue row is a refused CREATE/UPDATE (TERMINAL); the row
+      holds unsent work (not SYNCED); `held.updatedAt` is a strict ISO instant; the phone's `dateUpdated` is strictly
+      later. Times, never versions (the server decides by time; the phone's version is its own tally, 0042). Only records
+      the phone itself refused, never a parent found only through the rows waiting on it. The verdict becomes REOFFERED.
+    - **The server decides.** A STALE_CONFLICT stays TERMINAL with the server's words, reported once as
+      `push_stale_divergence`, never sent again; the phone's copy is untouched.
+    - **Held-deleted is never sent, whatever the times.** The server does NOT protect a deleted row on its own: the
+      update path sets `isDeleted = dto.isDeleted ?: existing.isDeleted` (`FinancialSyncV2Services.updateFromSync`,
+      stage `e3d54e4`; rule 23 names the same revival) and compares times only. The phone's guard is the protection.
+    - **Payments and invoice-payment links are never written over from here** — the owner's standing postponement of
+      Payments-screen changes (2026-09-13); missing ones are still offered again as before.
+    - **Switch:** `sync_held_copy_resend_enabled` (Remote Config, on unless `false`, Android + iOS), read only while
+      `sync_held_ask_enabled` is on. Off = 0161 exactly as merged in `7c4d46c1`.
+    - Guard: `AHeldCopyNewerHereIsSentAgainOnceTest` (14).
+    - **Open:** the server revives a soft-deleted row when a later-timed live copy arrives through any sync update —
+      the owner's decision whether the backend should refuse an un-delete through sync.
+
 ## Established 2026-09-12, while planning the receipt number
 
 The plan is `docs/SYNC-RECEIPT-NUMBER-PLAN.md`. Each line says how it is known.
