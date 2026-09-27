@@ -529,6 +529,17 @@ the list is wrong, not the app.**
     `prompt_taken`, our own check) on `launch_failed`; `exception_class` where something threw.
   - A `request_failed` does not move the schedule, so it can repeat once per share on a phone without Play.
 - **Notifications:** `notification_permission_shown` / `_allowed` / `_denied`
+- **Errors a person reads, from the build after 1.4.9 (`VC_113_VN_149` + `fix/plain-error-text`, decision
+  [0178](docs/decisions/0178-an-error-a-person-reads-is-a-plain-sentence-and-it-is-counted.md)):** **`error_shown`**, coded.
+  - One row per failure sentence actually drawn ("Couldn't load your clients. Please try again."), from `ShownError`
+    / `ErrorReport` — the only way a screen gets such a sentence.
+  - `action` (`load|save|delete|share|export|send|other`).
+  - `subject` (`clients|client|invoice|invoices|estimate|estimates|tax|terms|unit|category|header|background|template|currency|onboarding|business|item|expense|merchant|signature|stamp|payment_method|ledger|account|other`).
+  - `exception_class` (absent when nothing threw), `http_status` (only when a server answered).
+  - `kind` (`network|server|local|unknown`, decided only in `ErrorShown.kindOf`).
+  - No text, no exception message.
+  - Not sent for a cancelled screen, a repeat of the same failure, or a state field the screen never draws.
+  - Payments screens and debug screens are not in it yet.
 - **Parameters added 2026-09-04 (release after 1.4.2, branch `VC_93_VN_142`):** `app_cold_start.prev_exit`
   (`crash|anr|crash_native|user_request|low_memory|…|unknown`, API ≥ 30 only) + `prev_exit_ms_ago`;
   `splash_ready.reason|wait_ms|guest_login_ms|rc_ms|session_ms`; `guest_login_failed.reason` is now a

@@ -92,3 +92,4 @@ Numbering: next free number, zero-padded to 4.
 - [0175 — The share page reads its labels from the table, and only the invoice's own sentences are translated live](0175-the-share-page-reads-its-labels-from-the-table.md)
 - [0176 — The store's rating sheet is requested after the Nth confirmed share, and nothing is asked first](0176-the-stores-rating-sheet-is-requested-after-the-nth-share-and-nothing-is-asked-first.md)
 - [0177 — Every Save says "Save" and dims when there is nothing new to keep](0177-every-save-says-save-and-dims-when-there-is-nothing-to-keep.md)
+- [0178 — An error a person reads is a plain sentence, and it is counted (`error_shown`)](0178-an-error-a-person-reads-is-a-plain-sentence-and-it-is-counted.md)

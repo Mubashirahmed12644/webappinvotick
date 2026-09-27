@@ -594,6 +594,28 @@ that way says how long the screen had been open at its **last redraw**, which ca
 - A backend signal that read the old name keeps it (§1.8) and adds the new shape — never one or the other — and a
   press that old builds report under both names is counted once (`GREATEST`, not `+`).
 
+### 1.24 An error the person reads is counted at the one place it is made. *(decided 2026-09-27)*
+
+About 130 screens put an exception into the sentence (`Failed to delete client: FOREIGN KEY constraint failed`), and
+none of them told us. Now every failure sentence comes from `ShownError` (`domain/model/form`), or `ErrorReport`
+below `domain`. The same call returns the sentence, logs the cause and sends **`error_shown`**. Showing and counting
+cannot come apart.
+
+**The rules.**
+- **Codes only.** `action`, `subject`, `exception_class`, `http_status`, `kind`. Never the sentence and never the
+  exception's message (§1.22 — there is no closed-vocabulary key for the free text to ride beside).
+- **`kind` is decided in one place** (`ErrorShown.kindOf`). `server` when a status came back. `network` when the
+  exception, or anything it wraps, is a connection failure. `local` for a class only this process throws. Otherwise
+  `unknown`: a bare `Exception` is never guessed into a bucket (§1.7).
+- **Shown means drawn.** Nothing is sent for a cancelled screen (§1.19), a second showing of the same exception, or a
+  state field no screen draws (`drawn = false`). Counting an undrawn sentence would make the number lie.
+- **A domain event is not replaced by it.** `sync_failed`, `guest_login_failed` and `shared_invoice_open_failed` keep
+  saying what failed. `error_shown` says that a person was told.
+
+`ErrorTextNeverReachesThePersonTest` fails the build when a screen shows exception text, or writes a sentence in place
+inside a failure block. Decision
+[0178](docs/decisions/0178-an-error-a-person-reads-is-a-plain-sentence-and-it-is-counted.md).
+
 ### 1.10 Layers
 
 `intent.screen` · `intent.action` · `response.outcome` · `response.gate` · `response.interruption` ·
