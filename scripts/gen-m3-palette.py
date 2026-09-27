@@ -54,29 +54,187 @@ def in_gamut(rgb):
 import math
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# CAM16 / HCT
+#
+# This file used to hold CIELAB hue. That was wrong: CIELAB's constant-hue lines
+# bend for blues, so holding Lab hue while raising lightness walks a blue into
+# violet. Measured on the brand seed — #046EFB is CAM16 hue 268.9°, and the Lab
+# construction produced a dark `primary` at 281.4°: 12.5° of drift, which is the
+# lavender the app was showing.
+#
+# Material 3's tone is CIELAB L*, but its hue and chroma are CAM16. That pairing
+# is what HCT means. Verified against Material's own published baseline palette
+# (seed #6750A4): every tone T0..T100 within 2.4/255, most within 1.
+#
+# Google's published BLUE set (#0B57D0 -> #A8C7FA) is NOT a reference: its own
+# T80 sits 10.3° off its seed, i.e. hand-tuned, where #6750A4 holds hue to 0.8°.
+# ─────────────────────────────────────────────────────────────────────────────
+
+_WP100 = [95.047, 100.0, 108.883]
+_MF = [[0.4124564, 0.3575761, 0.1804375],
+       [0.2126729, 0.7151522, 0.0721750],
+       [0.0193339, 0.1191920, 0.9503041]]
+_MB = [[3.2404542, -1.5371385, -0.4985314],
+       [-0.9692660, 1.8760108, 0.0415560],
+       [0.0556434, -0.2040259, 1.0572252]]
+
+
+def _xyz100(hexcolor):
+    h = hexcolor.lstrip("#")
+    # s2l takes 0..255 and l2s returns 0..255 — do not rescale around them.
+    lin = [s2l(int(h[i:i + 2], 16)) * 100.0 for i in (0, 2, 4)]
+    return [sum(_MF[i][j] * lin[j] for j in range(3)) for i in range(3)]
+
+
+def _linrgb100(xyz):
+    return [sum(_MB[i][j] * xyz[j] for j in range(3)) for i in range(3)]
+
+
+def _in_gamut100(xyz):
+    return all(-0.4 <= c <= 100.4 for c in _linrgb100(xyz))
+
+
+def _hex_from_xyz100(xyz):
+    out = []
+    for c in _linrgb100(xyz):
+        out.append(max(0, min(255, round(l2s(c / 100.0)))))
+    return "#%02X%02X%02X" % tuple(out)
+
+
+def _y_from_lstar(L):
+    return 100.0 * ((L + 16.0) / 116.0) ** 3 if L > 8 else 100.0 * L / 903.2962962962963
+
+
+def _lstar_from_y(y):
+    t = y / 100.0
+    return 116.0 * (t ** (1 / 3)) - 16.0 if t > 216 / 24389 else t * 903.2962962962963
+
+
+def _cat(xyz):
+    x, y, z = xyz
+    return [0.401288 * x + 0.650173 * y - 0.051461 * z,
+            -0.250268 * x + 1.204414 * y + 0.045854 * z,
+            -0.002079 * x + 0.048952 * y + 0.953127 * z]
+
+
+def _cat_inv(r, g, b):
+    return [1.8620678 * r - 1.0112547 * g + 0.14918678 * b,
+            0.38752654 * r + 0.62144744 * g - 0.00897398 * b,
+            -0.01584150 * r - 0.03412294 * g + 1.04996444 * b]
+
+
+def _adapt(v, fl):
+    s = 1.0 if v >= 0 else -1.0
+    a = (fl * abs(v) / 100.0) ** 0.42
+    return s * 400.0 * a / (a + 27.13)
+
+
+def _unadapt(v, fl):
+    s = 1.0 if v >= 0 else -1.0
+    a = abs(v)
+    return s * 100.0 / fl * ((27.13 * a / (400.0 - a)) ** (1 / 0.42))
+
+
+def _build_vc():
+    """Material's default viewing conditions: D65, La from L*=50, average surround."""
+    la = (200.0 / math.pi) * _y_from_lstar(50.0) / 100.0
+    n = _y_from_lstar(50.0) / _WP100[1]
+    z = 1.48 + math.sqrt(n)
+    nbb = 0.725 / (n ** 0.2)
+    w = _cat(_WP100)
+    f = 0.8 + 2.0 / 10.0
+    d = max(0.0, min(1.0, f * (1.0 - (1.0 / 3.6) * math.exp((-la - 42.0) / 92.0))))
+    rgb_d = [d * _WP100[1] / c + 1.0 - d for c in w]
+    k = 1.0 / (5.0 * la + 1.0)
+    fl = 0.2 * (k ** 4) * 5.0 * la + 0.1 * ((1.0 - k ** 4) ** 2) * ((5.0 * la) ** (1 / 3))
+    wa = [_adapt(c * dd, fl) for c, dd in zip(w, rgb_d)]
+    aw = (40.0 * wa[0] + 20.0 * wa[1] + wa[2]) / 20.0 * nbb
+    return dict(n=n, z=z, nbb=nbb, ncb=nbb, c=0.69, nc=1.0, rgb_d=rgb_d, fl=fl, aw=aw)
+
+
+_VC = _build_vc()
+
+
+def cam16_hc(hexcolor):
+    """CAM16 hue in degrees, and CAM16 chroma."""
+    r, g, b = _cat(_xyz100(hexcolor))
+    a1, a2, a3 = (_adapt(v * d, _VC["fl"]) for v, d in zip((r, g, b), _VC["rgb_d"]))
+    a = (11.0 * a1 - 12.0 * a2 + a3) / 11.0
+    bb = (a1 + a2 - 2.0 * a3) / 9.0
+    hdeg = math.degrees(math.atan2(bb, a)) % 360
+    u = (20.0 * a1 + 20.0 * a2 + 21.0 * a3) / 20.0
+    p2 = (40.0 * a1 + 20.0 * a2 + a3) / 20.0
+    hr = math.radians(hdeg)
+    et = 0.25 * (math.cos(hr + 2.0) + 3.8)
+    J = 100.0 * (p2 * _VC["nbb"] / _VC["aw"]) ** (_VC["c"] * _VC["z"])
+    t = (50000.0 / 13.0 * _VC["nc"] * _VC["ncb"] * et * math.hypot(a, bb)) / (u + 0.305)
+    alpha = (t ** 0.9) * ((1.64 - 0.29 ** _VC["n"]) ** 0.73)
+    return hdeg, alpha * math.sqrt(J / 100.0)
+
+
+def _xyz_from_jch(J, C, hdeg):
+    hr = math.radians(hdeg)
+    alpha = 0.0 if J == 0 else C / math.sqrt(J / 100.0)
+    t = (alpha / ((1.64 - 0.29 ** _VC["n"]) ** 0.73)) ** (1.0 / 0.9)
+    ac = _VC["aw"] * ((J / 100.0) ** (1.0 / (_VC["c"] * _VC["z"])))
+    p1 = 50000.0 / 13.0 * (0.25 * (math.cos(hr + 2.0) + 3.8)) * _VC["nc"] * _VC["ncb"]
+    p2 = ac / _VC["nbb"]
+    gamma = 23.0 * (p2 + 0.305) * t / (
+        23.0 * p1 + 11.0 * t * math.cos(hr) + 108.0 * t * math.sin(hr))
+    a, b = gamma * math.cos(hr), gamma * math.sin(hr)
+    ra = (460.0 * p2 + 451.0 * a + 288.0 * b) / 1403.0
+    ga = (460.0 * p2 - 891.0 * a - 261.0 * b) / 1403.0
+    ba = (460.0 * p2 - 220.0 * a - 6300.0 * b) / 1403.0
+    rc, gc, bc = (_unadapt(v, _VC["fl"]) for v in (ra, ga, ba))
+    return _cat_inv(rc / _VC["rgb_d"][0], gc / _VC["rgb_d"][1], bc / _VC["rgb_d"][2])
+
+
+def _solve(hue, chroma, t):
+    """First in-gamut colour at CAM16 `hue`, walking chroma down, landing on L* = t."""
+    yt = _y_from_lstar(t)
+    c = chroma
+    while c >= 0:
+        lo, hi = 0.0, 100.0
+        for _ in range(40):
+            J = (lo + hi) / 2
+            if _xyz_from_jch(J, c, hue)[1] < yt:
+                lo = J
+            else:
+                hi = J
+        xyz = _xyz_from_jch((lo + hi) / 2, c, hue)
+        if _in_gamut100(xyz) and abs(_lstar_from_y(max(xyz[1], 0)) - t) < 0.6:
+            return _hex_from_xyz100(xyz)
+        c -= 0.4
+    return _hex_from_xyz100([_WP100[0] * yt / 100, yt, _WP100[2] * yt / 100])
+
+
 def tone(seed_hex, t, chroma_override=None):
     """The colour at tone `t` on the tonal palette seeded by `seed_hex`."""
-    L0, a0, b0 = hex2lab(seed_hex)
-    C0 = math.hypot(a0, b0)
-    h = math.atan2(b0, a0)
-    C = C0 if chroma_override is None else chroma_override
-    # Walk chroma down until sRGB can hold it. M3 does the same thing in HCT space.
-    while C > 0:
-        rgb = lab2rgb(t, C * math.cos(h), C * math.sin(h))
-        if in_gamut(rgb):
-            break
-        C -= 0.5
-    else:
-        rgb = lab2rgb(t, 0, 0)
-    return "#%02X%02X%02X" % tuple(max(0, min(255, round(c))) for c in rgb)
+    # Achromatic by definition, and CAM16 cannot be asked: alpha = C/sqrt(J/100)
+    # diverges as J -> 0, so the solver returns residual chroma. It gave #000038.
+    if t <= 0:
+        return "#000000"
+    if t >= 100:
+        return "#FFFFFF"
+    h, c = cam16_hc(seed_hex)
+    return _solve(h, c if chroma_override is None else chroma_override, t)
 
 
 def rotate(seed_hex, deg):
-    """Same lightness/chroma, hue turned — how M3 derives tertiary from a single seed."""
-    L, a, b = hex2lab(seed_hex)
-    C, h = math.hypot(a, b), math.atan2(b, a) + math.radians(deg)
-    rgb = lab2rgb(L, C * math.cos(h), C * math.sin(h))
-    return "#%02X%02X%02X" % tuple(max(0, min(255, round(c))) for c in rgb)
+    """Same tone/chroma, hue turned — how M3 derives tertiary from a single seed.
+
+    In CAM16 too. Rotating in Lab and reading the result back in CAM16 turned a
+    nominal +60 into something else, because the two spaces disagree about where
+    a hue is.
+    """
+    h, c = cam16_hc(seed_hex)
+    t = round(_lstar_from_y(_xyz100(seed_hex)[1]))
+    if t <= 0:
+        return "#000000"
+    if t >= 100:
+        return "#FFFFFF"
+    return _solve((h + deg) % 360, c, t)
 
 
 def rel_lum(h):

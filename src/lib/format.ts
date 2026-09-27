@@ -1,8 +1,35 @@
 // A few currencies whose narrow symbol we want to match the mobile app exactly.
 const SYMBOLS: Record<string, string> = { PKR: "₨", INR: "₹", USD: "$", GBP: "£", EUR: "€" };
 
+/**
+ * [n] to two decimals, half away from zero, on the decimal it is — the app's toUIString2Decimals.
+ *
+ * Every figure of an invoice is calculated at four decimals and rounded to two only here, where it is
+ * shown (owner, 2026-09-27). toLocaleString rounds the binary Number instead: 2.175 is held as
+ * 2.17499999…, and read "2.17" where the app reads "2.18". String(n) is the shortest text that reads
+ * back as n — the decimal that was calculated — so the rounding is done on its digits. No BigInt: this
+ * file goes into the app's offline renderer, which runs in whatever WebView the phone has.
+ */
+export function roundShown(n: number): number {
+  if (!Number.isFinite(n)) return 0;
+  const text = String(Math.abs(n));
+  if (text.includes("e")) return Number(n.toFixed(2));
+  const [int, frac = ""] = text.split(".");
+  if (frac.length <= 2) return n;
+  let digits = (int + frac.slice(0, 2)).split("").map(Number);
+  if (Number(frac[2]) >= 5) {
+    let i = digits.length - 1;
+    while (i >= 0 && digits[i] === 9) digits[i--] = 0;
+    if (i < 0) digits = [1, ...digits];
+    else digits[i] += 1;
+  }
+  const whole = digits.join("");
+  const value = Number(`${whole.slice(0, -2)}.${whole.slice(-2)}`);
+  return n < 0 ? -value : value;
+}
+
 export function formatMoney(amount: number | string, currency = "USD"): string {
-  const value = (typeof amount === "string" ? parseFloat(amount) : amount) || 0;
+  const value = roundShown((typeof amount === "string" ? parseFloat(amount) : amount) || 0);
   const code = (currency || "USD").toUpperCase();
   const sym = SYMBOLS[code];
   if (sym) {
