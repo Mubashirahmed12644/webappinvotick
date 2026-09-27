@@ -1,6 +1,13 @@
 @import "tailwindcss";
-/* Scan the shared invoice component so Tailwind v4 emits the utility classes it uses. */
-@source "../src/components/invoice";
+/* Scan exactly the components the offline render imports, so Tailwind v4 emits the classes they use and
+   nothing else. It scanned the whole src/components/invoice folder until 2026-09-27, which put the
+   web-only form's classes into the app's bundle (49 rules at 628d555), so the bundle's bytes changed
+   whenever a web form did. scripts/checks/run-renderer-sources-check.mjs fails when this list and the
+   renderer's imports disagree. */
+@source "../src/components/invoice/A4PagedFrame.tsx";
+@source "../src/components/invoice/InvoiceDocument.tsx";
+@source "../src/components/invoice/QrSvg.tsx";
+@source "../src/components/invoice/SummaryLeftFitted.tsx";
 
 /* Match the Android WebView's own background (#F7F7F7) on html/body/#root so there is NO white flash
    between page-load and the invoice being injected — the pre-render state is a seamless grey instead
