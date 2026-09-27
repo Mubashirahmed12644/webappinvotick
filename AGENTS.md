@@ -507,22 +507,27 @@ the list is wrong, not the app.**
   new arrives under it, so a query that still reads it is measuring history only.
 - **Store rating sheet, from the release after 1.4.9** (decision
   [0176](docs/decisions/0176-the-stores-rating-sheet-is-requested-after-the-nth-share-and-nothing-is-asked-first.md);
-  app branch `feat/store-review-after-share` @ `d90a7908`, **not merged, not released**).
+  merged into `VC_113_VN_149` at `a4846d44`; the owner's schedule is `feat/store-review-schedule` @ `6b680e1f`,
+  **not merged**; **not released**).
   - **`store_review_requested`**, coded, one per request, on Android and iOS. Nothing is asked of the user first,
     and our own feedback dialog (stars → WhatsApp) is never connected to it.
-  - When: after the Nth `invoice_shared_success` since the last request (Remote Config `store_review_after_shares`,
-    default 2), once the app has been in front 2 s with no ad, sheet, dialog or native question on screen. Never on the
-    install's first launch, never within `store_review_cooldown_days` (default 90), never when `store_review_enabled`
-    is `false`. All three keys are read as text, so an absent key keeps its default.
+  - When: the 1st request after the 2nd `invoice_shared_success` (Remote Config `store_review_after_shares`), once the
+    app has been in front 2 s with no ad, sheet, dialog or native question on screen.
+  - Then the owner's schedule, `store_review_schedule_days` = `7,7,7,14,14,14,30,30,30`: the 2nd and 3rd request 7
+    days after the one before, the 4th–6th 14 days, the 7th–9th 30 days. Each also needs a confirmed share after its
+    gap. After the 9th, never again on that install.
+  - Never on the install's first launch, never when `store_review_enabled` is `false`. All keys are read as text, so an
+    absent key keeps its default; a malformed schedule is the owner's default. `store_review_cooldown_days` is retired.
   - Sent when the request's end is known: on Android when Play's flow ends or fails, on iOS once the alert (if any)
     has gone, because iOS answers nothing.
-  - `trigger` (`invoice_share`), `share_count`, `share_threshold` (N in effect).
+  - `trigger` (`invoice_share`), `share_count`, `share_threshold` (2 for the 1st request, 1 after), `request_number`
+    (1–9: how far down the schedule this install is).
   - `outcome`: `flow_ended`, `request_failed` or `launch_failed`. **Absent on iOS** — absent is unknown (§1.7).
   - `flow_ms` on `flow_ended` only: how long Play's flow ran. Play never says whether a card was shown or whether the
     user rated, so neither is recorded anywhere.
   - `error_code` + `error` (Play's `ReviewErrorCode` and its word) on `request_failed`; `reason` (`no_screen`,
     `prompt_taken`, our own check) on `launch_failed`; `exception_class` where something threw.
-  - A `request_failed` spends no cooldown, so it can repeat once per share on a phone without Play.
+  - A `request_failed` does not move the schedule, so it can repeat once per share on a phone without Play.
 - **Notifications:** `notification_permission_shown` / `_allowed` / `_denied`
 - **Parameters added 2026-09-04 (release after 1.4.2, branch `VC_93_VN_142`):** `app_cold_start.prev_exit`
   (`crash|anr|crash_native|user_request|low_memory|…|unknown`, API ≥ 30 only) + `prev_exit_ms_ago`;

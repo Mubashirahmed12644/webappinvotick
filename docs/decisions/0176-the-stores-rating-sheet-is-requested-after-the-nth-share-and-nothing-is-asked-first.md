@@ -1,8 +1,9 @@
 # 0176 — The store's rating sheet is requested after the Nth confirmed share, and nothing is asked first
 
 - **Date:** 2026-09-27
-- **Status:** built, not merged, not released. App `invoice-kmp-app`, branch `feat/store-review-after-share` @ `d90a7908` off
-  `VC_113_VN_149` @ `796216ec`. No schema change, no server change. One new dependency on Android
+- **Status:** built, not released. App `invoice-kmp-app`: `feat/store-review-after-share` @ `d90a7908` is merged into
+  `VC_113_VN_149` (`a4846d44`); the owner's schedule (below, 2026-09-27) is `feat/store-review-schedule` @ `6b680e1f`
+  off `a4846d44`, **pushed, not merged**. No schema change, no server change. One new dependency on Android
   (`com.google.android.play:review` + `review-ktx` 2.0.2). Three new Remote Config keys, all optional.
 - **Asked by:** the owner, 2026-09-27. He was told what Play and Apple allow, and chose the compliant shape.
 
@@ -35,8 +36,41 @@ waits for a settled screen and asks the store once.
 - A moment refused by any of these spends nothing. The count stays at N and the next confirmed share tries again. A
   return that has not come within 10 minutes of the share is let go the same way.
 
-**3. Never:** on the install's first launch; within the cooldown (default 90 days) of the last request; when Remote
-Config says off. The store then applies its own quota and may show nothing — we only request.
+**3. Never:** on the install's first launch; before the owner's schedule allows the next request (see **The owner's
+schedule** below); after the schedule's last request; when Remote Config says off. The store then applies its own quota
+and may show nothing — we only request.
+
+## The owner's schedule (2026-09-27, replaces the single 90-day cooldown)
+
+**His words:** *"3 dafa 7 din baad and 3 dafa 14 din ky bad and 3 dafa 1 month ky baad."*
+
+He was told plainly first:
+- neither Google nor Apple tells the app whether the user rated, so we cannot stop "after they rate";
+- Google may not show the card more than about once a month;
+- Apple shows it at most 3 times a year.
+
+He chose a bounded schedule with that knowledge.
+
+| Request | Needs |
+|---|---|
+| 1st | the 2nd confirmed share, as before |
+| 2nd, 3rd | 7 days since the request before it, then a confirmed share |
+| 4th, 5th, 6th | 14 days since the request before it, then a confirmed share |
+| 7th, 8th, 9th | 30 days since the request before it, then a confirmed share |
+| after the 9th | never again on that install |
+
+- Each gap is measured from the previous **request**, and each request still needs its own happy moment: a confirmed
+  share after the gap, with every guard above (no ad, no dialog, no native question, not the first session).
+- Remote Config **`store_review_schedule_days`**, a string, default `7,7,7,14,14,14,30,30,30`: one value per request,
+  in order. The first request has no request before it, so its value is no wait. Changing the string changes the
+  schedule without a release; its length is the number of requests.
+- Read **all or nothing**. One unreadable entry, a gap below 1 day or above 3,650, an empty list or more than 50
+  entries, and the whole value is the owner's default — never a partial list, never "ask at every share".
+- **`store_review_cooldown_days` is retired.** It is removed from the app, so a console key of that name does nothing.
+  No released build ever read it.
+- Requests made are counted on the install (`store_review_requests_made`) and sent as **`request_number`** (1–9) on
+  `store_review_requested`, so the owner can see how far down the schedule people get. `share_threshold` is now 2 for
+  the 1st request and 1 after it.
 
 **4. While the sheet is up it holds the prompt screen.** It claims `SystemPrompt` as `store_review`, so no coaching
 tooltip draws over it and the consent form and Apple's tracking alert cannot stack on it.
@@ -47,7 +81,7 @@ build if either is called from a file that does not claim.
 read is `0`. Both are values, not absences (`RemoteSwitch.kt`).
 - `store_review_enabled`: on unless it says `false`. Off, nothing is ever requested.
 - `store_review_after_shares`: N, default 2, at least 1.
-- `store_review_cooldown_days`: default 90, at least 0.
+- `store_review_schedule_days`: the owner's schedule, below. (`store_review_cooldown_days` is retired.)
 
 **6. Android: Play's In-App Review API, 2.0.2.** `requestReviewFlow()` then `launchReviewFlow(activity, info)`.
 - 2.0.2 is the current release on Google Maven (2024-10-18). It shares `play:core-common` with `app-update` 2.1.0,
@@ -86,7 +120,7 @@ same shape as the paywall's `premium_purchase_result` (decision 0155, on the app
 `main`).
 - It is sent when the request's end is known: on Android when Play's flow ends or fails, on iOS once the alert has
   gone.
-- `trigger` (`invoice_share`), `share_count`, `share_threshold`.
+- `trigger` (`invoice_share`), `share_count`, `share_threshold`, `request_number` (1–9).
 - `outcome` is `flow_ended`, `request_failed` or `launch_failed`, and **absent on iOS**, because iOS answers nothing
   (§1.7).
 - `flow_ms` on `flow_ended` only.
@@ -122,6 +156,10 @@ Play nor Apple tells the app. The only place a rating appears is the Play Consol
 - 3 Remote Config count tests: `ARemoteCountKeepsItsDefaultUnlessItSaysANumberTest`.
 - The native-question guard, widened.
 - **Red first:** with the rules removed, 16 of the 19 fail.
+- **The schedule** (`6b680e1f`): 17 behaviour tests, 8 order tests, 4 schedule-parsing tests
+  (`AMalformedReviewScheduleKeepsTheOwnersScheduleTest`). With the schedule rules removed, all 8 schedule tests fail;
+  with partial parsing instead of all-or-nothing, 2 of the 4 parsing tests fail. Full suite **1490 passed, 1 skipped**
+  (head `a4846d44` was 1480 + 1). iOS `compileKotlinIosSimulatorArm64` passes; no Swift changed.
 - Full suite `tools/report/report.sh --unit-only`: **1466 passed, 1 skipped** (baseline 1444 + 1; +22 = 13 + 6 + 3).
 - Android debug compiles; iOS `compileKotlinIosSimulatorArm64` and the Xcode Debug build for the Simulator
   (`** BUILD SUCCEEDED **`) pass. Not run on a device: Play shows no card to a build it did not install, and
@@ -129,6 +167,7 @@ Play nor Apple tells the app. The only place a rating appears is the Play Consol
 
 ## Open for the owner
 
-1. N = 2 and 90 days are the defaults. Both can change from Remote Config without a release.
+1. N = 2 and the schedule `7,7,7,14,14,14,30,30,30` are the defaults. Both can change from Remote Config without a
+   release.
 2. Estimate shares do not count today. Should they?
 3. A refused moment (an ad or a sheet on screen) is not recorded. Should it be, as a parameter on this event?
