@@ -1,6 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 import { footerMode, type OwnFooter } from "@/lib/invotick-footer";
-import type { InvoiceRenderData } from "@/lib/data";
+import type { InvoiceRenderData, RenderItem } from "@/lib/data";
+import { discountTypeOf } from "@/lib/discount-type";
 import { formatMoney, formatDate, hexToRgba, contrastText, onTint, blendOnWhite } from "@/lib/format";
 import { imageProxyUrl } from "@/lib/image";
 import { BRAND_LOGO } from "@/lib/givens";
@@ -159,7 +160,7 @@ export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hide
                       <td className={`px-2 align-middle font-bold ${descBody}`}>{it ? it.name : ""}</td>
                       <td className="px-2 align-middle text-end font-bold">{it ? it.quantity.toFixed(2) : ""}</td>
                       <td className="px-2 align-middle text-end font-bold">{it ? formatMoney(it.unitPrice, cur) : ""}</td>
-                      <td className="px-2 align-middle text-end font-bold">{it ? (it.discountType === "PERCENTAGE" ? pct(it.discountValue) : it.discountValue.toFixed(2)) : ""}</td>
+                      <td className="px-2 align-middle text-end font-bold">{it ? discountCell(it, cur) : ""}</td>
                       <td className="px-2 align-middle text-end font-bold">{it ? pct(it.taxRate) : ""}</td>
                       <td className="px-2 align-middle text-end font-bold">{it ? formatMoney(it.amount, cur) : ""}</td>
                     </tr>
@@ -504,4 +505,16 @@ function TotalRow({ label, value, tint, rowKey }: { label: string; value: string
       <span className="font-bold">{value}</span>
     </div>
   );
+}
+
+/**
+ * A line's own discount as the Disc column shows it, the way the native PDF shows it: a percentage as
+ * "20.00%", a flat amount with the invoice's currency like the Price column beside it ("₨50.00"). The
+ * flat amount was a bare "50.00" here while the app's PDF of the same invoice said "Rs50.00", so a
+ * client could not tell 50 off from 50 %. The type is read as the app reads it (discountTypeOf), so a
+ * stored FIXED or AMOUNT is flat too. A line with no discount reads "0.00", as native.
+ */
+function discountCell(it: RenderItem, cur: string): string {
+  if (discountTypeOf(it.discountType) === "PERCENTAGE") return `${it.discountValue.toFixed(2)}%`;
+  return it.discountValue > 0 ? formatMoney(it.discountValue, cur) : it.discountValue.toFixed(2);
 }
