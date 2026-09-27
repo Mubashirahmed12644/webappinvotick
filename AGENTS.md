@@ -347,6 +347,28 @@ the list is wrong, not the app.**
 - **Form-typing proxies:** `business_form_text_typed`, `client_form_text_add`, `item_form_text_add` —
   fired **once per form**, on the first non-blank keystroke in the *name* field. They prove the user
   started typing, **not** that the data was real. Plus `client_add_success` and `Item_added`.
+- **The item, the client and leaving the invoice screen, from 1.4.9** (decision
+  [0037](docs/decisions/0037-the-ui-layer-owns-the-press.md) addendum, the owner's answers of 2026-09-26; app branch
+  `feat/149-events-0037-answers`, backend `feat/events-0037-answers`, **neither merged**):
+  - **`Item_added` is the item's result.** It fires once a line is **on the document**, after the item form's save
+    succeeded, from create and edit invoice and create and edit estimate — never on the press. The press stays the
+    Add button's `add_item_added`, which fires before validation. Parameters, booleans only: `has_price` (above zero),
+    `quantity_changed` (not the default 1), `has_description`, `has_discount`, `has_tax`, `has_category`, `has_unit`,
+    plus `source` = `create_invoice|edit_invoice|create_estimate|edit_estimate`. No name, amount or text. Up to 1.4.8
+    it was sent bare, from the create screen only: edits and estimates added lines nobody counted.
+  - **The client pair stays** ("Dono rakho, alag cheezein hain"): `client_form_saved` = the client was saved
+    (`optional_fields_filled`), `client_add_success` = a client was put on the invoice. Picking an existing client sends
+    only the second. The Health Centre's "One press, two events" treats the Save tap + either, and `add_item_added` +
+    `Item_added`, as press + result.
+  - **`Create_Invoice_Backpress_click` is no longer sent.** Its `has_changes`, `item_count`, `has_client`,
+    `has_business` and `ms_on_screen` are on **`invoice_screen_close`**, on every leave route of the create screen
+    (the ✕ reads them at the tap). The edit screen sends `method` and `had_input` only, as before; absent = unknown.
+    `has_changes` is not `had_input`: `had_input` is the leave dialog's rule (business **and** client **and** a line),
+    `has_changes` is "anything differs from a blank invoice".
+  - The old event fired on the **✕ as well as the system back** (24 h to 2026-09-27: 459 of 463 paired with a close
+    event, 297 `back_press` + 162 `close_button`). So the journey's `back_pressed` signal reads the old name **and**
+    `invoice_screen_close` with `method` `back_press` **or** `close_button` on `create_inv_scr`, taking the larger of
+    the two per device-hour, so an old build that sends both counts one press once.
 
 - ⚠️ **1.4.3 (`VC_95_VN_143`) removes nine coded duplicates — the UI layer now owns the press.**
   *(owner decision 2026-09-05, from the Health Centre's "One press, two events" check.)* Every one
@@ -372,7 +394,8 @@ the list is wrong, not the app.**
   first-invoice empty state; and the `optional_fields_filled` / `has_logo` / `has_description` /
   `has_discount` parameters are gone, so **nothing in the app now separates real data from the
   minimum that clears validation** — the G1 question. Putting those back means **parameters on the
-  surviving event** (`AGENTS-EVENTS.md` §1.1), never a second event.
+  surviving event** (`AGENTS-EVENTS.md` §1.1), never a second event. *For the item, answered from 1.4.9:
+  `Item_added` carries them (below).*
 - **Abandonment:** a sheet's **own per-sheet close id** (`invoice_create_client_screen_close`, …)
   carries `method` (`close_button` | `swipe` | `scrim_or_back`) and `had_input`. There is **no**
   separate dismissal event: one action, one event, with parameters — decision
