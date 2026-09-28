@@ -5,6 +5,7 @@
    whenever a web form did. scripts/checks/run-renderer-sources-check.mjs fails when this list and the
    renderer's imports disagree. */
 @source "../src/components/invoice/A4PagedFrame.tsx";
+@source "../src/components/invoice/GeneratedLogo.tsx";
 @source "../src/components/invoice/InvoiceDocument.tsx";
 @source "../src/components/invoice/QrSvg.tsx";
 @source "../src/components/invoice/SummaryLeftFitted.tsx";

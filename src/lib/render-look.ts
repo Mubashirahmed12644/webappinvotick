@@ -1,4 +1,5 @@
-import { systemAssetImage } from "./system-assets";
+import { systemAssetImage } from "./system-assets.ts";
+import { isLightHeader } from "./generated-logo.ts";
 
 /**
  * The part of an invoice's render data that comes from its template: colour, which blocks show,
@@ -54,6 +55,8 @@ export function templateLook(
     // A system-default header/background is not synced; the web ships the same image under its id.
     headerImage: images.header ?? systemAssetImage(t?.headerId),
     backgroundImage: images.background ?? systemAssetImage(t?.backgroundId),
+    // Whether the seeded photo behind the logo is light (decision 0181) — known by its id, never measured.
+    headerLight: isLightHeader(t?.headerId),
     backgroundOpacity: t?.backgroundOpacity ?? 1,
     itemTableHeaderAlignment: t?.itemTableHeaderAlignment ?? null,
     itemTableBodyAlignment: t?.itemTableBodyAlignment ?? null,

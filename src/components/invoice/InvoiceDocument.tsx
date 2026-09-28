@@ -8,6 +8,8 @@ import { BRAND_LOGO } from "@/lib/givens";
 import { LABELS, labelsFor, type InvoiceLabels } from "@/lib/invoice-labels";
 import { SummaryLeftFitted } from "./SummaryLeftFitted";
 import { QrSvg } from "./QrSvg";
+import { GeneratedLogo } from "./GeneratedLogo";
+import { LIGHT_SURROUND_TONE, toneOf } from "@/lib/generated-logo";
 
 // Faithful invoice document — mirrors the mobile app's rendered PDF:
 // full-bleed header image + logo + title, decorative themed background,
@@ -27,6 +29,12 @@ export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hide
   const t = data.toggles;
   const logoUrl = t.logo ? imageProxyUrl(data.business?.logo) : null;
   const headerUrl = imageProxyUrl(data.headerImage);
+  // The app's own logo for a business without one is drawn here, in this invoice's colour, rather than
+  // shown as the picture the app baked when the business was made (decision 0181). The picture stays in
+  // `logo` for every renderer that predates this.
+  const generatedLogo = t.logo && data.business?.logoGenerated && data.business.name ? data.business.name : null;
+  // Behind the tile: a seeded photo the app knows is light, or a plain band of a light invoice colour.
+  const headerLight = headerUrl ? data.headerLight === true : !data.backgroundImage && toneOf(color) >= LIGHT_SURROUND_TONE;
   const backgroundUrl = imageProxyUrl(data.backgroundImage);
   const signatureUrl = imageProxyUrl(data.signatureImage);
   const stampUrl = imageProxyUrl(data.stampImage);
@@ -57,7 +65,11 @@ export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hide
         {headerUrl && <img src={headerUrl} alt="" className="absolute inset-0 h-full w-full object-cover" style={{ objectPosition: "center 30%" }} />}
         <div className="relative z-10">
           {/* Logo drawn directly (native LogoModule clipShape=NONE) — no white box/border. */}
-          {logoUrl && <img src={logoUrl} alt="" className="h-[112px] w-auto object-contain" />}
+          {generatedLogo ? (
+            <GeneratedLogo name={generatedLogo} accent={color} headerLight={headerLight} size={112} />
+          ) : (
+            logoUrl && <img src={logoUrl} alt="" className="h-[112px] w-auto object-contain" />
+          )}
         </div>
         {t.title && (
           <p
@@ -279,7 +291,7 @@ export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hide
 // "Contact us", contact line, QR tile. An empty slot keeps its space, so the band never reflows.
 // `control` is the app preview's Remove / Edit button; no other caller passes it, so the share page,
 // its print and every image of the document are drawn without it.
-export function InvoiceFooter({ qrDataUrl, pageLabel, labels = LABELS, own, businessLogo, accent = "#0D4DC0", control }: { qrDataUrl?: string | null; pageLabel?: string; labels?: InvoiceLabels; own?: OwnFooter | null; businessLogo?: string | null; accent?: string; control?: FooterControl | null }) {
+export function InvoiceFooter({ qrDataUrl, pageLabel, labels = LABELS, own, businessLogo, generatedLogoName, accent = "#0D4DC0", control }: { qrDataUrl?: string | null; pageLabel?: string; labels?: InvoiceLabels; own?: OwnFooter | null; businessLogo?: string | null; generatedLogoName?: string | null; accent?: string; control?: FooterControl | null }) {
   // Pixel-parity with the native promotional footer (SharedComponents.drawPromotionalFooter), whose
   // sizes are all fractions of the sheet width. On the 794px A4 sheet those resolve to:
   //   band height 0.12·W ≈ 95, icon/QR 0.65·band ≈ 62, inner pad 0.6·32 ≈ 19, line gap 0.35·32 ≈ 11.
@@ -294,6 +306,9 @@ export function InvoiceFooter({ qrDataUrl, pageLabel, labels = LABELS, own, busi
   const qrTileStyle = { ...tileStyle, padding: qrPad, boxSizing: "border-box" } as const;
   const qrInner = tile - 2 * qrPad;
   const logoUrl = own && own.showLogo !== false ? imageProxyUrl(businessLogo) : null;
+  // The app's generated logo is drawn in the invoice colour here too, so the footer's tile and the
+  // header's are the same mark (decision 0181).
+  const generatedLogo = logoUrl && generatedLogoName ? generatedLogoName : null;
   const initials = own && own.showLogo !== false && !logoUrl ? own.initials?.trim() || null : null;
   // Two lines at most for what the business typed: the band's height is fixed (it is the layout).
   const clamp2 = { display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", overflowWrap: "anywhere" } as const;
@@ -310,6 +325,10 @@ export function InvoiceFooter({ qrDataUrl, pageLabel, labels = LABELS, own, busi
           {!own ? (
             <div style={tileStyle}>
               <img src={BRAND_LOGO} alt="Invotick" style={{ width: tile, height: tile, objectFit: "contain" }} />
+            </div>
+          ) : generatedLogo ? (
+            <div style={tileStyle}>
+              <GeneratedLogo name={generatedLogo} accent={accent} size={tile} />
             </div>
           ) : logoUrl ? (
             <div style={tileStyle}>
@@ -489,9 +508,14 @@ export function FooterControlButton({ control }: { control: FooterControl }) {
 }
 
 /** The props that switch [InvoiceFooter] to the business's own footer, when the document carries one. */
-export function ownFooterProps(data: InvoiceRenderData): { own?: OwnFooter | null; businessLogo?: string | null; accent?: string } {
+export function ownFooterProps(data: InvoiceRenderData): { own?: OwnFooter | null; businessLogo?: string | null; generatedLogoName?: string | null; accent?: string } {
   if (footerMode(data) !== "own") return {};
-  return { own: data.ownFooter, businessLogo: data.business?.logo, accent: data.color || "#0D4DC0" };
+  return {
+    own: data.ownFooter,
+    businessLogo: data.business?.logo,
+    generatedLogoName: data.business?.logoGenerated ? data.business.name : null,
+    accent: data.color || "#0D4DC0",
+  };
 }
 
 function TotalRow({ label, value, tint, rowKey }: { label: string; value: string; tint: string; rowKey?: string }) {

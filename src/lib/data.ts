@@ -5,6 +5,7 @@ import { config } from "./config";
 import { backendFetch } from "./backend";
 import { mockClients, mockInvoices, mockStats } from "./mock";
 import { templateLook } from "./render-look";
+import { isGeneratedLogo } from "./generated-logo";
 import { localDate, summarizeInvoices } from "./invoice-status";
 import { sortByOrder } from "./givens";
 import { savedItemsOf, type SavedInvoiceItem } from "./invoice-preview";
@@ -477,6 +478,12 @@ export interface InvoiceRenderData {
   business: {
     name: string;
     logo?: string | null;
+    /**
+     * True when `logo` is the app's own drawing — initials in a ring — which the renderer then draws in
+     * this invoice's colour instead of showing the picture (decision 0181). `logo` still carries the
+     * picture, for every renderer and every snapshot from before. Absent means false.
+     */
+    logoGenerated?: boolean | null;
     // Full sender detail (mirrors the client) so the "From" block matches native.
     emailAddress?: string | null;
     phone?: string | null;
@@ -487,6 +494,11 @@ export interface InvoiceRenderData {
   } | null;
   client: ClientDetail | null;
   headerImage?: string | null;
+  /**
+   * True when the header photo is light around the logo tile, so the generated logo's outline is drawn
+   * dark rather than light (decision 0181). Only the seeded photos are known; absent means false.
+   */
+  headerLight?: boolean | null;
   backgroundImage?: string | null;
   backgroundOpacity: number;
   signatureImage?: string | null;
@@ -570,7 +582,7 @@ export async function getInvoiceRenderData(id: string): Promise<InvoiceRenderDat
     terms: null,
     paymentInstructions: null,
     ...look,
-    business: business ? { name: business.name, logo: business.logo } : null,
+    business: business ? { name: business.name, logo: business.logo, logoGenerated: isGeneratedLogo(business.logo) } : null,
     client: (client as ClientDetail) ?? null,
     signatureImage: look.toggles.signature ? sig?.image ?? null : null,
     stampImage: look.toggles.stamp ? stamp?.image ?? null : null,

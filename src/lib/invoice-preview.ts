@@ -17,6 +17,7 @@ import {
 } from "./invoice-calc";
 import { sortByOrder } from "./givens";
 import { templateLook } from "./render-look";
+import { isGeneratedLogo } from "./generated-logo";
 
 /** The fields of an invoice that the form does not show. */
 export type KeptInvoiceFields = Pick<
@@ -515,7 +516,7 @@ export function invoicePreviewData(p: InvoicePreviewInput): InvoiceRenderData {
     paymentInstructions: null,
     ...look,
     business: p.business
-      ? { name: p.business.name, logo: p.business.logo }
+      ? { name: p.business.name, logo: p.business.logo, logoGenerated: isGeneratedLogo(p.business.logo) }
       : { name: PLACEHOLDER_BUSINESS_NAME, logo: null },
     client: c
       ? {
