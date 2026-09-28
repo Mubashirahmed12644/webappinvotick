@@ -616,6 +616,30 @@ cannot come apart.
 inside a failure block. Decision
 [0178](docs/decisions/0178-an-error-a-person-reads-is-a-plain-sentence-and-it-is-counted.md).
 
+### 1.26 The interface language is a stamp; the test's arm is sticky; the person's choice wins. *(decided 2026-09-29)*
+
+Decision [0185](docs/decisions/0185-the-app-speaks-french-to-french-phones-with-an-english-holdout.md). No new name for
+a variation (§1.1): the language is four parameters the gateway stamps on **every** event and every `screen_view`,
+the same shape as `overlay_variant`.
+
+| Parameter | Values | Absent means |
+|---|---|---|
+| `lang_variant` | `fr` · `en_holdout` (French-language phone, the French test's arm) · `not_eligible` (not a French phone, or chose first) | a French phone not dealt yet in this process — the first run's splash (§1.7) |
+| `app_lang` | `en` · `fr` — what the interface is **actually drawn in** | before the language is restored (never, after `MyApplication.onCreate`) |
+| `device_lang` | primary subtag only (`fr`, `en`, `ar`) — the phone's language as the platform gives it to the app, never the app's own override | unknown |
+| `lang_pick` | `manual` — the person chose in Drawer → Language; the choice wins over the arm | no choice made |
+
+- **One coded event, `french_ui_assigned`**, once per phone when the arm is dealt (after the splash's ad gate, like
+  `onboarding_overlay_assigned`): `lang_variant`, `bucket`, `holdout_percent`, `percent_source`
+  (`remote|missing|invalid`), `bucket_source` (`device_id|random`), `device_lang`; and once more, with
+  `released=true`, if Remote Config `french_ui_holdout_percent="0"` ends the test for a held-out phone.
+- **Read the test by `lang_variant`, never by `app_lang`**: the arm is intention-to-treat. A held-out phone whose person
+  then picked French keeps `lang_variant=en_holdout` and shows `app_lang=fr` + `lang_pick=manual` — that crossover is
+  data, not noise.
+- `device_lang` is not `analytics_sessions_v2.device_language` (§1.12–1.13): that one is the app's effective locale,
+  and from this build the app changes its own locale for the holdout and for a manual pick.
+- Rows from builds before this one carry none of the four keys. Absent is unknown, not English.
+
 ### 1.10 Layers
 
 `intent.screen` · `intent.action` · `response.outcome` · `response.gate` · `response.interruption` ·
