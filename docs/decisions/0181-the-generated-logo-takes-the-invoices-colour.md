@@ -2,7 +2,8 @@
 
 **Date:** 2026-09-28 · **Owner's decisions, same day** (mockups `logo-colour-mockup.html`, `logo-on-every-header.html`)
 **Web:** `feat/generated-logo-follows-colour` off `main` · **App:** `feat/generated-logo-follows-colour` off
-`VC_113_VN_149` (`029f0349`). Not merged, not deployed, not released. **No schema change, no backend change.**
+`VC_113_VN_149` (`029f0349`) · **Backend:** `feat/generated-logo-follows-colour` off `stage`. Not merged, not deployed,
+not released. **No schema change.** The backend change is code only, and it is needed before the app ships (below).
 
 ## What the owner decided
 1. The logo the app draws for a business with none (initials in a ring) is drawn in **the invoice's own colour**:
@@ -37,6 +38,34 @@ name: `business_<id>_<time>_generated-logo.jpg`. (`GeneratedLogo.kt` in the app,
 - *`businesses.description`*: every app push sends it back null, so it would be erased on the next edit.
 - *Reading the pixels*: the app cannot tell an old baked picture from an upload, and a pixel read can differ between
   the app and the web.
+
+## Found after: the backend treated the address as the file (added 2026-09-28)
+A fragment on a stored address is harmless to a request, but not to code that turns the text into a file or compares
+two texts as files. The account erase (decision 0111) did both:
+- `ClosedAccountEraser.deleteImageIfUnused` kept a file only while some row named it **exactly** (`WHERE logo = ?`). A
+  neighbour whose drawn logo is `<file>#generated-logo`, or the reverse, was not seen as a user, so **a file another
+  account still shows was deleted**. Red on `stage` in `AClosedAccountIsErasedAfterItsWindowTest`.
+- `FileStorageService.deleteUpload` refused any name that is not `<uuid>.<ext>`, so a marked address was `NOT_OURS`
+  and **an erased account's drawn logo stayed on disk for ever** (a privacy leak). Red on `stage` in
+  `AMarkedUploadAddressDeletesItsFileTest`.
+
+**The rule, in all three codebases: one function turns an address into the file it names, and it drops the fragment.**
+- Backend `dev.backend.infotick.util.ImageAddress` — `file()`, and `markedLike()` for SQL. `deleteUpload` maps through
+  `file()`; the erase asks `col = <file> OR col LIKE '<file>#%'` (LIKE's own wildcards escaped), which keeps the column
+  bare so an index could serve it. None of the seven image columns is indexed today; the erase already scanned them
+  once per image it deletes, and still does — one scan, not two.
+- App `ImageAddress.file` (domain): the download request, the downloaded file's name, and the two Coil models that
+  load `logoUrl`. The stored address keeps the mark: it is what tells the next phone.
+- Web `imageFile` (`src/lib/image.ts`), inside `imageProxyUrl`, so the mark never reaches `/api/img` or a cache key.
+
+**Audited and safe as they are:** static serving of `/uploads/**` (a request never carries a fragment); the sync push
+and pull, which store and return the text as sent; `CopyCheck` (compares what the phone sent, where a change of mark
+is a change); `BusinessService` (logs a length and a preview only); `EmailService` (its own logo); the share snapshot
+(logo as base64); the Health Centre (no image check); the admin panel (`normalizeInvoiceAssetUrl` keeps only
+`pathname`+`search` of a full URL, and the asset proxy validates `pathname` and fetches with `fetch`, which never sends
+a fragment); the app's `queueImageForDownload` and `getByServerUrl` (compare the stored text with the text the server
+returns, which carries the same mark; a marked and an unmarked row are two records, each downloading its own copy);
+local file clean-up (the app names local files itself, with no fragment).
 
 ## Backward compatibility
 - The baked picture is **still stored in the logo field** for new businesses (now drawn in the new tones of #0D4DC0, in
