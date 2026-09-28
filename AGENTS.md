@@ -654,6 +654,25 @@ the list is wrong, not the app.**
     **`outcome=consent_pending`** on the splash path — the number that says what land-first costs.
     `consent_pending` is also a new `ad_blocked_by` value on `app_foreground`.
   - iOS sends none of these yet; its UMP + ATT work is separate.
+- **Google Play's update prompt, from build 114** (decision
+  [0186](docs/decisions/0186-the-play-update-prompt-is-counted-from-check-to-landing.md); merged into `VC_113_VN_149`
+  at `df30d49d`, **not released**). Measurement only: the prompt appears exactly as before. Six coded events, Android
+  only (iOS has no Play update and sends none):
+  - **`update_check`**: Play's answer to the splash's check. Once per process when an update is offered, otherwise at
+    most once per 24 h. `outcome` (`answered|failed`), `requested_type`, `availability`
+    (`available|not_available|in_progress|unknown`), `install_status`, `current_version_code`. With an update:
+    `available_version_code`, `staleness_days`, `update_priority`, `flexible_allowed`, `immediate_allowed`. On
+    `failed`: `error_code` + `reason` (Play's word, e.g. `app_not_owned`) + `exception_class`.
+  - **`update_prompt_result`**: one per launch of Play's sheet. `outcome` (`accepted|declined|failed|launch_failed`),
+    `type`, `path` (`check|resume`), `answer_ms`, `available_version_code`; `reason` + `exception_class` on
+    `launch_failed`. "Prompt shown" = every row except `launch_failed`.
+  - **`update_download_result`**: `outcome` (`downloaded|failed|canceled`), `elapsed_ms` since acceptance,
+    `bytes_downloaded`, `total_bytes`, `error_code` + `reason` on `failed`. Never a progress tick.
+  - **`update_restart_offered`** (`path` = `download|resume`, once per process), **`update_restart_tapped`** (Restart
+    on the snackbar), **`update_restart_failed`** (`error_code`, `reason`, `exception_class`).
+  - **The landing:** `app_cold_start.updated_from_version_code`, the build this phone ran at its previous cold start
+    when it differs from now. Absent on a first install, on the same build, and on everyone's first run of 114.
+    Updates *to* 114 are read on the server, by the same `app_instance_id` sending a higher `app_version_code`.
 - **Lifecycle:** `app_cold_start`, `app_foreground`, `app_resumed`, `app_paused`, `app_background`,
   `app_heartbeat`, `session_break`, `screen_view`, `network_changed`, `app_exit_dialog_shown`
 

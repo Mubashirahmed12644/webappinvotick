@@ -96,3 +96,4 @@ Numbering: next free number, zero-padded to 4.
 - [0179 — A sign-in failure is told apart from the server's sentence](0179-a-sign-in-failure-is-told-apart-from-the-servers-sentence.md)
 - [0180 — An estimate's Save has the invoice's gate, and its first is celebrated](0180-an-estimates-save-has-the-invoices-gate-and-its-first-is-celebrated.md)
 - [0181 — The app's own logo takes the invoice's colour](0181-the-generated-logo-takes-the-invoices-colour.md)
+- [0186 — Google Play's update prompt is counted from the check to the landing](0186-the-play-update-prompt-is-counted-from-check-to-landing.md)

@@ -616,6 +616,29 @@ cannot come apart.
 inside a failure block. Decision
 [0178](docs/decisions/0178-an-error-a-person-reads-is-a-plain-sentence-and-it-is-counted.md).
 
+### 1.26 A flow the vendor runs is counted at the steps we can observe, and an arrival is stamped by the build that arrived. *(decided 2026-09-29)*
+
+**What went wrong.** Google Play's in-app update prompt ran on every launch and recorded nothing. On 2026-09-29, 21 % of
+active Android phones were two or more builds behind, and nobody could say whether Play never offered the update, the
+user declined it, the download failed, or nobody pressed Restart. The sheet's answer came back through
+`onActivityResult`, and nothing read it.
+
+The rules:
+- **Every step that a vendor's flow reports back to us is one coded event**, with the vendor's code turned into the
+  vendor's own word (§1.15). No auto tap can carry a vendor's sheet or a vendor's callback (§1.3, §1.23).
+- **Report the answer, not the launch, when the answer always comes back.** A launch row beside its answer counts one
+  sheet twice. A launch that fails is an outcome of the same event.
+- **Never a row per progress tick.** Report the end states, once per outcome per process.
+- **A check that answers "nothing to do" is rate-limited, not dropped.** Once a day per phone keeps the rare, useful
+  case (a phone that is behind while the vendor says "not available") without one row per open.
+- **An arrival is a parameter on the new build's `app_cold_start`, never an event from the old build.** The old
+  process is killed to install, so its last row is usually never written. `updated_from_version_code` is absent on a
+  first install and on the first run of the build that starts recording it — unknown, never "not updated" (§1.7).
+
+Events: `update_check`, `update_prompt_result`, `update_download_result`, `update_restart_offered`,
+`update_restart_tapped`, `update_restart_failed`, and `app_cold_start.updated_from_version_code`. Decision
+[0186](docs/decisions/0186-the-play-update-prompt-is-counted-from-check-to-landing.md).
+
 ### 1.10 Layers
 
 `intent.screen` · `intent.action` · `response.outcome` · `response.gate` · `response.interruption` ·
