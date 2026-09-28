@@ -664,6 +664,11 @@ apart), `window_class`. No coordinates, no text, no screenshot.
 
 Decision [0183](docs/decisions/0183-the-screen-map-measures-the-tour-dead-taps-and-ad-clicks.md).
 
+> **History split, same change.** The Payment Method card on Create Invoice had no id, so it reported under the
+> `tap:create_inv_scr:card` fallback every unnamed `InvotickCard` shares (§1.4) — and `tap:<edit screen>:card` in Edit
+> Invoice. From the build carrying `feat/screen-map-app-signals` it is **`create_inv_payment_method_click`** in both
+> modes (the Terms card's shape). A query for the card across that release reads both names.
+
 ### 1.10 Layers
 
 `intent.screen` · `intent.action` · `response.outcome` · `response.gate` · `response.interruption` ·
