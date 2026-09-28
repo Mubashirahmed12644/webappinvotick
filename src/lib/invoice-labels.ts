@@ -27,6 +27,12 @@ export type InvoiceLabels = {
   tax: string;
   shipping: string;
   total: string;
+  /**
+   * TOTAL on a document that carries a tax, in a language whose invoices say so ("TOTAL TTC" in French,
+   * decision 0185). Absent in English and in every machine-translated set: the renderer then shows
+   * [total], so nothing about those documents changes.
+   */
+  totalWithTax?: string;
   amountPaid: string;
   balanceDue: string;
   notes: string;
@@ -130,4 +136,6 @@ export const LABEL_TRANSLATION_SOURCE: Partial<Record<keyof InvoiceLabels, strin
   billTo: "Bill to customer",
 };
 
-export const LABEL_KEYS = Object.keys(LABELS) as (keyof InvoiceLabels)[];
+/** Every label a document always carries — the optional ones (`totalWithTax`) are not batched or tabled per key. */
+export type LabelKey = Exclude<keyof InvoiceLabels, "totalWithTax">;
+export const LABEL_KEYS = Object.keys(LABELS) as LabelKey[];

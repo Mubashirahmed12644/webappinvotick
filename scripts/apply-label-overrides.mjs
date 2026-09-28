@@ -88,6 +88,21 @@ function readOverrides(src) {
   return out;
 }
 
+
+// French is written by hand (src/lib/invoice-labels-fr.ts, decision 0185) and REPLACES the machine row
+// whole — every key, both tables — so the web table, the app's Kotlin copy and the renderer's own French
+// set are the same words. An empty parse refuses to run rather than dropping French from both copies.
+function readCuratedFrench(src) {
+  const block = (name) => {
+    const m = src.match(new RegExp(`export const ${name}[^{]*\\{([\\s\\S]*?)\\n\\};`));
+    if (!m) throw new Error(`${name} not found in invoice-labels-fr.ts`);
+    const out = Object.fromEntries([...m[1].matchAll(/^\s*(\w+):\s*"((?:[^"\\]|\\.)*)"/gm)].map((e) => [e[1], JSON.parse(`"${e[2]}"`)]));
+    if (Object.keys(out).length === 0) throw new Error(`${name} parsed empty`);
+    return out;
+  };
+  return { invoice: block("FR_LABELS"), estimate: block("FR_ESTIMATE_LABELS") };
+}
+
 const genSrc = readFileSync(WEB_TABLE, "utf8");
 const table = readGenerated(genSrc, "LABEL_TRANSLATIONS");
 const estimate = readGenerated(genSrc, "ESTIMATE_LABEL_TRANSLATIONS");
@@ -118,6 +133,12 @@ for (const code of Object.keys(table)) {
     applied += Object.keys(ov).length;
   }
 }
+
+const curatedFr = readCuratedFrench(readFileSync(join(WEB_ROOT, "src/lib/invoice-labels-fr.ts"), "utf8"));
+table.fr = curatedFr.invoice;
+estimate.fr = curatedFr.estimate;
+applied += Object.keys(curatedFr.invoice).length + Object.keys(curatedFr.estimate).length;
+console.log(`French replaced whole from invoice-labels-fr.ts: ${Object.keys(curatedFr.invoice).length} + ${Object.keys(curatedFr.estimate).length} estimate`);
 
 const after = Object.values(table).reduce((n, m) => n + Object.keys(m).length, 0);
 console.log(`brand name repaired in ${brandFixed} strings`);
