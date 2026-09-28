@@ -330,9 +330,14 @@ with trailing context. **A name in this list is a claim about the app; when it s
 the list is wrong, not the app.**
 
 - **Activation:** `invoice_created_success`, `ci_save_clicked`, `ci_preview_clicked`,
-  `ci_save_validation_failed`, `ci_celebration_shown`, `Saved_clicked`, `Draft_click`,
+  `ci_save_validation_failed`, `Saved_clicked`, `Draft_click`,
   `create_inv_discard_dailog_shown` (sic), `discard_dialog_closed`, `estimated_success` (sic),
   `estimate_converted_to_invoice`
+  - ⚠️ **`ci_celebration_shown` is not sent by any build since 1.4.1** (app `d6b4ada8` renamed it
+    `create_inv_completed_scr`). Since 0149 that name fires on **every** create-mode save, not only on the
+    celebration. The celebration is `invoice_created_success.is_first_invoice=true`, and, from decision
+    [0180](docs/decisions/0180-an-estimates-save-has-the-invoices-gate-and-its-first-is-celebrated.md),
+    `estimated_success.is_first_estimate=true`.
 - **G1 primary — proof an invoice is real:** **`invoice_shared_success`** (fires only on a **confirmed**
   share: the user picks a target app in the OS chooser, tagged `mode` + `target`; **live since 1.4.1**)
   and `payment_added`. `estimate_shared` is the estimate twin.
@@ -505,6 +510,22 @@ the list is wrong, not the app.**
   ⚠️ **`app_open_ad_loaded` is gone from the app** — 4 firings on 1 device, and `ad_loaded` carries
   everything it did plus `type`, `ad_request_id` and `ad_source`. Old rows keep the name; nothing
   new arrives under it, so a query that still reads it is measuring history only.
+- **The estimate's Save gate, from the release after 1.4.9** (decision
+  [0180](docs/decisions/0180-an-estimates-save-has-the-invoices-gate-and-its-first-is-celebrated.md); app branch
+  `feat/estimate-save-gate-and-celebration`, **not merged, not released**). No new event name.
+  - The Save dialog's events gain **`document`** = `invoice|estimate`: `ad_dialog_shown` (screen view),
+    `watch_ad_click`, `ad_dailog_premium_click` (sic), `ad_dialog_dismissed`. The share dialog on the saved invoice
+    sends `document=invoice`. Rows from earlier builds have no `document`: unknown, never "invoice" (§1.7).
+  - The interstitial behind an estimate's dialog sends **`placement=estimate_save`** on `ad_request`, `ad_loaded`,
+    `ad_load_failed`, `ad_shown`, `ad_dismissed`, `ad_impression_value`. The invoice's keep the config's own
+    (`interstitial`). Same ad unit, same config.
+  - The paywall opened from it: `screen_view` `premium_scr` with **`entry=estimate_save_ad_dialog`**.
+  - **`estimated_success.is_first_estimate`** (`true|false`): the first finished estimate on the phone. That is exactly
+    when the create screen shows the celebration.
+  - A dismissal keeps the work, as on the invoice: `ad_dialog_dismissed.outcome` = `draft_saved|draft_failed|
+    autosave_only` on create, `edits_kept` on edit.
+  - Kill switch: Remote Config **`estimate_save_gate_enabled`** (String, read as text; absent = on). Premium never
+    sees the dialog.
 - **Store rating sheet, from the release after 1.4.9** (decision
   [0176](docs/decisions/0176-the-stores-rating-sheet-is-requested-after-the-nth-share-and-nothing-is-asked-first.md);
   merged into `VC_113_VN_149` at `a4846d44`; the owner's schedule is `feat/store-review-schedule` @ `6b680e1f`,

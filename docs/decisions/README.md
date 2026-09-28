@@ -94,3 +94,4 @@ Numbering: next free number, zero-padded to 4.
 - [0177 — Every Save says "Save" and dims when there is nothing new to keep](0177-every-save-says-save-and-dims-when-there-is-nothing-to-keep.md)
 - [0178 — An error a person reads is a plain sentence, and it is counted (`error_shown`)](0178-an-error-a-person-reads-is-a-plain-sentence-and-it-is-counted.md)
 - [0179 — A sign-in failure is told apart from the server's sentence](0179-a-sign-in-failure-is-told-apart-from-the-servers-sentence.md)
+- [0180 — An estimate's Save has the invoice's gate, and its first is celebrated](0180-an-estimates-save-has-the-invoices-gate-and-its-first-is-celebrated.md)
