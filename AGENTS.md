@@ -550,6 +550,25 @@ the list is wrong, not the app.**
     `prompt_taken`, our own check) on `launch_failed`; `exception_class` where something threw.
   - A `request_failed` does not move the schedule, so it can repeat once per share on a phone without Play.
 - **Notifications:** `notification_permission_shown` / `_allowed` / `_denied`
+- **Screen Map signals, from the build that carries `feat/screen-map-app-signals`** (off `VC_113_VN_149`, **not
+  merged, not released**; decision [0183](docs/decisions/0183-the-screen-map-measures-the-tour-dead-taps-and-ad-clicks.md),
+  AGENTS-EVENTS §1.26–1.27):
+  - **`screen_mode`** on every event while Create Invoice or one of its sheets is on screen:
+    `tour_business|tour_client|tour_items|none`. Absent off the screen, while a full-screen ad is up, in Edit
+    Invoice, and before the draft loads. The `screen_view` announcing the next screen still carries the mode being
+    left (it is read before the screen pauses) — read `screen_name`. The tour's end is `Item_added` (`source=create_invoice`) with `screen_mode=tour_items`.
+  - **Overlay A/B test.** **`overlay_variant=on|off`** on every event of an install dealt an arm; the dealing is one
+    coded **`onboarding_overlay_assigned`** (`overlay_variant`, `bucket`, `holdout_percent`,
+    `percent_source=remote|missing|invalid`). Only fresh installs the splash sends to Create Invoice with no document;
+    **existing installs carry no `overlay_variant` at all**. Remote Config **`onboarding_overlay_holdout_percent`**,
+    a string: default `20`, `0` = everybody gets the tour. `off` = Create Invoice without the tour, nothing else.
+  - **`dead_tap`** (auto): `cell` `c<0-5>r<0-11>`, `scroll_bucket` 0–12 (Create Invoice only), `layer`
+    `screen|sheet|dialog`, `taps`, `window_class`. Both platforms (iOS checked on the Simulator: WebView and banner
+    taps send none).
+  - **`ad_clicked`** (coded) from the SDK's click callback, every format: `type`, `placement`, `ad_request_id`, and
+    `path` on app-open. Filter on `type` like every ad event.
+  - **`create_inv_payment_method_click`** — the Payment Method card's own id. Until this build it was
+    `tap:create_inv_scr:card`; read both across the release.
 - **Errors a person reads, from the build after 1.4.9 (`VC_113_VN_149` + `fix/plain-error-text`, decision
   [0178](docs/decisions/0178-an-error-a-person-reads-is-a-plain-sentence-and-it-is-counted.md)):** **`error_shown`**, coded.
   - One row per failure sentence actually drawn ("Couldn't load your clients. Please try again."), from `ShownError`

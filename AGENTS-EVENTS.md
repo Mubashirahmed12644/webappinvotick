@@ -616,6 +616,54 @@ cannot come apart.
 inside a failure block. Decision
 [0178](docs/decisions/0178-an-error-a-person-reads-is-a-plain-sentence-and-it-is-counted.md).
 
+### 1.26 What a screen is showing, and which arm of a test an install is in, are stamps — not events. *(decided 2026-09-29)*
+
+The Screen Map could not tell a Create Invoice visit under the tour from one without it, and could not compare the
+two, because every new user got the tour. Both answers are now **parameters the gateway stamps**, the shape of
+`ui_mode` (§1.1): no new name, every event, absent when unknown (§1.7).
+
+- **`screen_mode`** (`tour_business|tour_client|tour_items|none`) is set by Create Invoice while it is **resumed**
+  and no full-screen ad is up, and cleared the moment either stops being true. Its sheets carry it; ad events never
+  do; Edit Invoice never does. Before its draft loads, it is absent — `none` would claim nothing was drawn.
+  - **Pausing is not enough on iOS.** The interstitial is presented over the Compose host without pausing it, and
+    the host stops drawing, so the interstitial's `ad_shown` still carried the mode on the Simulator. The screen now
+    collects `AdVisibilityController.fullScreenAdShowing` directly, which needs no frame.
+  - The `screen_view` that announces the *next* screen still carries the mode being left: it is read before the
+    screen pauses. Split by `screen_name`, not by the stamp alone.
+- **A moment that is already a row is not a new event.** The tour ends only with the first item, and
+  `Item_added` is reported before the screen redraws, so `Item_added` + `screen_mode=tour_items` *is* the end of the
+  tour. Any other end is the first `none` after a `tour_*` with no such row between them.
+- **`overlay_variant`** (`on|off`) rides on every event of an install that was dealt an arm. The dealing itself is one
+  coded **`onboarding_overlay_assigned`** per install (nothing is pressed; decision 0064's reason), carrying the
+  `bucket` and where the share came from (`percent_source=remote|missing|invalid`), because a kill switch nobody can
+  see take effect is not one (§1.5a).
+- **An arm is decided once and never flips.** Stored per install (phone-wide), dealt from the device id, never for an
+  install that existed before the test. A Remote Config share is **read as a string**: a missing number reads `0`,
+  and `0` is the kill switch.
+
+Decision [0183](docs/decisions/0183-the-screen-map-measures-the-tour-dead-taps-and-ad-clicks.md).
+
+### 1.27 A tap nothing took is one auto event, observed and never taken. *(decided 2026-09-29)*
+
+**`dead_tap`**: `cell` (6 × 12 grid of the window, never finer), `scroll_bucket` (quarter windows, only where the
+screen registers its scroll), `layer` (`screen|sheet|dialog`), `taps` (one event per burst in one cell, ≤ 1.5 s
+apart), `window_class`. No coordinates, no text, no screenshot.
+
+- **Auto channel**, so the denylist stops it with no release (§1.5a). A coded twin would bypass that.
+- **Passive.** The observer reads each gesture in the Main pass after every control under it, never consumes, never
+  waits. A tap counts only if nothing consumed any part of it — a clickable's up, a scroller's moves, the WebView
+  interop filter's whole claimed stream — and it is read once more after the dispatch. The invoice WebView must
+  behave exactly as before (memory `webview-gesture-findings`: a non-passive listener broke panning once).
+- **The screen is frozen at the tap.** A burst is sent up to 1.5 s later, so `screen` and `screen_mode` are taken
+  when the finger lands, not when the row is written.
+- **The root names the destination, not the last sheet.** The gateway's current screen stays on a sheet's name after
+  the sheet closes (a Create Invoice tap read `item_form_scr` on the Simulator). The shell publishes its own
+  `LocalScreenId` for the root observer; a sheet or dialog uses its own.
+- **Both platforms.** On the iOS Simulator, taps on the invoice WebView and on the banner (UIKit views) sent none.
+- **A disabled button is a dead tap.** Nothing took it; that is the fact, and it is worth seeing.
+
+Decision [0183](docs/decisions/0183-the-screen-map-measures-the-tour-dead-taps-and-ad-clicks.md).
+
 ### 1.10 Layers
 
 `intent.screen` · `intent.action` · `response.outcome` · `response.gate` · `response.interruption` ·
