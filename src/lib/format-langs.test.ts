@@ -101,9 +101,10 @@ test("dates: the same calendar day in every language", () => {
 
 test("every written language has every label, non-empty, and the estimate's own words", () => {
   for (const [code, set, est] of [["pt", PT_LABELS, PT_ESTIMATE_LABELS], ["es", ES_LABELS, ES_ESTIMATE_LABELS], ["ar", AR_LABELS, AR_ESTIMATE_LABELS]] as const) {
-    for (const k of Object.keys(LABELS) as (keyof typeof LABELS)[]) {
-      assert.ok(typeof set[k] === "string" && set[k].trim().length > 0, `${code}.${k}`);
-      assert.ok(!set[k].includes("#"), `${code}.${k}: no English "#"`);
+    const words = set as Record<string, string>;
+    for (const k of Object.keys(LABELS)) {
+      assert.ok(typeof words[k] === "string" && words[k].trim().length > 0, `${code}.${k}`);
+      assert.ok(!words[k].includes("#"), `${code}.${k}: no English "#"`);
     }
     for (const k of Object.keys(ESTIMATE_LABELS) as (keyof typeof ESTIMATE_LABELS)[]) {
       if (ESTIMATE_LABELS[k] === LABELS[k]) continue;
