@@ -98,3 +98,4 @@ Numbering: next free number, zero-padded to 4.
 - [0181 — The app's own logo takes the invoice's colour](0181-the-generated-logo-takes-the-invoices-colour.md)
 - [0182 — What each user has earned us, ads and premium, on the All Users page](0182-what-each-user-has-earned-us-ads-and-premium.md)
 - [0183 — The Screen Map measures the tour, dead taps and ad clicks, and holds 20 % of new users out of the tour](0183-the-screen-map-measures-the-tour-dead-taps-and-ad-clicks.md)
+- [0184 — The Screen Map is a page of its own, read from three per-device rollups](0184-the-screen-map-is-a-page-of-its-own-read-from-per-device-rollups.md)
