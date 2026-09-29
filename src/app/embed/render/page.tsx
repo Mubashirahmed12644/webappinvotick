@@ -138,7 +138,7 @@ export default function EmbedRenderPage() {
       <A4PagedFrame
         data={translated?.data ?? data}
         labels={translated?.labels}
-        dir={translated?.dir ?? "ltr"}
+        dir={translated?.dir}
         qrDataUrl="/qr_code.jpg"
         // Server (token) mode renders read-only — exactly like the receiver's OG-link. Local (hash)
         // mode keeps the draggable editing overlays.

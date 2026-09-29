@@ -1,8 +1,7 @@
 import { labelsFor, LABEL_KEYS, type InvoiceLabels } from "./invoice-labels";
 import { ESTIMATE_LABEL_TRANSLATIONS, LABEL_TRANSLATIONS } from "./invoice-labels-i18n";
 import { isRtl } from "./translate";
-import { documentLanguage } from "./document-language";
-import { frenchLabelsFor } from "./invoice-labels-fr";
+import { documentLanguage, writtenLabelsFor } from "./document-language";
 import type { InvoiceRenderData } from "./data";
 
 /**
@@ -61,9 +60,11 @@ export function hasLabelTable(lang: string): boolean {
 export function documentLabels(documentType: InvoiceRenderData["documentType"], lang: string): InvoiceLabels {
   const base = labelsFor(documentType);
   if (!lang || lang === "en") return base;
-  // French is written by hand (invoice-labels-fr.ts, decision 0185), never taken from a translator; the
-  // table's French row is generated from the same file, so the app's copy says the same words.
-  if (documentLanguage(lang) === "fr") return frenchLabelsFor(documentType);
+  // French, Portuguese, Spanish and Arabic are written by hand (invoice-labels-<lang>.ts, decisions 0185, 0187), never
+  // taken from a translator; the table's rows for them are generated from the same files, so the app's copy says the
+  // same words.
+  const written = documentLanguage(lang);
+  if (written !== "en") return writtenLabelsFor(written, documentType);
   const table = {
     ...(LABEL_TRANSLATIONS[lang] ?? {}),
     ...(documentType === "ESTIMATE" ? (ESTIMATE_LABEL_TRANSLATIONS[lang] ?? {}) : {}),
@@ -114,9 +115,11 @@ export async function translateDocument(
   translate: Translator,
 ): Promise<TranslatedInvoice> {
   const labels = documentLabels(data.documentType, lang);
-  // Reading a document in English or in French also writes its figures and dates that way (decision 0185):
-  // `language` is what the renderer formats by. Any other language leaves the document's own formatting.
-  const written = documentLanguage(lang) === "fr" ? "fr" : !lang || lang === "en" ? "en" : null;
+  // Reading a document in English or in a hand-written language also writes its figures and dates that way
+  // (decisions 0185, 0187): `language` is what the renderer formats by. Any other language leaves the document's own
+  // formatting.
+  const curated = documentLanguage(lang);
+  const written = curated !== "en" ? curated : !lang || lang === "en" ? "en" : null;
   if (written && documentLanguage(data.language) !== written) data = { ...data, language: written };
   if (!lang || lang === "en") return { data, labels, dir: "ltr" };
   const dir: "ltr" | "rtl" = isRtl(lang) ? "rtl" : "ltr";

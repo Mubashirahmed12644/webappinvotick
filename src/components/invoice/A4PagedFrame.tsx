@@ -5,7 +5,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import { FooterControlButton, InvoiceDocument, InvoiceFooter, ownFooterProps } from "./InvoiceDocument";
 import { type InvoiceLabels } from "@/lib/invoice-labels";
-import { documentLabelsFor, documentLanguage, pageLine } from "@/lib/document-language";
+import { documentDir, documentLabelsFor, documentLanguage, pageLine } from "@/lib/document-language";
 import { imageProxyUrl } from "@/lib/image";
 import type { InvoiceRenderData } from "@/lib/data";
 
@@ -315,7 +315,7 @@ export function A4PagedFrame({
   footerControl,
   onFooterControl,
   labels,
-  dir,
+  dir: dirProp,
 }: {
   data: InvoiceRenderData;
   qrDataUrl?: string | null;
@@ -342,6 +342,9 @@ export function A4PagedFrame({
   labels?: InvoiceLabels;
   dir?: "ltr" | "rtl";
 }) {
+  // The caller's direction (a translation's), else the document's own: an Arabic document reads right to left
+  // (decision 0187). Every document that is not Arabic, with no direction passed, is "ltr" exactly as before.
+  const dir = dirProp ?? documentDir(data.language);
   const containerRef = useRef<HTMLDivElement>(null);
   // Whether the pages carry a footer band at all: the Invotick one (free), the business's own one in the
   // same band (premium, decision 0151), or none (premium without one, decision 0147).
@@ -767,7 +770,7 @@ export function A4PagedFrame({
                     {multi && (
                       <div style={{ position: "absolute", left: 0, right: 0, bottom: (FOOTER_BOTTOM_MARGIN - 13) / 2, textAlign: "center", fontSize: 11, fontWeight: 500, color: "#9ca3af" }}>
                         {/* English keeps its original markup, text node for text node. */}
-                        {docLang === "fr" ? pageLine(docLang, i + 1, pages.length) : <>Page {i + 1} of {pages.length}</>}
+                        {docLang !== "en" ? pageLine(docLang, i + 1, pages.length) : <>Page {i + 1} of {pages.length}</>}
                       </div>
                     )}
                     {/* Draggable signature + stamp overlays — only on the summary (last) page. Each

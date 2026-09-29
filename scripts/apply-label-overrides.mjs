@@ -89,18 +89,21 @@ function readOverrides(src) {
 }
 
 
-// French is written by hand (src/lib/invoice-labels-fr.ts, decision 0185) and REPLACES the machine row
-// whole — every key, both tables — so the web table, the app's Kotlin copy and the renderer's own French
-// set are the same words. An empty parse refuses to run rather than dropping French from both copies.
-function readCuratedFrench(src) {
+// French, Portuguese, Spanish and Arabic are written by hand (src/lib/invoice-labels-<code>.ts, decisions 0185, 0187)
+// and each REPLACES its machine row whole — every key, both tables — so the web table, the app's Kotlin copy and the
+// renderer's own set are the same words. An empty parse refuses to run rather than dropping a language from both copies.
+// Adding a hand-written language is its file and one code here.
+const CURATED = ["fr", "pt", "es", "ar"];
+function readCurated(code, src) {
+  const NAME = code.toUpperCase();
   const block = (name) => {
     const m = src.match(new RegExp(`export const ${name}[^{]*\\{([\\s\\S]*?)\\n\\};`));
-    if (!m) throw new Error(`${name} not found in invoice-labels-fr.ts`);
+    if (!m) throw new Error(`${name} not found in invoice-labels-${code}.ts`);
     const out = Object.fromEntries([...m[1].matchAll(/^\s*(\w+):\s*"((?:[^"\\]|\\.)*)"/gm)].map((e) => [e[1], JSON.parse(`"${e[2]}"`)]));
     if (Object.keys(out).length === 0) throw new Error(`${name} parsed empty`);
     return out;
   };
-  return { invoice: block("FR_LABELS"), estimate: block("FR_ESTIMATE_LABELS") };
+  return { invoice: block(`${NAME}_LABELS`), estimate: block(`${NAME}_ESTIMATE_LABELS`) };
 }
 
 const genSrc = readFileSync(WEB_TABLE, "utf8");
@@ -134,11 +137,13 @@ for (const code of Object.keys(table)) {
   }
 }
 
-const curatedFr = readCuratedFrench(readFileSync(join(WEB_ROOT, "src/lib/invoice-labels-fr.ts"), "utf8"));
-table.fr = curatedFr.invoice;
-estimate.fr = curatedFr.estimate;
-applied += Object.keys(curatedFr.invoice).length + Object.keys(curatedFr.estimate).length;
-console.log(`French replaced whole from invoice-labels-fr.ts: ${Object.keys(curatedFr.invoice).length} + ${Object.keys(curatedFr.estimate).length} estimate`);
+for (const code of CURATED) {
+  const curated = readCurated(code, readFileSync(join(WEB_ROOT, `src/lib/invoice-labels-${code}.ts`), "utf8"));
+  table[code] = curated.invoice;
+  estimate[code] = curated.estimate;
+  applied += Object.keys(curated.invoice).length + Object.keys(curated.estimate).length;
+  console.log(`${code} replaced whole from invoice-labels-${code}.ts: ${Object.keys(curated.invoice).length} + ${Object.keys(curated.estimate).length} estimate`);
+}
 
 const after = Object.values(table).reduce((n, m) => n + Object.keys(m).length, 0);
 console.log(`brand name repaired in ${brandFixed} strings`);

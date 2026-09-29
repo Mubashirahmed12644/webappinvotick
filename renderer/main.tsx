@@ -137,7 +137,7 @@ function render(data: InvoiceRenderData | null) {
       <A4PagedFrame
         data={data}
         labels={currentTranslation.labels}
-        dir={currentTranslation.dir ?? "ltr"}
+        dir={currentTranslation.dir}
         qrDataUrl={qrCode}
         draggableStamp
         onStampMove={(x, y) => {
