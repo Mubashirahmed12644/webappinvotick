@@ -102,4 +102,4 @@ Numbering: next free number, zero-padded to 4.
 - [0185 — The app speaks French to French-language phones, with a 50/50 English holdout](0185-the-app-speaks-french-to-french-phones-with-an-english-holdout.md)
 - [0186 — Google Play's update prompt is counted from the check to the landing](0186-the-play-update-prompt-is-counted-from-check-to-landing.md)
 - [0187 — Portuguese, Spanish and Arabic, with one shared English holdout](0187-portuguese-spanish-and-arabic-with-one-shared-holdout.md)
-- [0189 — Rate Us: one feedback dialog, five stars opens our Play Store page (Android only)](0189-rate-us-in-the-drawer.md)
+- [0189 — Rate Us: one feedback dialog, five stars opens our Play Store page (Android only); it also shows itself after a share, with an off switch](0189-rate-us-in-the-drawer.md)

@@ -2,8 +2,9 @@
 
 - **Date:** 2026-09-30
 - **Status:** built, not merged. App `invoice-kmp-app`: `feat/rate-us-drawer` @ `53bc9285`, off
-  `feat/review-happy-moment` @ `33771bb4` (0176's addendum). **Pushed, not merged.** No schema change, no server change,
-  no new dependency, no Remote Config key.
+  `feat/review-happy-moment` @ `33771bb4` (0176's addendum); the automatic showing on `feat/rate-us-auto` @ `75864199`,
+  off `feat/rate-us-drawer`. **Pushed, not merged, not released.** No schema change, no server change, no new
+  dependency. Three Remote Config keys (the automatic showing's, below).
 - **Asked by:** the owner, 2026-09-30, after seeing a reference app. Three messages that day, each building on the last.
 
 ## What the owner chose
@@ -83,14 +84,57 @@ No event was renamed and no new press event was added: the dialog's taps keep th
 - **No `screen_view` for the dialog:** a dialog is not a sheet or a route, and announcing it would make taps and coded
   events disagree about the screen (§1.2).
 
+## Addendum 2026-09-30 — the automatic showing, approved and built
+
+**The owner's go.** In the main session on 2026-09-30 he was asked, in Roman Urdu, whether the dialog should also
+appear by itself: after a successful invoice share, at most once per 30 days, up to 3 times per phone, never again
+after five stars, never together with Google's card, and with a Remote Config off switch. The question told him the
+risk: the app asking for stars itself and sending only five-star users to Play is the riskiest end of this grey area.
+He chose **"Haan, banao (band switch ke saath)"** — yes, build it, with the off switch.
+
+**As built (`feat/rate-us-auto` @ `75864199`, Android only):**
+- **The same dialog.** No second sheet: one host at the app root (`RateUsAutoHost`) opens `FeedbackDialog` with
+  `trigger=auto` and the drawer's tap ids. A note goes to the team's WhatsApp like every door's.
+- **When.** After a confirmed invoice share, once the app has been in front for 5 s (the store card waits 2 s, so when
+  both are due the card goes first and the dialog stands down), and again judged on screen: no full-screen ad, no
+  native prompt, nothing drawn over the screens, no ad or paywall closed in the last `store_review_after_ad_seconds`.
+- **Schedule** (`RateUsPromptPolicy`, in this order): `rate_us_auto_enabled` off → never · five stars from **any
+  door** → never again (`rated_five_at`, this install) · `rate_us_max_auto_shows` reached (default **3**) · the first
+  session · fewer than `rate_us_gap_days` (default **30**) since the last showing · fewer than **2× the gap** since
+  one to four stars · the store card's own refusals (days of use, a crash last time, an error in the quiet hours) ·
+  the store's card already went in this process · then the screen checks. A showing is counted when shown, so closing
+  it unanswered uses one up.
+- **One ask per process, both ways** (`OneAskPerProcess`, core/common): opening the dialog from any door takes it, so
+  Google's card never follows our dialog; the automatic showing never follows the card. A door the user presses still
+  opens after the card — only the automatic showing is refused.
+- **Off switch.** `rate_us_auto_enabled` (text; only `false` switches it off; absent = on). `rate_us_gap_days` (≥ 1)
+  and `rate_us_max_auto_shows` (0 = never) are read as text too. **iOS is hard off** whatever the console says, and
+  nothing starts it there (Apple 5.6.1).
+- **Never the In-App Review API.** Five stars still opens only our Play listing, through `FeedbackRating.openStore`.
+
+**Events.** `rate_us_not_shown` (coded, at most one per share: `reason`, `trigger=invoice_share`, `auto_shows`,
+`days_of_use`), silent for `switched_off`, `rated_five`, `cap_reached`. The showing's own taps are the dialog's
+existing ids with `trigger=auto`; star taps now carry `trigger` too. The store card's `store_review_not_requested`
+gains `reason=rate_us_dialog_this_session`. AGENTS-EVENTS §1.31.
+
+**Rejected.** A second "Rate your experience" sheet (the earlier draft): one dialog for every door is the owner's own
+rule. A `rate_us_shown` / `rate_us_submitted` name: the dialog's ids already carry it (§1.1, §1.8). Counting a
+showing only when answered: a dismissal would then never use up the cap, and a user who always closes it would be
+asked on every share after the gap.
+
+**The guard, three more rules** (`TheStoreReviewPathAsksNothingTest`): the `rateus` package names nothing of the
+store card's path (the In-App Review API, `StoreReviewLauncher`, the review package — `MyApplication` hands in the
+card's record of use); it names no listing and opens nothing (the store is reached only through the dialog's five-star
+rule); `RateUsAuto.start` is called only from `androidMain`. A real probe file turned the guard red with 4 failures,
+and green again once removed.
+
+**Verified.** Full gate `testDebugUnitTest --continue --rerun-tasks`: **2165 tests, 0 failures, 0 errors** (from
+2118: +14 `RateUsPromptPolicyTest`, +22 `TheRatingDialogShowsItselfAfterAShareTest` on virtual time, +3
+`OneAskPerProcessTest`, +4 store-card tests for the one ask, +1 `StoreReviewPolicyTest`, +3 guard).
+`:composeApp:compileKotlinIosSimulatorArm64` green. Not tried on a device.
+
 ## Not built
 
-- **The automatic showing** (owner's second message: after a confirmed share, gap `rate_us_gap_days` 30, cap
-  `rate_us_max_auto_shows` 3, kill switch `rate_us_auto_enabled`, never in the same process as the store card, 60 days
-  quiet after 1–4 stars, never again after five stars via `rated_five_at`). The agent's permission check refused to
-  write the file that switches it on, so it was not built; the policy, coordinator and tests were drafted and set aside.
-  It needs the owner's explicit go in the session before it is built. An automatic question about feelings is the
-  riskier end of this grey area; it would carry the kill switch.
 - **`rated_five_at` on the account:** the only preferences table (`user_preferences`) is not synced; syncing a field is
   a schema change on phone and server, so it would stay local.
 - **"Help & Support is always in the menu":** there is no Help & Support entry (it is commented out in the drawer), so
