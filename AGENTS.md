@@ -676,6 +676,13 @@ the list is wrong, not the app.**
 - **Lifecycle:** `app_cold_start`, `app_foreground`, `app_resumed`, `app_paused`, `app_background`,
   `app_heartbeat`, `session_break`, `screen_view`, `network_changed`, `app_exit_dialog_shown`
 
+- **The interface language, from the build after 1.4.9** (decision
+  [0185](docs/decisions/0185-the-app-speaks-french-to-french-phones-with-an-english-holdout.md), AGENTS-EVENTS §1.28):
+  every event and screen view carries **`lang_variant`** (`fr|en_holdout|not_eligible`), **`app_lang`** (`en|fr`, what
+  is drawn), **`device_lang`** (the phone's primary language) and **`lang_pick=manual`** when the person chose in
+  Drawer → Language. One coded **`french_ui_assigned`** per French-language phone when its arm is dealt (Remote Config
+  `french_ui_holdout_percent`, text, default 50; `0` ends the test). Not deployed until the owner approves the screens.
+
 ⚠️ The names this section carried until 2026-09-04 (`invoice_created`, `Business_added`,
 `business_form_text_add`, `Client_added`) return **zero rows** on the live build; a funnel built on
 them reads as steps nobody reached. Memory: `g1-real-data-metric-gap`.

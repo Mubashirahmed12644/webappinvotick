@@ -99,3 +99,4 @@ Numbering: next free number, zero-padded to 4.
 - [0182 — What each user has earned us, ads and premium, on the All Users page](0182-what-each-user-has-earned-us-ads-and-premium.md)
 - [0183 — The Screen Map measures the tour, dead taps and ad clicks, and holds 20 % of new users out of the tour](0183-the-screen-map-measures-the-tour-dead-taps-and-ad-clicks.md)
 - [0184 — The Screen Map is a page of its own, read from three per-device rollups](0184-the-screen-map-is-a-page-of-its-own-read-from-per-device-rollups.md)
+- [0185 — The app speaks French to French-language phones, with a 50/50 English holdout](0185-the-app-speaks-french-to-french-phones-with-an-english-holdout.md)
