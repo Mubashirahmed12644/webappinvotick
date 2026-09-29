@@ -3,19 +3,23 @@ import { FR_ESTIMATE_LABELS, FR_LABELS } from "./invoice-labels-fr";
 import { PT_ESTIMATE_LABELS, PT_LABELS } from "./invoice-labels-pt";
 import { ES_ESTIMATE_LABELS, ES_LABELS } from "./invoice-labels-es";
 import { AR_ESTIMATE_LABELS, AR_LABELS } from "./invoice-labels-ar";
+import { HI_ESTIMATE_LABELS, HI_LABELS } from "./invoice-labels-hi";
+import { MY_ESTIMATE_LABELS, MY_LABELS } from "./invoice-labels-my";
+import { TH_ESTIMATE_LABELS, TH_LABELS } from "./invoice-labels-th";
 
 /**
  * The language a document is WRITTEN in (decisions 0185, 0187) — its labels, how its numbers and dates are
  * written, and which way it reads. Not the reader's language: that is the share page's picker, which only swaps
  * the labels.
  *
- * A document whose snapshot says `language: "fr"` (or "pt-AO", "es_419", "ar-EG", …) is written in that language.
+ * A document whose snapshot says `language: "fr"` (or "pt-AO", "es_419", "ar-EG", "hi-IN", "my-MM", "th-TH", …) is
+ * written in that language.
  * Anything else — absent, null, "en", or a language we have no hand-written set for — is "en", which is exactly how
  * every document rendered before 0185, so every frozen snapshot keeps rendering byte for byte as it did.
  *
  * Adding a language is one entry in [WRITTEN] and its hand-written label file; the checks read this table.
  */
-export type DocumentLanguage = "en" | "fr" | "pt" | "es" | "ar";
+export type DocumentLanguage = "en" | "fr" | "pt" | "es" | "ar" | "hi" | "my" | "th";
 
 type Written = {
   invoice: InvoiceLabels;
@@ -31,6 +35,9 @@ export const WRITTEN: Record<Exclude<DocumentLanguage, "en">, Written> = {
   pt: { invoice: PT_LABELS, estimate: PT_ESTIMATE_LABELS, sep: ": ", page: (p, n) => `Página ${p} de ${n}`, dir: "ltr" },
   es: { invoice: ES_LABELS, estimate: ES_ESTIMATE_LABELS, sep: ": ", page: (p, n) => `Página ${p} de ${n}`, dir: "ltr" },
   ar: { invoice: AR_LABELS, estimate: AR_ESTIMATE_LABELS, sep: ": ", page: (p, n) => `الصفحة ${p} من ${n}`, dir: "rtl" },
+  hi: { invoice: HI_LABELS, estimate: HI_ESTIMATE_LABELS, sep: ": ", page: (p, n) => `पेज ${p} / ${n}`, dir: "ltr" },
+  my: { invoice: MY_LABELS, estimate: MY_ESTIMATE_LABELS, sep: ": ", page: (p, n) => `စာမျက်နှာ ${p} / ${n}`, dir: "ltr" },
+  th: { invoice: TH_LABELS, estimate: TH_ESTIMATE_LABELS, sep: ": ", page: (p, n) => `หน้า ${p} จาก ${n}`, dir: "ltr" },
 };
 
 /** Every language a document can be written in, English first. */

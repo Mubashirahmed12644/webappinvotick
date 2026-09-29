@@ -89,11 +89,11 @@ function readOverrides(src) {
 }
 
 
-// French, Portuguese, Spanish and Arabic are written by hand (src/lib/invoice-labels-<code>.ts, decisions 0185, 0187)
+// French, Portuguese, Spanish, Arabic, Hindi, Burmese and Thai are written by hand (src/lib/invoice-labels-<code>.ts, decisions 0185, 0187)
 // and each REPLACES its machine row whole — every key, both tables — so the web table, the app's Kotlin copy and the
 // renderer's own set are the same words. An empty parse refuses to run rather than dropping a language from both copies.
 // Adding a hand-written language is its file and one code here.
-const CURATED = ["fr", "pt", "es", "ar"];
+const CURATED = ["fr", "pt", "es", "ar", "hi", "my", "th"];
 function readCurated(code, src) {
   const NAME = code.toUpperCase();
   const block = (name) => {

@@ -1,5 +1,5 @@
 /**
- * A document written in Portuguese, Spanish or Arabic (decision 0187) draws its hand-written labels, its own figures
+ * A document written in Portuguese, Spanish, Arabic, Hindi, Burmese or Thai (decision 0187) draws its hand-written labels, its own figures
  * and dates, and the figures are the same numbers the English document shows. An Arabic document reads right to left
  * and isolates every figure, date, phone number and invoice number, so none of them reorders.
  *
@@ -45,11 +45,14 @@ function valueOf(lang: DocumentLanguage, s: string): number {
   return (s.includes("-") ? -1 : 1) * Number(figures[figures.length - 1].replaceAll(",", ""));
 }
 
-const LANGS = ["pt", "es", "ar"] as const;
+const LANGS = ["pt", "es", "ar", "hi", "my", "th"] as const;
 const DATE_RE: Record<(typeof LANGS)[number], RegExp> = {
   pt: /\d{1,2}\s(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)\.\s\d{4}/,
   es: /\d{1,2}\s(ene|feb|mar|abr|may|jun|jul|ago|sep|oct|nov|dic)\.\s\d{4}/,
   ar: /\d{2}\/\d{2}\/\d{4}/,
+  hi: /\d{2}\/\d{2}\/\d{4}/,
+  my: /\d{2}\/\d{2}\/\d{4}/,
+  th: /\d{1,2}\s(ม\.ค|ก\.พ|มี\.ค|เม\.ย|พ\.ค|มิ\.ย|ก\.ค|ส\.ค|ก\.ย|ต\.ค|พ\.ย|ธ\.ค)\.\s\d{4}/,
 };
 
 for (const lang of LANGS) {
@@ -105,13 +108,14 @@ for (const lang of LANGS) {
 }
 
 // The language table itself.
-check("the written languages are en, fr, pt, es, ar", JSON.stringify(DOCUMENT_LANGUAGES) === JSON.stringify(["en", "fr", "pt", "es", "ar"]));
-for (const [tag, lang] of [["pt-AO", "pt"], ["pt_BR", "pt"], ["es-419", "es"], ["ES", "es"], ["ar-EG", "ar"], ["de", "en"], [null, "en"], ["", "en"]] as const) {
+check("the written languages are en, fr, pt, es, ar, hi, my, th", JSON.stringify(DOCUMENT_LANGUAGES) === JSON.stringify(["en", "fr", "pt", "es", "ar", "hi", "my", "th"]));
+for (const [tag, lang] of [["pt-AO", "pt"], ["pt_BR", "pt"], ["es-419", "es"], ["ES", "es"], ["ar-EG", "ar"], ["hi-IN", "hi"], ["my-MM", "my"], ["th-TH", "th"], ["de", "en"], [null, "en"], ["", "en"]] as const) {
   check(`documentLanguage(${JSON.stringify(tag)}) = ${lang}`, documentLanguage(tag) === lang);
 }
 check("an Arabic document reads right to left", documentDir("ar-DZ") === "rtl");
-check("no other document does", ["en", "fr", "pt", "es", null, "fa"].every((l) => documentDir(l) === "ltr"));
+check("no other document does", ["en", "fr", "pt", "es", "hi", "my", "th", null, "fa"].every((l) => documentDir(l) === "ltr"));
 check("page lines", pageLine("pt", 1, 3) === "Página 1 de 3" && pageLine("es", 2, 3) === "Página 2 de 3" && pageLine("ar", 1, 2) === "الصفحة 1 من 2" && pageLine("en", 1, 2) === "Page 1 of 2");
+check("page lines (wave 2)", pageLine("hi", 1, 3) === "पेज 1 / 3" && pageLine("my", 2, 3) === "စာမျက်နှာ 2 / 3" && pageLine("th", 1, 2) === "หน้า 1 จาก 2");
 
 // Reading across languages on the share page.
 const never = async () => null;

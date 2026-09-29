@@ -31,9 +31,10 @@ export function roundShown(n: number): number {
 /**
  * The languages a document can be written in (document-language.ts). Only French and Portuguese punctuate their
  * figures differently; Spanish and Arabic documents keep the app's own `1,234.50` (decision 0187: the Spanish installs
- * are mostly point-decimal countries, and an Arabic document isolates each figure instead — InvoiceDocument).
+ * are mostly point-decimal countries, and an Arabic document isolates each figure instead — InvoiceDocument). Hindi,
+ * Burmese and Thai keep it too: India, Myanmar and Thailand all write `1,234.50` with Western digits in business.
  */
-export type FigureLanguage = "en" | "fr" | "pt" | "es" | "ar";
+export type FigureLanguage = "en" | "fr" | "pt" | "es" | "ar" | "hi" | "my" | "th";
 
 export function formatMoney(amount: number | string, currency = "USD", lang: FigureLanguage = "en"): string {
   if (lang === "fr") return formatMoneyFr(amount, currency);
@@ -275,6 +276,8 @@ const MONTHS_SHORT_FR = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil
 /** Portuguese (European, as Angola and Mozambique write it) and Latin American Spanish short months (decision 0187). */
 const MONTHS_SHORT_PT = ["jan.", "fev.", "mar.", "abr.", "mai.", "jun.", "jul.", "ago.", "set.", "out.", "nov.", "dez."];
 const MONTHS_SHORT_ES = ["ene.", "feb.", "mar.", "abr.", "may.", "jun.", "jul.", "ago.", "sep.", "oct.", "nov.", "dic."];
+/** Thai short months (CLDR), with the Gregorian year the app stores — not the Buddhist Era. */
+const MONTHS_SHORT_TH = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
 
 export function formatDate(date?: string | null, lang: FigureLanguage = "en"): string {
   if (!date) return "—";
@@ -288,6 +291,9 @@ export function formatDate(date?: string | null, lang: FigureLanguage = "en"): s
   // Arabic: day first, all digits — no month word to argue over between Cairo (سبتمبر), Damascus (أيلول) and Rabat
   // (شتنبر), and it reads the same on the client's side of any border. The document isolates it (InvoiceDocument).
   if (lang === "ar") return `${String(d).padStart(2, "0")}/${String(m).padStart(2, "0")}/${y}`;
+  // Hindi and Burmese: numeric day-first too, as Indian and Myanmar bills write it. Thai: "29 ก.ย. 2026".
+  if (lang === "hi" || lang === "my") return `${String(d).padStart(2, "0")}/${String(m).padStart(2, "0")}/${y}`;
+  if (lang === "th") return `${d}${NBSP}${MONTHS_SHORT_TH[m - 1]}${NBSP}${y}`;
   // Same text `toLocaleDateString("en-US", { month: "short", … })` produced for a correct date, so
   // nothing that already rendered right changes — but built from the components, so no locale and
   // no timezone can reinterpret it. Matches the app's native `formatDateLong` exactly, which is

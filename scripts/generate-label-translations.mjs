@@ -114,7 +114,7 @@ for (const code of codes) {
 }
 
 
-// French, Portuguese, Spanish and Arabic are written by hand (src/lib/invoice-labels-<code>.ts, decisions 0185, 0187)
+// French, Portuguese, Spanish, Arabic, Hindi, Burmese and Thai are written by hand (src/lib/invoice-labels-<code>.ts, decisions 0185, 0187)
 // and each REPLACES its machine row whole — every key, both tables — so the web table, the app's Kotlin copy and the
 // renderer's own set are the same words. An empty parse refuses to run rather than dropping a language from both copies.
 function readCurated(code, src) {
@@ -128,7 +128,7 @@ function readCurated(code, src) {
   };
   return { invoice: block(`${NAME}_LABELS`), estimate: block(`${NAME}_ESTIMATE_LABELS`) };
 }
-for (const code of ["fr", "pt", "es", "ar"]) {
+for (const code of ["fr", "pt", "es", "ar", "hi", "my", "th"]) {
   const curated = readCurated(code, readFileSync(`src/lib/invoice-labels-${code}.ts`, "utf8"));
   out[code] = curated.invoice;
   estOut[code] = curated.estimate;
