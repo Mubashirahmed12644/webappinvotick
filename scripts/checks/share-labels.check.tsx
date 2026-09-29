@@ -160,7 +160,8 @@ for (const [name, table] of [["invoice", LABEL_TRANSLATIONS], ["estimate", ESTIM
 
 // 5. The rendered share page, the way a client reads it.
 for (const [lang, words] of [
-  ["zh-CN", ["销售方", "购买方", "折扣", "采购订单号", "扫描下载 Invotick", "使用 Invotick 生成的发票", `${LIVE}Cotton fabric`, `${LIVE}Thank you for your business`]],
+  // Chinese is the hand-written set (invoice-labels-zh.ts), the picker's "zh-CN" row included.
+  ["zh-CN", ["销售方", "购买方", "折扣", "采购订单号", LABEL_TRANSLATIONS["zh-CN"].footerScan!, LABEL_TRANSLATIONS["zh-CN"].footerGenerated!, `${LIVE}Cotton fabric`, `${LIVE}Thank you for your business`]],
   ["ar", [LABEL_TRANSLATIONS.ar.from!, LABEL_TRANSLATIONS.ar.billTo!, LABEL_TRANSLATIONS.ar.colDisc!, LABEL_TRANSLATIONS.ar.footerScan!, `${LIVE}Cotton fabric`]],
 ] as const) {
   const t = await translateInvoice(doc, lang);

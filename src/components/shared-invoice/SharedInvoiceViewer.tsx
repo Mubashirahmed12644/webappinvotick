@@ -7,6 +7,9 @@ import { translateInvoice, type TranslatedInvoice } from "@/lib/translate-invoic
 import type { InvoiceRenderData } from "@/lib/data";
 import { documentDir, documentLanguage } from "@/lib/document-language";
 
+/** Names, in their own language, of the written languages the reader's list does not carry. */
+const WRITTEN_NATIVE: Record<string, string> = { tr: "Türkçe", pl: "Polski" };
+
 /**
  * Shared-invoice viewer with a language picker. The invoice ships in its original language; picking a
  * language takes the labels from our committed table — the same words the app shows the sender — and
@@ -18,14 +21,23 @@ export function SharedInvoiceViewer({ data, qrDataUrl }: { data: InvoiceRenderDa
   // The picker starts on the language the document is written in (decision 0185): a French invoice opens
   // on "Français", and picking it again is the original, not a translation.
   const original = documentLanguage(data.language);
-  const [lang, setLang] = useState<string>(original);
+  // The picker's own code for it: Chinese is listed as "zh-CN". A written language the list does not carry (Turkish,
+  // Polish) gets its own entry, so the picker never claims the document is in a language it is not; an English
+  // document's list is untouched.
+  const originalCode = LANGUAGES.find((l) => l.code === original)?.code
+    ?? LANGUAGES.find((l) => l.code !== "en" && documentLanguage(l.code) === original)?.code
+    ?? original;
+  const options = LANGUAGES.some((l) => l.code === originalCode)
+    ? LANGUAGES
+    : [...LANGUAGES, { code: originalCode, name: originalCode, native: WRITTEN_NATIVE[originalCode] ?? originalCode }];
+  const [lang, setLang] = useState<string>(originalCode);
   // The original reads the way it was written: an Arabic document right to left (decision 0187).
   const [view, setView] = useState<TranslatedInvoice>({ data, labels: undefined as never, dir: documentDir(data.language) });
   const [loading, setLoading] = useState(false);
 
   async function pick(code: string) {
     setLang(code);
-    if (code === original) {
+    if (code === originalCode) {
       setView({ data, labels: undefined as never, dir: documentDir(data.language) });
       return;
     }
@@ -50,7 +62,7 @@ export function SharedInvoiceViewer({ data, qrDataUrl }: { data: InvoiceRenderDa
             className="max-w-[9rem] cursor-pointer bg-transparent pr-1 outline-none disabled:opacity-60"
             aria-label="Invoice language"
           >
-            {LANGUAGES.map((l) => (
+            {options.map((l) => (
               <option key={l.code} value={l.code}>
                 {l.native}
               </option>

@@ -93,7 +93,11 @@ function readOverrides(src) {
 // and each REPLACES its machine row whole — every key, both tables — so the web table, the app's Kotlin copy and the
 // renderer's own set are the same words. An empty parse refuses to run rather than dropping a language from both copies.
 // Adding a hand-written language is its file and one code here.
-const CURATED = ["fr", "pt", "es", "ar"];
+const CURATED = ["fr", "pt", "es", "ar", "fa", "pl", "tr", "zh"];
+// A curated set that also stands for a reader code of the share page's picker (translate.ts `LANGUAGES`): the picker
+// offers Chinese as "zh-CN", so that row is the hand-written Simplified set too, and a Chinese document reads the same
+// words whether it was written in Chinese or picked from the list.
+const CURATED_ALIASES = { zh: ["zh-CN"] };
 function readCurated(code, src) {
   const NAME = code.toUpperCase();
   const block = (name) => {
@@ -139,8 +143,10 @@ for (const code of Object.keys(table)) {
 
 for (const code of CURATED) {
   const curated = readCurated(code, readFileSync(join(WEB_ROOT, `src/lib/invoice-labels-${code}.ts`), "utf8"));
-  table[code] = curated.invoice;
-  estimate[code] = curated.estimate;
+  for (const key of [code, ...(CURATED_ALIASES[code] ?? [])]) {
+    table[key] = curated.invoice;
+    estimate[key] = curated.estimate;
+  }
   applied += Object.keys(curated.invoice).length + Object.keys(curated.estimate).length;
   console.log(`${code} replaced whole from invoice-labels-${code}.ts: ${Object.keys(curated.invoice).length} + ${Object.keys(curated.estimate).length} estimate`);
 }
