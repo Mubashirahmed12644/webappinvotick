@@ -29,15 +29,17 @@ export function roundShown(n: number): number {
 }
 
 /**
- * The languages a document can be written in (document-language.ts). Only French and Portuguese punctuate their
- * figures differently; Spanish and Arabic documents keep the app's own `1,234.50` (decision 0187: the Spanish installs
- * are mostly point-decimal countries, and an Arabic document isolates each figure instead — InvoiceDocument).
+ * The languages a document can be written in (document-language.ts). French, Portuguese, Polish and Turkish punctuate
+ * their figures differently; Spanish, Arabic, Persian and Chinese documents keep the app's own `1,234.50` (decision
+ * 0187: the Spanish installs are mostly point-decimal countries, an Arabic or Persian document isolates each figure
+ * instead — InvoiceDocument — and Chinese writes `¥1,234.50` itself).
  */
-export type FigureLanguage = "en" | "fr" | "pt" | "es" | "ar";
+export type FigureLanguage = "en" | "fr" | "pt" | "es" | "ar" | "fa" | "pl" | "tr" | "zh";
 
 export function formatMoney(amount: number | string, currency = "USD", lang: FigureLanguage = "en"): string {
   if (lang === "fr") return formatMoneyFr(amount, currency);
-  if (lang === "pt") return formatMoneyFr(amount, currency, NBSP);
+  if (lang === "pt" || lang === "pl") return formatMoneyFr(amount, currency, NBSP);
+  if (lang === "tr") return formatMoneyFr(amount, currency, ".");
   const value = roundShown((typeof amount === "string" ? parseFloat(amount) : amount) || 0);
   const code = (currency || "USD").toUpperCase();
   const sym = SYMBOLS[code];
@@ -83,6 +85,11 @@ export function portugueseDigits(english: string): string {
   return frenchDigits(english, NBSP);
 }
 
+/** Turkish figures: a full stop between thousands and a decimal comma — `1.234,50`. */
+export function turkishDigits(english: string): string {
+  return frenchDigits(english, ".");
+}
+
 function formatMoneyFr(amount: number | string, currency: string, group: string = NNBSP): string {
   const digits = (english: string) => frenchDigits(english, group);
   const value = roundShown((typeof amount === "string" ? parseFloat(amount) : amount) || 0);
@@ -107,14 +114,16 @@ function formatMoneyFr(amount: number | string, currency: string, group: string 
 /** A plain figure to two decimals — the item table's quantity. English keeps its `toFixed(2)`. */
 export function formatFixed2(n: number, lang: FigureLanguage = "en"): string {
   if (lang === "fr") return frenchDigits(n.toFixed(2));
-  if (lang === "pt") return portugueseDigits(n.toFixed(2));
+  if (lang === "pt" || lang === "pl") return portugueseDigits(n.toFixed(2));
+  if (lang === "tr") return turkishDigits(n.toFixed(2));
   return n.toFixed(2);
 }
 
-/** A rate to two decimals — "20.00%" / "20,00 %" (French) / "20,00%" (Portuguese). */
+/** A rate to two decimals — "20.00%" / "20,00 %" (French) / "20,00%" (Portuguese, Polish) / "%20,00" (Turkish). */
 export function formatPercent(n: number, lang: FigureLanguage = "en"): string {
   if (lang === "fr") return `${frenchDigits(n.toFixed(2))}${NNBSP}%`;
-  if (lang === "pt") return `${portugueseDigits(n.toFixed(2))}%`;
+  if (lang === "pt" || lang === "pl") return `${portugueseDigits(n.toFixed(2))}%`;
+  if (lang === "tr") return `%${turkishDigits(n.toFixed(2))}`;
   return `${n.toFixed(2)}%`;
 }
 
@@ -288,6 +297,12 @@ export function formatDate(date?: string | null, lang: FigureLanguage = "en"): s
   // Arabic: day first, all digits — no month word to argue over between Cairo (سبتمبر), Damascus (أيلول) and Rabat
   // (شتنبر), and it reads the same on the client's side of any border. The document isolates it (InvoiceDocument).
   if (lang === "ar") return `${String(d).padStart(2, "0")}/${String(m).padStart(2, "0")}/${y}`;
+  // Polish and Turkish invoices print the date as digits with full stops: "29.09.2026".
+  if (lang === "pl" || lang === "tr") return `${String(d).padStart(2, "0")}.${String(m).padStart(2, "0")}.${y}`;
+  // Persian writes a date year first: "2026/09/29", the Gregorian day the invoice was dated (isolated, like Arabic).
+  if (lang === "fa") return `${y}/${String(m).padStart(2, "0")}/${String(d).padStart(2, "0")}`;
+  // Chinese: "2026年9月29日".
+  if (lang === "zh") return `${y}年${m}月${d}日`;
   // Same text `toLocaleDateString("en-US", { month: "short", … })` produced for a correct date, so
   // nothing that already rendered right changes — but built from the components, so no locale and
   // no timezone can reinterpret it. Matches the app's native `formatDateLong` exactly, which is

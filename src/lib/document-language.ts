@@ -3,6 +3,10 @@ import { FR_ESTIMATE_LABELS, FR_LABELS } from "./invoice-labels-fr";
 import { PT_ESTIMATE_LABELS, PT_LABELS } from "./invoice-labels-pt";
 import { ES_ESTIMATE_LABELS, ES_LABELS } from "./invoice-labels-es";
 import { AR_ESTIMATE_LABELS, AR_LABELS } from "./invoice-labels-ar";
+import { FA_ESTIMATE_LABELS, FA_LABELS } from "./invoice-labels-fa";
+import { PL_ESTIMATE_LABELS, PL_LABELS } from "./invoice-labels-pl";
+import { TR_ESTIMATE_LABELS, TR_LABELS } from "./invoice-labels-tr";
+import { ZH_ESTIMATE_LABELS, ZH_LABELS } from "./invoice-labels-zh";
 
 /**
  * The language a document is WRITTEN in (decisions 0185, 0187) — its labels, how its numbers and dates are
@@ -15,7 +19,7 @@ import { AR_ESTIMATE_LABELS, AR_LABELS } from "./invoice-labels-ar";
  *
  * Adding a language is one entry in [WRITTEN] and its hand-written label file; the checks read this table.
  */
-export type DocumentLanguage = "en" | "fr" | "pt" | "es" | "ar";
+export type DocumentLanguage = "en" | "fr" | "pt" | "es" | "ar" | "fa" | "pl" | "tr" | "zh";
 
 type Written = {
   invoice: InvoiceLabels;
@@ -31,6 +35,10 @@ export const WRITTEN: Record<Exclude<DocumentLanguage, "en">, Written> = {
   pt: { invoice: PT_LABELS, estimate: PT_ESTIMATE_LABELS, sep: ": ", page: (p, n) => `Página ${p} de ${n}`, dir: "ltr" },
   es: { invoice: ES_LABELS, estimate: ES_ESTIMATE_LABELS, sep: ": ", page: (p, n) => `Página ${p} de ${n}`, dir: "ltr" },
   ar: { invoice: AR_LABELS, estimate: AR_ESTIMATE_LABELS, sep: ": ", page: (p, n) => `الصفحة ${p} من ${n}`, dir: "rtl" },
+  fa: { invoice: FA_LABELS, estimate: FA_ESTIMATE_LABELS, sep: ": ", page: (p, n) => `صفحه ${p} از ${n}`, dir: "rtl" },
+  pl: { invoice: PL_LABELS, estimate: PL_ESTIMATE_LABELS, sep: ": ", page: (p, n) => `Strona ${p} z ${n}`, dir: "ltr" },
+  tr: { invoice: TR_LABELS, estimate: TR_ESTIMATE_LABELS, sep: ": ", page: (p, n) => `Sayfa ${p} / ${n}`, dir: "ltr" },
+  zh: { invoice: ZH_LABELS, estimate: ZH_ESTIMATE_LABELS, sep: "：", page: (p, n) => `第 ${p} 页，共 ${n} 页`, dir: "ltr" },
 };
 
 /** Every language a document can be written in, English first. */
@@ -63,7 +71,7 @@ export function pageLine(lang: DocumentLanguage, page: number, pages: number): s
   return lang === "en" ? `Page ${page} of ${pages}` : WRITTEN[lang].page(page, pages);
 }
 
-/** Which way a document written in [language] reads: Arabic right to left, everything else left to right. */
+/** Which way a document written in [language] reads: Arabic and Persian right to left, everything else left to right. */
 export function documentDir(language?: string | null): "ltr" | "rtl" {
   const lang = documentLanguage(language);
   return lang === "en" ? "ltr" : WRITTEN[lang].dir;
