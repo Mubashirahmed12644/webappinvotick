@@ -416,6 +416,19 @@ the list is wrong, not the app.**
   `shared_invoice_opened` **70**, and `shared_invoice_approved` has fired **zero times ever**
   (`shared_invoice_rejected`: one, on 2026-08-09). Not evidence the approval loop is unused —
   evidence that the surface most receivers use had never been instrumented.
+  **A sender's own link, from the app build carrying `fix/owner-never-decides-own-invoice`** (not merged yet; decision
+  [0191](docs/decisions/0191-a-document-made-on-this-phone-is-never-answered-on-it.md), AGENTS-EVENTS §1.31):
+  - `shared_invoice_opened_by_owner` carries **`account`**:
+    - `open`: the open account made it, and it opens on its saved screen;
+    - `other`: another account or guest on this phone made it.
+  - With `account=other`, one row per screen once the open is settled:
+    - **`switched=true`**: that account opened, and the document is on its saved screen;
+    - **`switched=false`**, with **`reason`**: `cancelled`, `no_place`, `busy`, `not_on_this_phone`, `failed` or
+      `too_many_accounts`.
+  - `shared_invoice_decision_failed` gains **`reason=sender`**: the server refused the answer (409,
+    `viewerIsSender`) because the asking account made the document.
+  - Before this build, an estimate link opened by its own sender arrived as `shared_invoice_opened`. It also dated
+    the link "viewed": 16 of 17 first estimate-link opens in the app, 2026-08-25 to 09-29.
 - **Growth (G2), receiver side — on the web** *(`Webinvotick`, decision
   [0045](docs/decisions/0045-the-share-link-page-reports-its-own-journey.md); **built, not
   deployed**).* The `/i/{token}` page is the first non-app client in this pipeline. It posts to the
