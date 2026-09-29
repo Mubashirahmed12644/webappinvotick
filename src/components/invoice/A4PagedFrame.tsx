@@ -7,6 +7,7 @@ import { FooterControlButton, InvoiceDocument, InvoiceFooter, ownFooterProps } f
 import { type InvoiceLabels } from "@/lib/invoice-labels";
 import { documentDir, documentLabelsFor, documentLanguage, pageLine } from "@/lib/document-language";
 import { imageProxyUrl } from "@/lib/image";
+import { PAYMENT_STAMP_SIZE, PAYMENT_STAMP_START, startInDirection } from "@/lib/overlay-start";
 import type { InvoiceRenderData } from "@/lib/data";
 
 /**
@@ -448,16 +449,20 @@ export function A4PagedFrame({
   // starts inside the totals box, a hair after the "SHIPPING" row label — the empty strip between the
   // row labels and the figures, which is where the app puts it (DraggableStampModule). The exact spot
   // is measured from the rendered page by the effect below; this is the pre-measurement value.
+  // A place the user gave is kept in either direction; only a default is mirrored for a right-to-left page, whose
+  // totals box is on the left (decision 0187 — the native renderer's rule).
   const [stampFrac, setStampFrac] = useState(() =>
     data.stampOffsetX != null && data.stampOffsetY != null
       ? { x: data.stampOffsetX, y: data.stampOffsetY }
-      : STAMP_DEFAULT_FRAC);
+      : startInDirection(STAMP_DEFAULT_FRAC, stampSizePx / SHEET_W, dir));
   const [sigFrac, setSigFrac] = useState(() =>
     data.signatureOffsetX != null && data.signatureOffsetY != null
       ? { x: data.signatureOffsetX, y: data.signatureOffsetY }
-      : SIGNATURE_DEFAULT_FRAC);
-  // Payment stamp lives on the totals box (its top line is aligned by the effect below).
-  const [paymentStampFrac, setPaymentStampFrac] = useState({ x: 0.68, y: 0.521 });
+      : startInDirection(SIGNATURE_DEFAULT_FRAC, sigSizePx / SHEET_W, dir));
+  // Payment stamp lives on the totals box (its top line is aligned by the effect below). Its x is the over-totals
+  // slot for the page's direction: right to left, the totals box is on the left, and so is the stamp.
+  const [paymentStampFrac, setPaymentStampFrac] = useState(PAYMENT_STAMP_START);
+  const paymentStampAt = startInDirection(paymentStampFrac, PAYMENT_STAMP_SIZE, dir);
   const [selectedOverlay, setSelectedOverlay] = useState<"stamp" | "signature" | null>(null);
   // Local removal — hides the overlay immediately; the app persists it via onStamp/SignatureRemove.
   const [stampRemoved, setStampRemoved] = useState(false);
@@ -826,10 +831,10 @@ export function A4PagedFrame({
                         draggable={false}
                         style={{
                           position: "absolute",
-                          left: paymentStampFrac.x * SHEET_W,
-                          top: paymentStampFrac.y * SHEET_H,
-                          width: 0.189 * SHEET_W,
-                          height: 0.189 * SHEET_W,
+                          left: paymentStampAt.x * SHEET_W,
+                          top: paymentStampAt.y * SHEET_H,
+                          width: PAYMENT_STAMP_SIZE * SHEET_W,
+                          height: PAYMENT_STAMP_SIZE * SHEET_W,
                           objectFit: "contain",
                           pointerEvents: "none",
                           userSelect: "none",
