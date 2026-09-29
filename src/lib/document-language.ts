@@ -3,8 +3,12 @@ import { FR_ESTIMATE_LABELS, FR_LABELS } from "./invoice-labels-fr";
 import { PT_ESTIMATE_LABELS, PT_LABELS } from "./invoice-labels-pt";
 import { ES_ESTIMATE_LABELS, ES_LABELS } from "./invoice-labels-es";
 import { AR_ESTIMATE_LABELS, AR_LABELS } from "./invoice-labels-ar";
+import { DE_ESTIMATE_LABELS, DE_LABELS } from "./invoice-labels-de";
 import { FA_ESTIMATE_LABELS, FA_LABELS } from "./invoice-labels-fa";
+import { ID_ESTIMATE_LABELS, ID_LABELS } from "./invoice-labels-id";
+import { NL_ESTIMATE_LABELS, NL_LABELS } from "./invoice-labels-nl";
 import { PL_ESTIMATE_LABELS, PL_LABELS } from "./invoice-labels-pl";
+import { SV_ESTIMATE_LABELS, SV_LABELS } from "./invoice-labels-sv";
 import { TR_ESTIMATE_LABELS, TR_LABELS } from "./invoice-labels-tr";
 import { ZH_ESTIMATE_LABELS, ZH_LABELS } from "./invoice-labels-zh";
 
@@ -19,7 +23,7 @@ import { ZH_ESTIMATE_LABELS, ZH_LABELS } from "./invoice-labels-zh";
  *
  * Adding a language is one entry in [WRITTEN] and its hand-written label file; the checks read this table.
  */
-export type DocumentLanguage = "en" | "fr" | "pt" | "es" | "ar" | "fa" | "pl" | "tr" | "zh";
+export type DocumentLanguage = "en" | "fr" | "pt" | "es" | "ar" | "de" | "fa" | "id" | "nl" | "pl" | "sv" | "tr" | "zh";
 
 type Written = {
   invoice: InvoiceLabels;
@@ -35,8 +39,13 @@ export const WRITTEN: Record<Exclude<DocumentLanguage, "en">, Written> = {
   pt: { invoice: PT_LABELS, estimate: PT_ESTIMATE_LABELS, sep: ": ", page: (p, n) => `Página ${p} de ${n}`, dir: "ltr" },
   es: { invoice: ES_LABELS, estimate: ES_ESTIMATE_LABELS, sep: ": ", page: (p, n) => `Página ${p} de ${n}`, dir: "ltr" },
   ar: { invoice: AR_LABELS, estimate: AR_ESTIMATE_LABELS, sep: ": ", page: (p, n) => `الصفحة ${p} من ${n}`, dir: "rtl" },
+  // Wave 2 (2026-09-29), alphabetical by code.
+  de: { invoice: DE_LABELS, estimate: DE_ESTIMATE_LABELS, sep: ": ", page: (p, n) => `Seite ${p} von ${n}`, dir: "ltr" },
   fa: { invoice: FA_LABELS, estimate: FA_ESTIMATE_LABELS, sep: ": ", page: (p, n) => `صفحه ${p} از ${n}`, dir: "rtl" },
+  id: { invoice: ID_LABELS, estimate: ID_ESTIMATE_LABELS, sep: ": ", page: (p, n) => `Halaman ${p} dari ${n}`, dir: "ltr" },
+  nl: { invoice: NL_LABELS, estimate: NL_ESTIMATE_LABELS, sep: ": ", page: (p, n) => `Pagina ${p} van ${n}`, dir: "ltr" },
   pl: { invoice: PL_LABELS, estimate: PL_ESTIMATE_LABELS, sep: ": ", page: (p, n) => `Strona ${p} z ${n}`, dir: "ltr" },
+  sv: { invoice: SV_LABELS, estimate: SV_ESTIMATE_LABELS, sep: ": ", page: (p, n) => `Sida ${p} av ${n}`, dir: "ltr" },
   tr: { invoice: TR_LABELS, estimate: TR_ESTIMATE_LABELS, sep: ": ", page: (p, n) => `Sayfa ${p} / ${n}`, dir: "ltr" },
   zh: { invoice: ZH_LABELS, estimate: ZH_ESTIMATE_LABELS, sep: "：", page: (p, n) => `第 ${p} 页，共 ${n} 页`, dir: "ltr" },
 };
@@ -45,7 +54,9 @@ export const WRITTEN: Record<Exclude<DocumentLanguage, "en">, Written> = {
 export const DOCUMENT_LANGUAGES: DocumentLanguage[] = ["en", ...(Object.keys(WRITTEN) as DocumentLanguage[])];
 
 export function documentLanguage(language?: string | null): DocumentLanguage {
-  const primary = (language ?? "").trim().toLowerCase().split(/[-_]/)[0];
+  const tag = (language ?? "").trim().toLowerCase().split(/[-_]/)[0];
+  // Android's old code for Indonesian ("in") is the same language as "id" (InterfaceLanguages.LEGACY_CODES in the app).
+  const primary = tag === "in" ? "id" : tag;
   return primary in WRITTEN ? (primary as DocumentLanguage) : "en";
 }
 

@@ -46,17 +46,28 @@ function text(html: string): string {
 function valueOf(lang: DocumentLanguage, s: string): number {
   if (lang === "pt" || lang === "pl") return Number(s.split(NBSP).slice(0, -1).join("").replace(",", "."));
   if (lang === "tr") return Number(s.split(NBSP).slice(0, -1).join("").replaceAll(".", "").replace(",", "."));
+  // Wave 2: German "1.234,50 €", Dutch "€ 1.234,50", Indonesian "€1.234,50" (dot thousands), Swedish "1 234,50 €".
+  if (lang === "de" || lang === "nl" || lang === "id" || lang === "sv") {
+    const group = lang === "sv" ? NBSP : "\\.";
+    const runs = s.match(new RegExp(`\\d{1,3}(?:${group}\\d{3})*(?:,\\d+)?`, "g")) ?? ["NaN"];
+    if (runs.length !== 1) return NaN;
+    return (s.includes("-") ? -1 : 1) * Number(runs[0].split(lang === "sv" ? NBSP : ".").join("").replace(",", "."));
+  }
   const figures = s.match(/\d[\d,]*(?:\.\d+)?/g) ?? ["NaN"];
   return (s.includes("-") ? -1 : 1) * Number(figures[figures.length - 1].replaceAll(",", ""));
 }
 
-const LANGS = ["pt", "es", "ar", "fa", "pl", "tr", "zh"] as const;
+const LANGS = ["pt", "es", "ar", "de", "fa", "id", "nl", "pl", "sv", "tr", "zh"] as const;
 const DATE_RE: Record<(typeof LANGS)[number], RegExp> = {
   pt: /\d{1,2}\s(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)\.\s\d{4}/,
   es: /\d{1,2}\s(ene|feb|mar|abr|may|jun|jul|ago|sep|oct|nov|dic)\.\s\d{4}/,
   ar: /\d{2}\/\d{2}\/\d{4}/,
+  de: /\d{2}\.\d{2}\.\d{4}/,
   fa: /\d{4}\/\d{2}\/\d{2}/,
+  id: /\d{1,2}\s(Jan|Feb|Mar|Apr|Mei|Jun|Jul|Agu|Sep|Okt|Nov|Des)\s\d{4}/,
+  nl: /\d{1,2}\s(jan\.|feb\.|mrt\.|apr\.|mei|jun\.|jul\.|aug\.|sep\.|okt\.|nov\.|dec\.)\s\d{4}/,
   pl: /\d{2}\.\d{2}\.\d{4}/,
+  sv: /\d{4}-\d{2}-\d{2}/,
   tr: /\d{2}\.\d{2}\.\d{4}/,
   zh: /\d{4}年\d{1,2}月\d{1,2}日/,
 };
@@ -117,8 +128,8 @@ for (const lang of LANGS) {
 }
 
 // The language table itself.
-check("the written languages are en, fr, pt, es, ar, fa, pl, tr, zh", JSON.stringify(DOCUMENT_LANGUAGES) === JSON.stringify(["en", "fr", "pt", "es", "ar", "fa", "pl", "tr", "zh"]));
-for (const [tag, lang] of [["pt-AO", "pt"], ["pt_BR", "pt"], ["es-419", "es"], ["ES", "es"], ["ar-EG", "ar"], ["fa-IR", "fa"], ["pl-PL", "pl"], ["tr-TR", "tr"], ["zh-CN", "zh"], ["zh-Hans-CN", "zh"], ["de", "en"], [null, "en"], ["", "en"]] as const) {
+check("the written languages are en, fr, pt, es, ar, de, fa, id, nl, pl, sv, tr, zh", JSON.stringify(DOCUMENT_LANGUAGES) === JSON.stringify(["en", "fr", "pt", "es", "ar", "de", "fa", "id", "nl", "pl", "sv", "tr", "zh"]));
+for (const [tag, lang] of [["pt-AO", "pt"], ["pt_BR", "pt"], ["es-419", "es"], ["ES", "es"], ["ar-EG", "ar"], ["de-AT", "de"], ["fa-IR", "fa"], ["id-TL", "id"], ["in-ID", "id"], ["nl-SR", "nl"], ["pl-PL", "pl"], ["sv_SE", "sv"], ["tr-TR", "tr"], ["zh-CN", "zh"], ["zh-Hans-CN", "zh"], ["ja", "en"], [null, "en"], ["", "en"]] as const) {
   check(`documentLanguage(${JSON.stringify(tag)}) = ${lang}`, documentLanguage(tag) === lang);
 }
 check("an Arabic document reads right to left", documentDir("ar-DZ") === "rtl");
@@ -130,6 +141,14 @@ check("Polish figures", formatMoney(1234.5, "PLN", "pl") === `1${NBSP}234,50${NB
 check("Turkish figures", formatMoney(1234.5, "TRY", "tr") === `1.234,50${NBSP}₺` && formatMoney(1234567.89, "EUR", "tr") === `1.234.567,89${NBSP}€`);
 check("Persian and Chinese keep the English figure", formatMoney(1234.5, "IRR", "fa") === formatMoney(1234.5, "IRR", "en") && formatMoney(1234.5, "CNY", "zh") === formatMoney(1234.5, "CNY", "en"));
 check("second-wave dates", formatDate("2026-09-29", "fa") === "2026/09/29" && formatDate("2026-09-29", "pl") === "29.09.2026" && formatDate("2026-09-29", "tr") === "29.09.2026" && formatDate("2026-09-05", "zh") === "2026年9月5日");
+check("wave 2 page lines", pageLine("de", 1, 3) === "Seite 1 von 3" && pageLine("id", 2, 3) === "Halaman 2 dari 3" && pageLine("nl", 1, 2) === "Pagina 1 van 2" && pageLine("sv", 1, 2) === "Sida 1 av 2");
+check("wave 2 figures", formatMoney(1234.5, "EUR", "de") === `1.234,50${NBSP}€` && formatMoney(1234.5, "EUR", "nl") === `€${NBSP}1.234,50` && formatMoney(1234.5, "IDR", "id").endsWith("1.234,50") && formatMoney(1234.5, "SEK", "sv") === `1${NBSP}234,50${NBSP}kr`, [formatMoney(1234.5, "EUR", "de"), formatMoney(1234.5, "EUR", "nl"), formatMoney(1234.5, "IDR", "id"), formatMoney(1234.5, "SEK", "sv")].join(" | "));
+check("wave 2 dates", formatDate("2026-09-29", "de") === "29.09.2026" && formatDate("2026-09-29", "sv") === "2026-09-29" && formatDate("2026-09-29", "nl") === `29${NBSP}sep.${NBSP}2026` && formatDate("2026-08-05", "id") === `5${NBSP}Agu${NBSP}2026`);
+// German, Dutch and Swedish say "incl. tax" on the total only when the document carries a tax (as French "TTC").
+for (const lang of ["de", "nl", "sv"] as const) {
+  const withTax = text(renderToStaticMarkup(<InvoiceDocument data={{ ...FIXTURES.discountAndTax, language: lang } as InvoiceRenderData} qrDataUrl="/qr.jpg" />));
+  check(`${lang}: the taxed total says ${writtenLabelsFor(lang, "INVOICE").totalWithTax}`, withTax.includes(writtenLabelsFor(lang, "INVOICE").totalWithTax!));
+}
 
 // Reading across languages on the share page.
 const never = async () => null;

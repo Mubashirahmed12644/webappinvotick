@@ -131,7 +131,7 @@ function readCurated(code, src) {
 }
 // Chinese is also the picker's "zh-CN" row (apply-label-overrides.mjs, CURATED_ALIASES).
 const CURATED_ALIASES = { zh: ["zh-CN"] };
-for (const code of ["fr", "pt", "es", "ar", "fa", "pl", "tr", "zh"]) {
+for (const code of ["fr", "pt", "es", "ar", "de", "fa", "id", "nl", "pl", "sv", "tr", "zh"]) {
   const curated = readCurated(code, readFileSync(`src/lib/invoice-labels-${code}.ts`, "utf8"));
   for (const key of [code, ...(CURATED_ALIASES[code] ?? [])]) {
     out[key] = curated.invoice;

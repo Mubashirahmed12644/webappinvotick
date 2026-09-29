@@ -750,6 +750,11 @@ test is added for the three new languages together.
 - **`not_eligible`** is now any phone whose language has no interface (not en/fr/pt/es/ar), or an English phone.
 - Rows from builds before this one carry no `pt`, `es` or `ar` value and no `translated_ui_assigned`. A pt/es/ar phone
   on 1.4.9 or 0185's build reads `not_eligible` — it was not in any test then.
+- **Wave 2, group B (2026-09-29, not released):** German, Indonesian, Dutch and Swedish join the **translated** test —
+  no new key, event or salt. `lang_variant` and `app_lang` gain `de` · `id` · `nl` · `sv`; `translated_ui_assigned`
+  fires for their phones too, and `en_holdout` is split by `device_lang` exactly as above. An Indonesian phone's
+  `device_lang` is `id` whichever code the platform reports (Android's `Locale.getLanguage()` still says `in`;
+  `InterfaceLanguages.primary` reads it as `id`). Rows before this build read `not_eligible` for them.
 
 ### 1.10 Layers
 

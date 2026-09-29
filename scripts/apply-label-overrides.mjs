@@ -93,7 +93,7 @@ function readOverrides(src) {
 // and each REPLACES its machine row whole — every key, both tables — so the web table, the app's Kotlin copy and the
 // renderer's own set are the same words. An empty parse refuses to run rather than dropping a language from both copies.
 // Adding a hand-written language is its file and one code here.
-const CURATED = ["fr", "pt", "es", "ar", "fa", "pl", "tr", "zh"];
+const CURATED = ["fr", "pt", "es", "ar", "de", "fa", "id", "nl", "pl", "sv", "tr", "zh"];
 // A curated set that also stands for a reader code of the share page's picker (translate.ts `LANGUAGES`): the picker
 // offers Chinese as "zh-CN", so that row is the hand-written Simplified set too, and a Chinese document reads the same
 // words whether it was written in Chinese or picked from the list.
