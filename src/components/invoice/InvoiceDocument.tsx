@@ -2,10 +2,11 @@
 import { footerMode, type OwnFooter } from "@/lib/invotick-footer";
 import type { InvoiceRenderData, RenderItem } from "@/lib/data";
 import { discountTypeOf } from "@/lib/discount-type";
-import { formatMoney, formatDate, hexToRgba, contrastText, onTint, blendOnWhite } from "@/lib/format";
+import { formatMoney, formatDate, formatFixed2, formatPercent, hexToRgba, contrastText, onTint, blendOnWhite } from "@/lib/format";
+import { documentLabelsFor, documentLanguage, labelSeparator, type DocumentLanguage } from "@/lib/document-language";
 import { imageProxyUrl } from "@/lib/image";
 import { BRAND_LOGO } from "@/lib/givens";
-import { LABELS, labelsFor, type InvoiceLabels } from "@/lib/invoice-labels";
+import { LABELS, type InvoiceLabels } from "@/lib/invoice-labels";
 import { SummaryLeftFitted } from "./SummaryLeftFitted";
 import { QrSvg } from "./QrSvg";
 import { GeneratedLogo } from "./GeneratedLogo";
@@ -22,7 +23,14 @@ export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hide
   // The document's own vocabulary, unless the caller passed a translated set — the shared-link view
   // does, having already run the labels through the receiver's language.
   const isEstimate = data.documentType === "ESTIMATE";
-  const labels = labelsProp ?? labelsFor(data.documentType);
+  // The language the document is written in (decision 0185): its labels when the caller passed none, and
+  // how its figures and dates are written. Absent = English, byte for byte as before.
+  const lang = documentLanguage(data.language);
+  const labels = labelsProp ?? documentLabelsFor(data);
+  const sep = labelSeparator(lang);
+  // "TOTAL TTC" only when there is a tax to include (see invoice-labels-fr.ts); English has no such label.
+  const hasTax = data.taxAmount !== 0 || data.items.some((it) => it.taxRate !== 0);
+  const totalLabel = hasTax && labels.totalWithTax ? labels.totalWithTax : labels.total;
   const color = data.color || "#0D4DC0";
   const onColor = contrastText(color);
   const cur = data.currency;
@@ -39,7 +47,7 @@ export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hide
   const signatureUrl = imageProxyUrl(data.signatureImage);
   const stampUrl = imageProxyUrl(data.stampImage);
   const c = data.client;
-  const pct = (n: number) => `${n.toFixed(2)}%`;
+  const pct = (n: number) => formatPercent(n, lang);
   const label = "text-[15px] font-extrabold text-[#1c1b1f]";
   // Item-table Description column alignment from the template config (native itemTable*Alignment).
   // Numeric columns always stay end-aligned. Logical start/end so RTL still mirrors.
@@ -104,8 +112,8 @@ export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hide
               {[data.business?.addressLine1, data.business?.addressLine2, data.business?.city, data.business?.country].filter(Boolean).length > 0 && (
                 <p className="text-[13px] font-medium">{[data.business?.addressLine1, data.business?.addressLine2, data.business?.city, data.business?.country].filter(Boolean).join(", ")}</p>
               )}
-              {data.business?.phone && <p className="text-[13px] font-medium">{labels.phone}: {data.business.phone}</p>}
-              {data.business?.emailAddress && <p className="text-[13px] font-medium">{labels.email}: {data.business.emailAddress}</p>}
+              {data.business?.phone && <p className="text-[13px] font-medium">{labels.phone}{sep}{data.business.phone}</p>}
+              {data.business?.emailAddress && <p className="text-[13px] font-medium">{labels.email}{sep}{data.business.emailAddress}</p>}
             </div>
           )}
           {t.receiver && (
@@ -116,8 +124,8 @@ export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hide
               {[c?.addressLine1, c?.city, c?.country].filter(Boolean).length > 0 && (
                 <p className="text-[13px] font-medium">{[c?.addressLine1, c?.city, c?.country].filter(Boolean).join(", ")}</p>
               )}
-              {c?.phone && <p className="text-[13px] font-medium">{labels.phone}: {c.phone}</p>}
-              {c?.emailAddress && <p className="text-[13px] font-medium">{labels.email}: {c.emailAddress}</p>}
+              {c?.phone && <p className="text-[13px] font-medium">{labels.phone}{sep}{c.phone}</p>}
+              {c?.emailAddress && <p className="text-[13px] font-medium">{labels.email}{sep}{c.emailAddress}</p>}
             </div>
           )}
           {/* Native FlexibleInvoiceMetaModule alignRight=true: the block sits at the RIGHT of its
@@ -125,10 +133,10 @@ export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hide
           <div className="flex justify-end">
             <div className="text-start">
               <p className={label}>{labels.invoiceDetails}</p>
-              <p className="mt-1 text-[14px] font-medium">{labels.invoiceNo}: {data.invoiceNumber}</p>
-              <p className="text-[14px] font-medium">{labels.issueDate}: {formatDate(data.invoiceDate)}</p>
-              {data.dueDate && <p className="text-[14px] font-medium">{labels.dueDate}: {formatDate(data.dueDate)}</p>}
-              {data.poNumber && <p className="text-[14px] font-medium">{labels.poNo}: {data.poNumber}</p>}
+              <p className="mt-1 text-[14px] font-medium">{labels.invoiceNo}{sep}{data.invoiceNumber}</p>
+              <p className="text-[14px] font-medium">{labels.issueDate}{sep}{formatDate(data.invoiceDate, lang)}</p>
+              {data.dueDate && <p className="text-[14px] font-medium">{labels.dueDate}{sep}{formatDate(data.dueDate, lang)}</p>}
+              {data.poNumber && <p className="text-[14px] font-medium">{labels.poNo}{sep}{data.poNumber}</p>}
             </div>
           </div>
         </div>
@@ -170,11 +178,11 @@ export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hide
                     <tr key={i} style={{ backgroundColor: tint, height: 28 }}>
                       <td className="px-2 align-middle text-center font-bold">{it ? it.sn : ""}</td>
                       <td className={`px-2 align-middle font-bold ${descBody}`}>{it ? it.name : ""}</td>
-                      <td className="px-2 align-middle text-end font-bold">{it ? it.quantity.toFixed(2) : ""}</td>
-                      <td className="px-2 align-middle text-end font-bold">{it ? formatMoney(it.unitPrice, cur) : ""}</td>
-                      <td className="px-2 align-middle text-end font-bold">{it ? discountCell(it, cur) : ""}</td>
+                      <td className="px-2 align-middle text-end font-bold">{it ? formatFixed2(it.quantity, lang) : ""}</td>
+                      <td className="px-2 align-middle text-end font-bold">{it ? formatMoney(it.unitPrice, cur, lang) : ""}</td>
+                      <td className="px-2 align-middle text-end font-bold">{it ? discountCell(it, cur, lang) : ""}</td>
                       <td className="px-2 align-middle text-end font-bold">{it ? pct(it.taxRate) : ""}</td>
-                      <td className="px-2 align-middle text-end font-bold">{it ? formatMoney(it.amount, cur) : ""}</td>
+                      <td className="px-2 align-middle text-end font-bold">{it ? formatMoney(it.amount, cur, lang) : ""}</td>
                     </tr>
                   );
                 })}
@@ -204,10 +212,10 @@ export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hide
                 A4PagedFrame align the payment stamp's top edge to this box's top line. */}
             {t.total ? (
               <div data-totals className="relative w-full max-w-[300px]" style={{ border: `1px solid ${color}` }}>
-                <TotalRow rowKey="subtotal" label={labels.subTotal} value={formatMoney(data.subtotal, cur)} tint={hexToRgba(color, 0.05)} />
-                <TotalRow rowKey="discount" label={labels.discount} value={formatMoney(data.discountAmount, cur)} tint={hexToRgba(color, 0.05)} />
-                <TotalRow rowKey="tax" label={labels.tax} value={formatMoney(data.taxAmount, cur)} tint={hexToRgba(color, 0.05)} />
-                <TotalRow rowKey="shipping" label={labels.shipping} value={formatMoney(data.shippingCost, cur)} tint={hexToRgba(color, 0.05)} />
+                <TotalRow rowKey="subtotal" label={labels.subTotal} value={formatMoney(data.subtotal, cur, lang)} tint={hexToRgba(color, 0.05)} />
+                <TotalRow rowKey="discount" label={labels.discount} value={formatMoney(data.discountAmount, cur, lang)} tint={hexToRgba(color, 0.05)} />
+                <TotalRow rowKey="tax" label={labels.tax} value={formatMoney(data.taxAmount, cur, lang)} tint={hexToRgba(color, 0.05)} />
+                <TotalRow rowKey="shipping" label={labels.shipping} value={formatMoney(data.shippingCost, cur, lang)} tint={hexToRgba(color, 0.05)} />
                 {/* TOTAL — light tint + accent text, the lowest of three rungs on an invoice. On an
                     estimate it is the only figure that matters and the last row in the box, so it
                     takes the hero treatment BALANCE DUE would have had.
@@ -220,8 +228,8 @@ export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hide
                     estimate branch already did the right thing with `onColor`; this is the invoice
                     branch catching up. */}
                 <div className="flex items-center justify-between px-3 py-2 text-[15px] font-extrabold" style={isEstimate ? { backgroundColor: color, color: onColor } : { backgroundColor: hexToRgba(color, 0.16), color: onTint(color, 0.16) }}>
-                  <span>{labels.total}</span>
-                  <span>{formatMoney(data.total, cur)}</span>
+                  <span>{totalLabel}</span>
+                  <span>{formatMoney(data.total, cur, lang)}</span>
                 </div>
                 {/* AMOUNT PAID / BALANCE DUE — an invoice's two lower rungs, and nonsense on an
                     estimate: nothing has been paid against a price that is still being quoted, and
@@ -231,11 +239,11 @@ export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hide
                   <>
                     <div className="flex items-center justify-between px-3 py-2 text-[15px] font-extrabold" style={{ backgroundColor: hexToRgba(color, 0.34), color: contrastText(blendOnWhite(color, 0.34)) }}>
                       <span>{labels.amountPaid}</span>
-                      <span>{formatMoney(data.amountPaid ?? 0, cur)}</span>
+                      <span>{formatMoney(data.amountPaid ?? 0, cur, lang)}</span>
                     </div>
                     <div className="flex items-center justify-between px-3 py-2 text-[15px] font-extrabold" style={{ backgroundColor: color, color: onColor }}>
                       <span>{labels.balanceDue}</span>
-                      <span>{formatMoney(data.balanceDue ?? data.total, cur)}</span>
+                      <span>{formatMoney(data.balanceDue ?? data.total, cur, lang)}</span>
                     </div>
                   </>
                 )}
@@ -538,7 +546,7 @@ function TotalRow({ label, value, tint, rowKey }: { label: string; value: string
  * client could not tell 50 off from 50 %. The type is read as the app reads it (discountTypeOf), so a
  * stored FIXED or AMOUNT is flat too. A line with no discount reads "0.00", as native.
  */
-function discountCell(it: RenderItem, cur: string): string {
-  if (discountTypeOf(it.discountType) === "PERCENTAGE") return `${it.discountValue.toFixed(2)}%`;
-  return it.discountValue > 0 ? formatMoney(it.discountValue, cur) : it.discountValue.toFixed(2);
+function discountCell(it: RenderItem, cur: string, lang: DocumentLanguage = "en"): string {
+  if (discountTypeOf(it.discountType) === "PERCENTAGE") return formatPercent(it.discountValue, lang);
+  return it.discountValue > 0 ? formatMoney(it.discountValue, cur, lang) : formatFixed2(it.discountValue, lang);
 }

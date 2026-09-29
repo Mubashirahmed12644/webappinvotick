@@ -150,7 +150,7 @@ check("Arabic reads right to left", down.dir === "rtl");
 for (const [name, table] of [["invoice", LABEL_TRANSLATIONS], ["estimate", ESTIMATE_LABEL_TRANSLATIONS]] as const) {
   for (const [lang, row] of Object.entries(table)) {
     for (const [k, v] of Object.entries(row)) {
-      const english = (name === "estimate" ? labelsFor("ESTIMATE") : LABELS)[k as keyof InvoiceLabels];
+      const english = (name === "estimate" ? labelsFor("ESTIMATE") : LABELS)[k as keyof InvoiceLabels] ?? "";
       if (english.includes("Invotick")) {
         check(`${name} table ${lang}.${k} spells Invotick whole`, (v as string).includes("Invotick"), JSON.stringify(v));
       }

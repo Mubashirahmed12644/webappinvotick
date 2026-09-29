@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { A4PagedFrame } from "@/components/invoice/A4PagedFrame";
 import { InvoiceFooter } from "@/components/invoice/InvoiceDocument";
 import { LABELS } from "@/lib/invoice-labels";
+import { documentLabelsFor } from "@/lib/document-language";
 import type { InvoiceRenderData } from "@/lib/data";
 import { BRAND_LOGO } from "@/lib/givens";
 import "./renderer.css";
@@ -49,7 +50,9 @@ function SkeletonPage({ withFooter }: { withFooter: boolean }) {
         <div style={{ width: SHEET_W, height: SHEET_H, background: "#fff", boxShadow: "0 3px 16px rgba(0,0,0,0.18)", transform: `scale(${s})`, transformOrigin: "top left", position: "relative", overflow: "hidden" }}>
           {withFooter && (
             <div style={{ position: "absolute", left: 0, right: 0, bottom: FOOTER_BOTTOM_MARGIN, background: "#fff", paddingLeft: 32, paddingRight: 32 }}>
-              <InvoiceFooter qrDataUrl={qrCode} labels={LABELS} />
+              {/* `?lang=fr` draws the skeleton's footer in French (decision 0185), so a French document's
+                  footer does not change language when the document arrives. Absent = English, as before. */}
+              <InvoiceFooter qrDataUrl={qrCode} labels={documentLabelsFor({ language: new URLSearchParams(window.location.search).get("lang") })} />
             </div>
           )}
         </div>

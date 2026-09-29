@@ -28,7 +28,8 @@ export function roundShown(n: number): number {
   return n < 0 ? -value : value;
 }
 
-export function formatMoney(amount: number | string, currency = "USD"): string {
+export function formatMoney(amount: number | string, currency = "USD", lang: "en" | "fr" = "en"): string {
+  if (lang === "fr") return formatMoneyFr(amount, currency);
   const value = roundShown((typeof amount === "string" ? parseFloat(amount) : amount) || 0);
   const code = (currency || "USD").toUpperCase();
   const sym = SYMBOLS[code];
@@ -42,6 +43,58 @@ export function formatMoney(amount: number | string, currency = "USD"): string {
     // NO space to match the native render ("Rs584.00", not "Rs 584.00").
     return `${currency}${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   }
+}
+
+// ─── French documents (decision 0185) ───────────────────────────────────────────────────────────
+//
+// A document written in French shows its figures the French way: `1 234,50 €` — a narrow no-break space
+// (U+202F) between thousands, a decimal comma, and the symbol AFTER the amount behind a no-break space
+// (U+00A0). The figure itself is never computed here: every French string is the English one's digits,
+// re-punctuated. The same rounding (roundShown), the same number of decimals (Intl's own for an ISO
+// code — 0 for JPY, 3 for KWD — exactly as the English line), the same symbol. Only the punctuation and
+// the symbol's side change, so an amount cannot read differently in the two languages.
+
+const NNBSP = "\u202F";
+const NBSP = "\u00A0";
+
+/** "1,234.50" / "-1234.5" (English digits) → "1 234,50" / "-1 234,5". Grouping is re-done, so either input works. */
+export function frenchDigits(english: string): string {
+  const m = /^(-?)([\d,]+)(?:\.(\d+))?$/.exec(english.trim());
+  if (!m) return english;
+  const [, sign, intPart, frac] = m;
+  const int = intPart.replace(/,/g, "");
+  const grouped = int.replace(/\B(?=(\d{3})+(?!\d))/g, NNBSP);
+  return `${sign}${grouped}${frac !== undefined ? `,${frac}` : ""}`;
+}
+
+function formatMoneyFr(amount: number | string, currency: string): string {
+  const value = roundShown((typeof amount === "string" ? parseFloat(amount) : amount) || 0);
+  const code = (currency || "USD").toUpperCase();
+  const two = (v: number) => v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const sym = SYMBOLS[code];
+  if (sym) return `${frenchDigits(two(value))}${NBSP}${sym}`;
+  try {
+    // The English line's own parts: its symbol, its sign, its digits and its decimals.
+    const parts = new Intl.NumberFormat("en-US", { style: "currency", currency: code, currencyDisplay: "narrowSymbol" }).formatToParts(value);
+    const symbol = parts.filter((p) => p.type === "currency").map((p) => p.value).join("");
+    const sign = parts.some((p) => p.type === "minusSign") ? "-" : "";
+    const int = parts.filter((p) => p.type === "integer").map((p) => p.value).join("");
+    const fraction = parts.filter((p) => p.type === "fraction").map((p) => p.value).join("");
+    return `${frenchDigits(`${sign}${int}${fraction ? `.${fraction}` : ""}`)}${NBSP}${symbol}`;
+  } catch {
+    // A raw symbol the app passes ("Rs", "€"), not an ISO code: after the amount, as a French reader expects.
+    return `${frenchDigits(two(value))}${NBSP}${currency}`;
+  }
+}
+
+/** A plain figure to two decimals — the item table's quantity. English keeps its `toFixed(2)`. */
+export function formatFixed2(n: number, lang: "en" | "fr" = "en"): string {
+  return lang === "fr" ? frenchDigits(n.toFixed(2)) : n.toFixed(2);
+}
+
+/** A rate to two decimals — "20.00%" / "20,00 %". */
+export function formatPercent(n: number, lang: "en" | "fr" = "en"): string {
+  return lang === "fr" ? `${frenchDigits(n.toFixed(2))}${NNBSP}%` : `${n.toFixed(2)}%`;
 }
 
 // rgba() from a #RRGGBB hex, for theme tints (e.g. table row background).
@@ -195,11 +248,16 @@ function parseCalendarDate(raw: string): [number, number, number] | null {
   return [y, m, d];
 }
 
-export function formatDate(date?: string | null): string {
+/** French short months, as French typography abbreviates them (the English line spells the month too). */
+const MONTHS_SHORT_FR = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
+
+export function formatDate(date?: string | null, lang: "en" | "fr" = "en"): string {
   if (!date) return "—";
   const parsed = parseCalendarDate(date);
   if (!parsed) return date;
   const [y, m, d] = parsed;
+  // "29 sept. 2026": day, month, year, the French order. Same calendar triple as the English line.
+  if (lang === "fr") return `${d}${NBSP}${MONTHS_SHORT_FR[m - 1]}${NBSP}${y}`;
   // Same text `toLocaleDateString("en-US", { month: "short", … })` produced for a correct date, so
   // nothing that already rendered right changes — but built from the components, so no locale and
   // no timezone can reinterpret it. Matches the app's native `formatDateLong` exactly, which is

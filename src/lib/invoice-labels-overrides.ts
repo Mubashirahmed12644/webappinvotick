@@ -30,6 +30,10 @@
  */
 import type { InvoiceLabels } from "./invoice-labels";
 
+// "fr" is not corrected here: French is written by hand in invoice-labels-fr.ts (decision 0185), and
+// scripts/apply-label-overrides.mjs writes that file over the whole French row of both tables. (No comment
+// may sit INSIDE the map below: the script's parser reads language blocks one after another and stops at
+// the first line that is not one.)
 export const LABEL_TRANSLATION_OVERRIDES: Record<string, Partial<InvoiceLabels>> = {
   "zh-CN": {
     from: "销售方",
@@ -83,17 +87,6 @@ export const LABEL_TRANSLATION_OVERRIDES: Record<string, Partial<InvoiceLabels>>
     balanceDue: "مانده قابل پرداخت",
     notes: "یادداشت‌ها",
     footerTagline: "فاکتورهای حرفه‌ای را در چند ثانیه بسازید",
-  },
-  "fr": {
-    from: "Émetteur",
-    billTo: "Facturé à",
-    poNo: "N° de bon de commande",
-    colSn: "N°",
-    colDescription: "Désignation",
-    colQty: "Qté",
-    discount: "REMISE",
-    tax: "TAXE",
-    shipping: "FRAIS DE PORT",
   },
   "de": {
     from: "Rechnungssteller",

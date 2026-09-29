@@ -1,0 +1,20 @@
+// Bundles english-golden.check.tsx (the "@/" alias, TSX) with the repo's rolldown and runs it in node.
+import { build } from "rolldown";
+import { fileURLToPath } from "node:url";
+import { join } from "node:path";
+import { pathToFileURL } from "node:url";
+
+const root = fileURLToPath(new URL("../..", import.meta.url));
+// Inside node_modules so the bundle resolves react from the repo; never committed.
+const out = join(root, "node_modules/.cache/english-golden-check.mjs");
+await build({
+  input: join(root, "scripts/checks/english-golden.check.tsx"),
+  resolve: { alias: { "@": join(root, "src") } },
+  external: [/^react($|\/)/, /^react-dom($|\/)/, /^react-zoom-pan-pinch/],
+  moduleTypes: { ".jpg": "dataurl", ".png": "dataurl", ".css": "empty" },
+  transform: { jsx: "react-jsx" },
+  platform: "node",
+  output: { file: out, format: "esm", codeSplitting: false }, // the viewer imports its translator lazily
+  logLevel: "warn",
+});
+await import(pathToFileURL(out).href);

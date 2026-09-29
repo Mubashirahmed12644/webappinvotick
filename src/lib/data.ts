@@ -530,6 +530,13 @@ export interface InvoiceRenderData {
    * the owner's footer once the server says the owner is premium (`withOwnersFooterRule`).
    */
   ownFooter?: OwnFooter | null;
+  /**
+   * The language the document is written in (decision 0185): "fr" draws the curated French labels
+   * (invoice-labels-fr.ts) and writes figures and dates the French way (`1 234,50 €`, `29 sept. 2026`).
+   * Absent — every snapshot captured before 0185 — or anything else means English, exactly as before.
+   * The app's InvoiceSnapshot carries the same field, from the invoice's own `language` column.
+   */
+  language?: string | null;
 }
 
 export async function getInvoiceRenderData(id: string): Promise<InvoiceRenderData | null> {

@@ -4,7 +4,8 @@ import { footerMode } from "@/lib/invotick-footer";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import { FooterControlButton, InvoiceDocument, InvoiceFooter, ownFooterProps } from "./InvoiceDocument";
-import { labelsFor, type InvoiceLabels } from "@/lib/invoice-labels";
+import { type InvoiceLabels } from "@/lib/invoice-labels";
+import { documentLabelsFor, documentLanguage, pageLine } from "@/lib/document-language";
 import { imageProxyUrl } from "@/lib/image";
 import type { InvoiceRenderData } from "@/lib/data";
 
@@ -434,7 +435,9 @@ export function A4PagedFrame({
 
   // The footer is the one place the caller's `labels` were not reaching: it carries its own default,
   // so an estimate whose caller passed nothing printed "Invoice generated using Invotick" under it.
-  const docLabels = labels ?? labelsFor(data.documentType);
+  // A French document (decision 0185) carries its own French labels; absent language = English as before.
+  const docLabels = labels ?? documentLabelsFor(data);
+  const docLang = documentLanguage(data.language);
   // Overlay sizes (px) from the saved fractions; payment stamp keeps its own slightly larger size.
   const stampSizePx = (data.stampSize ?? 0.189) * SHEET_W;
   const sigSizePx = (data.signatureSize ?? 0.189) * SHEET_W;
@@ -763,7 +766,8 @@ export function A4PagedFrame({
                         extra space for it. */}
                     {multi && (
                       <div style={{ position: "absolute", left: 0, right: 0, bottom: (FOOTER_BOTTOM_MARGIN - 13) / 2, textAlign: "center", fontSize: 11, fontWeight: 500, color: "#9ca3af" }}>
-                        Page {i + 1} of {pages.length}
+                        {/* English keeps its original markup, text node for text node. */}
+                        {docLang === "fr" ? pageLine(docLang, i + 1, pages.length) : <>Page {i + 1} of {pages.length}</>}
                       </div>
                     )}
                     {/* Draggable signature + stamp overlays — only on the summary (last) page. Each
