@@ -33,11 +33,17 @@ export function roundShown(n: number): number {
  * figures differently; Spanish and Arabic documents keep the app's own `1,234.50` (decision 0187: the Spanish installs
  * are mostly point-decimal countries, and an Arabic document isolates each figure instead — InvoiceDocument).
  */
-export type FigureLanguage = "en" | "fr" | "pt" | "es" | "ar";
+export type FigureLanguage = "en" | "fr" | "pt" | "es" | "ar" | "de" | "id" | "nl" | "sv";
 
 export function formatMoney(amount: number | string, currency = "USD", lang: FigureLanguage = "en"): string {
   if (lang === "fr") return formatMoneyFr(amount, currency);
   if (lang === "pt") return formatMoneyFr(amount, currency, NBSP);
+  // Wave 2: German `1.234,50 €` and Swedish `1 234,50 kr` put the symbol after, as French does; Dutch `€ 1.234,50`
+  // and Indonesian `Rp1.234,50` keep it where the English line has it.
+  if (lang === "de") return formatMoneyFr(amount, currency, ".");
+  if (lang === "sv") return formatMoneyFr(amount, currency, NBSP);
+  if (lang === "nl") return symbolFirst(formatMoney(amount, currency), NBSP);
+  if (lang === "id") return symbolFirst(formatMoney(amount, currency), "");
   const value = roundShown((typeof amount === "string" ? parseFloat(amount) : amount) || 0);
   const code = (currency || "USD").toUpperCase();
   const sym = SYMBOLS[code];
@@ -78,6 +84,30 @@ export function frenchDigits(english: string, group: string = NNBSP): string {
   return `${sign}${grouped}${frac !== undefined ? `,${frac}` : ""}`;
 }
 
+/**
+ * The English line with its figure re-punctuated in place (dot thousands, decimal comma) and its symbol left in front:
+ * `€1,234.50` → `€ 1.234,50` (Dutch, [gap] = no-break space) or `Rp1.234,50` (Indonesian, no gap). A sign stays where
+ * the English put it (`-$5.00` → `-$ 5,00`, `$-5.00` → `$ -5,00`). Only a string with exactly one figure is rewritten:
+ * guessing at an amount is worse than an English comma. The app's twin is `SymbolFirstFigures` (Kotlin).
+ */
+export function symbolFirst(english: string, gap: string): string {
+  // An exec loop, not matchAll: this file runs in the app's offline renderer, in whatever WebView the phone has.
+  const re = /(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d+))?/g;
+  const runs: RegExpExecArray[] = [];
+  for (let m = re.exec(english); m; m = re.exec(english)) runs.push(m);
+  if (runs.length !== 1) return english;
+  const run = runs[0];
+  if (run[1].length > 1 && run[1].startsWith("0")) return english; // "0042" is an identifier, never an amount
+  const at = run.index;
+  const head = english.slice(0, at);
+  const tail = english.slice(at + run[0].length);
+  const lead = head.startsWith("-") ? "-" : "";
+  const trail = head.length > lead.length && head.endsWith("-") ? "-" : "";
+  const symbol = head.slice(lead.length, head.length - trail.length);
+  const sep = symbol && !/\s$/.test(symbol) ? gap : "";
+  return `${lead}${symbol}${sep}${trail}${frenchDigits(run[0], ".")}${tail}`;
+}
+
 /** Portuguese figures (decision 0187): the French shape with Portugal's no-break space between thousands. */
 export function portugueseDigits(english: string): string {
   return frenchDigits(english, NBSP);
@@ -107,7 +137,8 @@ function formatMoneyFr(amount: number | string, currency: string, group: string 
 /** A plain figure to two decimals — the item table's quantity. English keeps its `toFixed(2)`. */
 export function formatFixed2(n: number, lang: FigureLanguage = "en"): string {
   if (lang === "fr") return frenchDigits(n.toFixed(2));
-  if (lang === "pt") return portugueseDigits(n.toFixed(2));
+  if (lang === "pt" || lang === "sv") return portugueseDigits(n.toFixed(2));
+  if (lang === "de" || lang === "nl" || lang === "id") return frenchDigits(n.toFixed(2), ".");
   return n.toFixed(2);
 }
 
@@ -115,6 +146,10 @@ export function formatFixed2(n: number, lang: FigureLanguage = "en"): string {
 export function formatPercent(n: number, lang: FigureLanguage = "en"): string {
   if (lang === "fr") return `${frenchDigits(n.toFixed(2))}${NNBSP}%`;
   if (lang === "pt") return `${portugueseDigits(n.toFixed(2))}%`;
+  // German and Swedish put a space before "%" (DIN 5008, Språkrådet); Dutch and Indonesian do not.
+  if (lang === "de") return `${frenchDigits(n.toFixed(2), ".")}${NBSP}%`;
+  if (lang === "sv") return `${portugueseDigits(n.toFixed(2))}${NBSP}%`;
+  if (lang === "nl" || lang === "id") return `${frenchDigits(n.toFixed(2), ".")}%`;
   return `${n.toFixed(2)}%`;
 }
 
@@ -275,6 +310,9 @@ const MONTHS_SHORT_FR = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil
 /** Portuguese (European, as Angola and Mozambique write it) and Latin American Spanish short months (decision 0187). */
 const MONTHS_SHORT_PT = ["jan.", "fev.", "mar.", "abr.", "mai.", "jun.", "jul.", "ago.", "set.", "out.", "nov.", "dez."];
 const MONTHS_SHORT_ES = ["ene.", "feb.", "mar.", "abr.", "may.", "jun.", "jul.", "ago.", "sep.", "oct.", "nov.", "dic."];
+/** Dutch and Indonesian short months (wave 2). German writes `29.09.2026` and Swedish `2026-09-29`: no month word. */
+const MONTHS_SHORT_NL = ["jan.", "feb.", "mrt.", "apr.", "mei", "jun.", "jul.", "aug.", "sep.", "okt.", "nov.", "dec."];
+const MONTHS_SHORT_ID = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
 
 export function formatDate(date?: string | null, lang: FigureLanguage = "en"): string {
   if (!date) return "—";
@@ -288,6 +326,12 @@ export function formatDate(date?: string | null, lang: FigureLanguage = "en"): s
   // Arabic: day first, all digits — no month word to argue over between Cairo (سبتمبر), Damascus (أيلول) and Rabat
   // (شتنبر), and it reads the same on the client's side of any border. The document isolates it (InvoiceDocument).
   if (lang === "ar") return `${String(d).padStart(2, "0")}/${String(m).padStart(2, "0")}/${y}`;
+  const dd = String(d).padStart(2, "0");
+  const mm = String(m).padStart(2, "0");
+  if (lang === "de") return `${dd}.${mm}.${y}`;
+  if (lang === "sv") return `${y}-${mm}-${dd}`;
+  if (lang === "nl") return `${d}${NBSP}${MONTHS_SHORT_NL[m - 1]}${NBSP}${y}`;
+  if (lang === "id") return `${d}${NBSP}${MONTHS_SHORT_ID[m - 1]}${NBSP}${y}`;
   // Same text `toLocaleDateString("en-US", { month: "short", … })` produced for a correct date, so
   // nothing that already rendered right changes — but built from the components, so no locale and
   // no timezone can reinterpret it. Matches the app's native `formatDateLong` exactly, which is

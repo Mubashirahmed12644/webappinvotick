@@ -128,7 +128,7 @@ function readCurated(code, src) {
   };
   return { invoice: block(`${NAME}_LABELS`), estimate: block(`${NAME}_ESTIMATE_LABELS`) };
 }
-for (const code of ["fr", "pt", "es", "ar"]) {
+for (const code of ["fr", "pt", "es", "ar", "de", "id", "nl", "sv"]) {
   const curated = readCurated(code, readFileSync(`src/lib/invoice-labels-${code}.ts`, "utf8"));
   out[code] = curated.invoice;
   estOut[code] = curated.estimate;

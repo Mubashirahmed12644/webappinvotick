@@ -3,6 +3,10 @@ import { FR_ESTIMATE_LABELS, FR_LABELS } from "./invoice-labels-fr";
 import { PT_ESTIMATE_LABELS, PT_LABELS } from "./invoice-labels-pt";
 import { ES_ESTIMATE_LABELS, ES_LABELS } from "./invoice-labels-es";
 import { AR_ESTIMATE_LABELS, AR_LABELS } from "./invoice-labels-ar";
+import { DE_ESTIMATE_LABELS, DE_LABELS } from "./invoice-labels-de";
+import { ID_ESTIMATE_LABELS, ID_LABELS } from "./invoice-labels-id";
+import { NL_ESTIMATE_LABELS, NL_LABELS } from "./invoice-labels-nl";
+import { SV_ESTIMATE_LABELS, SV_LABELS } from "./invoice-labels-sv";
 
 /**
  * The language a document is WRITTEN in (decisions 0185, 0187) — its labels, how its numbers and dates are
@@ -15,7 +19,7 @@ import { AR_ESTIMATE_LABELS, AR_LABELS } from "./invoice-labels-ar";
  *
  * Adding a language is one entry in [WRITTEN] and its hand-written label file; the checks read this table.
  */
-export type DocumentLanguage = "en" | "fr" | "pt" | "es" | "ar";
+export type DocumentLanguage = "en" | "fr" | "pt" | "es" | "ar" | "de" | "id" | "nl" | "sv";
 
 type Written = {
   invoice: InvoiceLabels;
@@ -31,13 +35,20 @@ export const WRITTEN: Record<Exclude<DocumentLanguage, "en">, Written> = {
   pt: { invoice: PT_LABELS, estimate: PT_ESTIMATE_LABELS, sep: ": ", page: (p, n) => `Página ${p} de ${n}`, dir: "ltr" },
   es: { invoice: ES_LABELS, estimate: ES_ESTIMATE_LABELS, sep: ": ", page: (p, n) => `Página ${p} de ${n}`, dir: "ltr" },
   ar: { invoice: AR_LABELS, estimate: AR_ESTIMATE_LABELS, sep: ": ", page: (p, n) => `الصفحة ${p} من ${n}`, dir: "rtl" },
+  // Wave 2 (2026-09-29): German, Indonesian, Dutch, Swedish. Alphabetical by code.
+  de: { invoice: DE_LABELS, estimate: DE_ESTIMATE_LABELS, sep: ": ", page: (p, n) => `Seite ${p} von ${n}`, dir: "ltr" },
+  id: { invoice: ID_LABELS, estimate: ID_ESTIMATE_LABELS, sep: ": ", page: (p, n) => `Halaman ${p} dari ${n}`, dir: "ltr" },
+  nl: { invoice: NL_LABELS, estimate: NL_ESTIMATE_LABELS, sep: ": ", page: (p, n) => `Pagina ${p} van ${n}`, dir: "ltr" },
+  sv: { invoice: SV_LABELS, estimate: SV_ESTIMATE_LABELS, sep: ": ", page: (p, n) => `Sida ${p} av ${n}`, dir: "ltr" },
 };
 
 /** Every language a document can be written in, English first. */
 export const DOCUMENT_LANGUAGES: DocumentLanguage[] = ["en", ...(Object.keys(WRITTEN) as DocumentLanguage[])];
 
 export function documentLanguage(language?: string | null): DocumentLanguage {
-  const primary = (language ?? "").trim().toLowerCase().split(/[-_]/)[0];
+  const tag = (language ?? "").trim().toLowerCase().split(/[-_]/)[0];
+  // Android's old code for Indonesian ("in") is the same language as "id" (InterfaceLanguages.LEGACY_CODES in the app).
+  const primary = tag === "in" ? "id" : tag;
   return primary in WRITTEN ? (primary as DocumentLanguage) : "en";
 }
 
