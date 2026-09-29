@@ -163,6 +163,21 @@ Memory is dated observation. Verify any file:line against the code before relyin
       OutOfMemoryError; with it, 641/641 passed in 1m05s.
     - Prefer adding a test to an existing context class over creating a new one.
 
+13. **An invoice deleted on the phone takes its own payments with it** (owner, 2026-09-30: *"Invoice mite to us ki
+    payments bhi mitein"*; decision [0188](../../docs/decisions/0188-a-deleted-invoice-takes-its-own-payments.md); app
+    `release/1.5.1-integration`).
+    - `InvoiceDao.softDeleteWithLines` (the one path all invoice deletes reach) soft-deletes, in the transaction that
+      deletes the invoice and its lines, **its live payment links and the live payments recorded on it alone**, and
+      queues each DELETE there too (`QueueDocumentDelete`), under each row's own owner.
+    - **A payment also linked to another invoice is not deleted** — the Payments screen splits one receipt across a
+      client's invoices; only this invoice's link goes, and the rest of the receipt keeps counting where it is.
+    - The ledger, balances and dashboard read live rows only, so they stop counting them. The owner's case: a payment
+      added, the Save gate dismissed (a draft is written with it), then "Discard Everything" — the payment stayed live.
+    - **No stored row is repaired and no server change was made**: the server applies payment and link DELETEs as
+      they arrive (`PaymentSyncV2Service` / `InvoicePaymentSyncV2Service.deleteFromSync`). An invoice deleted by a build
+      up to 1.5.0 still leaves its payments live; a server cascade waits, like the lines', for the version rule.
+    - A pulled (server) delete of an invoice still does not touch payments (`ServerDeleteDao`).
+    - Guards: `ADeletedInvoiceTakesItsOwnPaymentsTest`, `ADeletedDocumentTakesItsLinesTest`.
 ## Decided by the owner, 2026-09-11
 
 - **The order of the structural fixes:**
