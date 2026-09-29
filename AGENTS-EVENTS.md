@@ -1022,10 +1022,16 @@ Full detail in `memory/mysql-binary-uuid-and-test-clock.md`. In native queries:
       announced nothing, which put ~3 % of returning cold starts into S0 by mistake. Its `first_screen_reached` carries
       `screen=pdf_viewer`: **exclude those processes from splash pass-through**, on both sides of the build boundary
       (before it, they are the returning processes with no `screen_view` at all).
-    - **`params.country_source=ip`** marks an event whose `country` the server filled from `ip_records` because the
-      batch sent none. Never over the phone's own, never for `platform=Web`. Expect it on few first-open leavers: a new
-      phone's address reaches `ip_records` up to 3 h later (6.7 % were there already, 2026-09-22..28). A per-country
-      rate must say how much of it is `country_source=ip`, and `country IS NULL` stays unknown, never a country.
+    - **`params.country_source`** marks an event whose `country` the server filled because the batch sent none. Never
+      over the phone's own, never for `platform=Web`. Two values, the two places asked in this order (decision
+      [0191](docs/decisions/0191-a-local-country-file-answers-when-ip-records-does-not-know-the-address-yet.md)):
+      **`ip`** = `ip_records` (four lookup services, the careful answer; only 6.7 % of first-open leavers were there
+      already, 2026-09-22..28) and **`ip_local`** = DB-IP's free "IP to Country Lite" file on the server, which answers
+      for a phone's very first batch. A per-country rate must say how much of it is server-derived
+      (`country_source IN ('ip','ip_local')`) and how much of that is `ip_local`, which is coarser: DB-IP Lite is
+      country-level and less exact than the four-service answer. `country IS NULL` stays unknown, never a country. Rows
+      stamped before 0191 have `ip` or nothing; **`ip_local` starts with the deploy of 0191**, so a coverage trend
+      across that day is a source change, not a behaviour change.
 
 ---
 

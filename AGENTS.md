@@ -705,8 +705,10 @@ the list is wrong, not the app.**
     - `screen_view pdf_viewer` (and its `first_screen_reached`): the PDF "Open with" screen, which announced nothing
       before. It has no splash: exclude it from splash pass-through.
     - `splash_ready.ad_wait_source` = `bundled|remote_cached|remote_fresh`: which ad wait applied.
-    - Server-side, `params.country_source=ip`: `country` filled from `ip_records` for a batch that sent none (backend,
-      Android and iOS only). Only the code is stored, never the address.
+    - Server-side, `params.country_source` = `ip` (from `ip_records`) or `ip_local` (from the local DB-IP file, decision
+      [0191](docs/decisions/0191-a-local-country-file-answers-when-ip-records-does-not-know-the-address-yet.md)):
+      `country` filled for a batch that sent none (backend, Android and iOS only). Only the code is stored, never the
+      address. `ip_local` is coarser; a per-country rate says how much of it it is.
 
 - **The interface language, from the build after 1.4.9** (decision
   [0185](docs/decisions/0185-the-app-speaks-french-to-french-phones-with-an-english-holdout.md), AGENTS-EVENTS §1.28):
