@@ -1,5 +1,8 @@
 // A few currencies whose narrow symbol we want to match the mobile app exactly.
-const SYMBOLS: Record<string, string> = { PKR: "₨", INR: "₹", USD: "$", GBP: "£", EUR: "€" };
+// The rupee is "Rs", two letters, never the one character U+20A8 (owner's decision, 2026-09-29): iOS's font drew that
+// character as a squeezed "Rs", so one amount looked different on each device. A snapshot from an app before 1.5.0
+// still sends the old character as its currency; it is read as "Rs" too, so an old share link matches a new one.
+const SYMBOLS: Record<string, string> = { PKR: "Rs", "\u20A8": "Rs", INR: "₹", USD: "$", GBP: "£", EUR: "€" };
 
 /**
  * [n] to two decimals, half away from zero, on the decimal it is — the app's toUIString2Decimals.

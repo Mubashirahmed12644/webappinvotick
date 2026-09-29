@@ -616,7 +616,7 @@ export function GuidedFirstInvoice({ fi, active = true, initialStep = 1, coachCl
                         {/*
                           The amount is the FULL width of the card, outside the column the delete
                           button shares — measured, not guessed. Inside that column at 320 px with a
-                          1.5× font the box came out 136 px and `₨1,284,500.75` is 154 px, so the
+                          1.5× font the box came out 136 px and `Rs1,284,500.75` is 154 px, so the
                           figure was painted 36 px to the LEFT of its own grey pill: half on the
                           tint, half on the card, over the price it was computed from. A total drawn
                           outside its own box makes the arithmetic look wrong, which is a trust cost

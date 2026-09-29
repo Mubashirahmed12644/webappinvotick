@@ -548,7 +548,7 @@ function TotalRow({ label, value, tint, rowKey }: { label: string; value: string
 
 /**
  * A line's own discount as the Disc column shows it, the way the native PDF shows it: a percentage as
- * "20.00%", a flat amount with the invoice's currency like the Price column beside it ("₨50.00"). The
+ * "20.00%", a flat amount with the invoice's currency like the Price column beside it ("Rs50.00"). The
  * flat amount was a bare "50.00" here while the app's PDF of the same invoice said "Rs50.00", so a
  * client could not tell 50 off from 50 %. The type is read as the app reads it (discountTypeOf), so a
  * stored FIXED or AMOUNT is flat too. A line with no discount reads "0.00", as native.
