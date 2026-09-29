@@ -114,8 +114,8 @@ for (const code of codes) {
 }
 
 
-// French, Portuguese, Spanish, Arabic, Persian, Polish, Turkish and Chinese are written by hand
-// (src/lib/invoice-labels-<code>.ts, decisions 0185, 0187)
+// French, Portuguese, Spanish, Arabic and the fifteen-language wave 2 set (German, Persian, Hindi, Indonesian, Burmese,
+// Dutch, Polish, Swedish, Thai, Turkish, Chinese) are written by hand (src/lib/invoice-labels-<code>.ts, decisions 0185, 0187)
 // and each REPLACES its machine row whole — every key, both tables — so the web table, the app's Kotlin copy and the
 // renderer's own set are the same words. An empty parse refuses to run rather than dropping a language from both copies.
 function readCurated(code, src) {
@@ -131,7 +131,7 @@ function readCurated(code, src) {
 }
 // Chinese is also the picker's "zh-CN" row (apply-label-overrides.mjs, CURATED_ALIASES).
 const CURATED_ALIASES = { zh: ["zh-CN"] };
-for (const code of ["fr", "pt", "es", "ar", "de", "fa", "id", "nl", "pl", "sv", "tr", "zh"]) {
+for (const code of ["fr", "pt", "es", "ar", "de", "fa", "hi", "id", "my", "nl", "pl", "sv", "th", "tr", "zh"]) {
   const curated = readCurated(code, readFileSync(`src/lib/invoice-labels-${code}.ts`, "utf8"));
   for (const key of [code, ...(CURATED_ALIASES[code] ?? [])]) {
     out[key] = curated.invoice;

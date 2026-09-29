@@ -5,10 +5,13 @@ import { ES_ESTIMATE_LABELS, ES_LABELS } from "./invoice-labels-es";
 import { AR_ESTIMATE_LABELS, AR_LABELS } from "./invoice-labels-ar";
 import { DE_ESTIMATE_LABELS, DE_LABELS } from "./invoice-labels-de";
 import { FA_ESTIMATE_LABELS, FA_LABELS } from "./invoice-labels-fa";
+import { HI_ESTIMATE_LABELS, HI_LABELS } from "./invoice-labels-hi";
 import { ID_ESTIMATE_LABELS, ID_LABELS } from "./invoice-labels-id";
+import { MY_ESTIMATE_LABELS, MY_LABELS } from "./invoice-labels-my";
 import { NL_ESTIMATE_LABELS, NL_LABELS } from "./invoice-labels-nl";
 import { PL_ESTIMATE_LABELS, PL_LABELS } from "./invoice-labels-pl";
 import { SV_ESTIMATE_LABELS, SV_LABELS } from "./invoice-labels-sv";
+import { TH_ESTIMATE_LABELS, TH_LABELS } from "./invoice-labels-th";
 import { TR_ESTIMATE_LABELS, TR_LABELS } from "./invoice-labels-tr";
 import { ZH_ESTIMATE_LABELS, ZH_LABELS } from "./invoice-labels-zh";
 
@@ -17,13 +20,16 @@ import { ZH_ESTIMATE_LABELS, ZH_LABELS } from "./invoice-labels-zh";
  * written, and which way it reads. Not the reader's language: that is the share page's picker, which only swaps
  * the labels.
  *
- * A document whose snapshot says `language: "fr"` (or "pt-AO", "es_419", "ar-EG", …) is written in that language.
+ * A document whose snapshot says `language: "fr"` (or "pt-AO", "es_419", "ar-EG", "hi-IN", "my-MM", "th-TH", …) is
+ * written in that language.
  * Anything else — absent, null, "en", or a language we have no hand-written set for — is "en", which is exactly how
  * every document rendered before 0185, so every frozen snapshot keeps rendering byte for byte as it did.
  *
  * Adding a language is one entry in [WRITTEN] and its hand-written label file; the checks read this table.
  */
-export type DocumentLanguage = "en" | "fr" | "pt" | "es" | "ar" | "de" | "fa" | "id" | "nl" | "pl" | "sv" | "tr" | "zh";
+export type DocumentLanguage =
+  | "en" | "fr" | "pt" | "es" | "ar"
+  | "de" | "fa" | "hi" | "id" | "my" | "nl" | "pl" | "sv" | "th" | "tr" | "zh";
 
 type Written = {
   invoice: InvoiceLabels;
@@ -42,10 +48,13 @@ export const WRITTEN: Record<Exclude<DocumentLanguage, "en">, Written> = {
   // Wave 2 (2026-09-29), alphabetical by code.
   de: { invoice: DE_LABELS, estimate: DE_ESTIMATE_LABELS, sep: ": ", page: (p, n) => `Seite ${p} von ${n}`, dir: "ltr" },
   fa: { invoice: FA_LABELS, estimate: FA_ESTIMATE_LABELS, sep: ": ", page: (p, n) => `صفحه ${p} از ${n}`, dir: "rtl" },
+  hi: { invoice: HI_LABELS, estimate: HI_ESTIMATE_LABELS, sep: ": ", page: (p, n) => `पेज ${p} / ${n}`, dir: "ltr" },
   id: { invoice: ID_LABELS, estimate: ID_ESTIMATE_LABELS, sep: ": ", page: (p, n) => `Halaman ${p} dari ${n}`, dir: "ltr" },
+  my: { invoice: MY_LABELS, estimate: MY_ESTIMATE_LABELS, sep: ": ", page: (p, n) => `စာမျက်နှာ ${p} / ${n}`, dir: "ltr" },
   nl: { invoice: NL_LABELS, estimate: NL_ESTIMATE_LABELS, sep: ": ", page: (p, n) => `Pagina ${p} van ${n}`, dir: "ltr" },
   pl: { invoice: PL_LABELS, estimate: PL_ESTIMATE_LABELS, sep: ": ", page: (p, n) => `Strona ${p} z ${n}`, dir: "ltr" },
   sv: { invoice: SV_LABELS, estimate: SV_ESTIMATE_LABELS, sep: ": ", page: (p, n) => `Sida ${p} av ${n}`, dir: "ltr" },
+  th: { invoice: TH_LABELS, estimate: TH_ESTIMATE_LABELS, sep: ": ", page: (p, n) => `หน้า ${p} จาก ${n}`, dir: "ltr" },
   tr: { invoice: TR_LABELS, estimate: TR_ESTIMATE_LABELS, sep: ": ", page: (p, n) => `Sayfa ${p} / ${n}`, dir: "ltr" },
   zh: { invoice: ZH_LABELS, estimate: ZH_ESTIMATE_LABELS, sep: "：", page: (p, n) => `第 ${p} 页，共 ${n} 页`, dir: "ltr" },
 };

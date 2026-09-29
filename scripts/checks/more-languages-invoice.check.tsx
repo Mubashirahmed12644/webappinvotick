@@ -1,8 +1,9 @@
 /**
- * A document written in Portuguese, Spanish, Arabic, Persian, Polish, Turkish or Chinese (decision 0187 and its second
- * wave) draws its hand-written labels, its own figures and dates, and the figures are the same numbers the English
- * document shows. An Arabic or Persian document reads right to left and isolates every figure, date, phone number and
- * invoice number, so none of them reorders.
+ * A document written in Portuguese, Spanish, Arabic or any of the wave 2 languages — German, Persian, Hindi,
+ * Indonesian, Burmese, Dutch, Polish, Swedish, Thai, Turkish, Chinese (decision 0187) — draws its hand-written labels,
+ * its own figures and dates, and the figures are the same numbers the English document shows. An Arabic or Persian
+ * document reads right to left and isolates every figure, date, phone number and invoice number, so none of them
+ * reorders.
  *
  * Run: node scripts/checks/run-more-languages-invoice-check.mjs
  * The English side — byte-identical output — is english-golden.check.tsx; French is french-invoice.check.tsx.
@@ -57,17 +58,20 @@ function valueOf(lang: DocumentLanguage, s: string): number {
   return (s.includes("-") ? -1 : 1) * Number(figures[figures.length - 1].replaceAll(",", ""));
 }
 
-const LANGS = ["pt", "es", "ar", "de", "fa", "id", "nl", "pl", "sv", "tr", "zh"] as const;
+const LANGS = ["pt", "es", "ar", "de", "fa", "hi", "id", "my", "nl", "pl", "sv", "th", "tr", "zh"] as const;
 const DATE_RE: Record<(typeof LANGS)[number], RegExp> = {
   pt: /\d{1,2}\s(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)\.\s\d{4}/,
   es: /\d{1,2}\s(ene|feb|mar|abr|may|jun|jul|ago|sep|oct|nov|dic)\.\s\d{4}/,
   ar: /\d{2}\/\d{2}\/\d{4}/,
   de: /\d{2}\.\d{2}\.\d{4}/,
   fa: /\d{4}\/\d{2}\/\d{2}/,
+  hi: /\d{2}\/\d{2}\/\d{4}/,
   id: /\d{1,2}\s(Jan|Feb|Mar|Apr|Mei|Jun|Jul|Agu|Sep|Okt|Nov|Des)\s\d{4}/,
+  my: /\d{2}\/\d{2}\/\d{4}/,
   nl: /\d{1,2}\s(jan\.|feb\.|mrt\.|apr\.|mei|jun\.|jul\.|aug\.|sep\.|okt\.|nov\.|dec\.)\s\d{4}/,
   pl: /\d{2}\.\d{2}\.\d{4}/,
   sv: /\d{4}-\d{2}-\d{2}/,
+  th: /\d{1,2}\s(ม\.ค|ก\.พ|มี\.ค|เม\.ย|พ\.ค|มิ\.ย|ก\.ค|ส\.ค|ก\.ย|ต\.ค|พ\.ย|ธ\.ค)\.\s\d{4}/,
   tr: /\d{2}\.\d{2}\.\d{4}/,
   zh: /\d{4}年\d{1,2}月\d{1,2}日/,
 };
@@ -128,13 +132,13 @@ for (const lang of LANGS) {
 }
 
 // The language table itself.
-check("the written languages are en, fr, pt, es, ar, de, fa, id, nl, pl, sv, tr, zh", JSON.stringify(DOCUMENT_LANGUAGES) === JSON.stringify(["en", "fr", "pt", "es", "ar", "de", "fa", "id", "nl", "pl", "sv", "tr", "zh"]));
-for (const [tag, lang] of [["pt-AO", "pt"], ["pt_BR", "pt"], ["es-419", "es"], ["ES", "es"], ["ar-EG", "ar"], ["de-AT", "de"], ["fa-IR", "fa"], ["id-TL", "id"], ["in-ID", "id"], ["nl-SR", "nl"], ["pl-PL", "pl"], ["sv_SE", "sv"], ["tr-TR", "tr"], ["zh-CN", "zh"], ["zh-Hans-CN", "zh"], ["ja", "en"], [null, "en"], ["", "en"]] as const) {
+check("the written languages are en, fr, pt, es, ar, de, fa, hi, id, my, nl, pl, sv, th, tr, zh", JSON.stringify(DOCUMENT_LANGUAGES) === JSON.stringify(["en", "fr", "pt", "es", "ar", "de", "fa", "hi", "id", "my", "nl", "pl", "sv", "th", "tr", "zh"]));
+for (const [tag, lang] of [["pt-AO", "pt"], ["pt_BR", "pt"], ["es-419", "es"], ["ES", "es"], ["ar-EG", "ar"], ["de-AT", "de"], ["fa-IR", "fa"], ["hi-IN", "hi"], ["id-TL", "id"], ["in-ID", "id"], ["my-MM", "my"], ["nl-SR", "nl"], ["pl-PL", "pl"], ["sv_SE", "sv"], ["th-TH", "th"], ["tr-TR", "tr"], ["zh-CN", "zh"], ["zh-Hans-CN", "zh"], ["ja", "en"], [null, "en"], ["", "en"]] as const) {
   check(`documentLanguage(${JSON.stringify(tag)}) = ${lang}`, documentLanguage(tag) === lang);
 }
 check("an Arabic document reads right to left", documentDir("ar-DZ") === "rtl");
 check("a Persian document reads right to left", documentDir("fa-IR") === "rtl");
-check("no other document does", ["en", "fr", "pt", "es", "pl", "tr", "zh", null, "ur"].every((l) => documentDir(l) === "ltr"));
+check("no other document does", ["en", "fr", "pt", "es", "de", "hi", "id", "my", "nl", "pl", "sv", "th", "tr", "zh", null, "ur"].every((l) => documentDir(l) === "ltr"));
 check("page lines", pageLine("pt", 1, 3) === "Página 1 de 3" && pageLine("es", 2, 3) === "Página 2 de 3" && pageLine("ar", 1, 2) === "الصفحة 1 من 2" && pageLine("en", 1, 2) === "Page 1 of 2");
 check("page lines, second wave", pageLine("fa", 1, 2) === "صفحه 1 از 2" && pageLine("pl", 1, 2) === "Strona 1 z 2" && pageLine("tr", 1, 2) === "Sayfa 1 / 2" && pageLine("zh", 1, 2) === "第 1 页，共 2 页");
 check("Polish figures", formatMoney(1234.5, "PLN", "pl") === `1${NBSP}234,50${NBSP}zł` && formatMoney(-5, "EUR", "pl") === `-5,00${NBSP}€`);
@@ -149,6 +153,7 @@ for (const lang of ["de", "nl", "sv"] as const) {
   const withTax = text(renderToStaticMarkup(<InvoiceDocument data={{ ...FIXTURES.discountAndTax, language: lang } as InvoiceRenderData} qrDataUrl="/qr.jpg" />));
   check(`${lang}: the taxed total says ${writtenLabelsFor(lang, "INVOICE").totalWithTax}`, withTax.includes(writtenLabelsFor(lang, "INVOICE").totalWithTax!));
 }
+check("page lines (wave 2, Hindi, Burmese, Thai)", pageLine("hi", 1, 3) === "पेज 1 / 3" && pageLine("my", 2, 3) === "စာမျက်နှာ 2 / 3" && pageLine("th", 1, 2) === "หน้า 1 จาก 2");
 
 // Reading across languages on the share page.
 const never = async () => null;

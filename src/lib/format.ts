@@ -32,9 +32,12 @@ export function roundShown(n: number): number {
  * The languages a document can be written in (document-language.ts). French, Portuguese, Polish, Turkish, German,
  * Dutch, Indonesian and Swedish punctuate their figures differently; Spanish, Arabic, Persian and Chinese documents keep
  * the app's own `1,234.50` (decision 0187: the Spanish installs are mostly point-decimal countries, an Arabic or Persian
- * document isolates each figure instead — InvoiceDocument — and Chinese writes `¥1,234.50` itself).
+ * document isolates each figure instead — InvoiceDocument — and Chinese writes `¥1,234.50` itself). Hindi, Burmese and
+ * Thai keep it too: India, Myanmar and Thailand all write `1,234.50` with Western digits in business.
  */
-export type FigureLanguage = "en" | "fr" | "pt" | "es" | "ar" | "de" | "fa" | "id" | "nl" | "pl" | "sv" | "tr" | "zh";
+export type FigureLanguage =
+  | "en" | "fr" | "pt" | "es" | "ar"
+  | "de" | "fa" | "hi" | "id" | "my" | "nl" | "pl" | "sv" | "th" | "tr" | "zh";
 
 export function formatMoney(amount: number | string, currency = "USD", lang: FigureLanguage = "en"): string {
   if (lang === "fr") return formatMoneyFr(amount, currency);
@@ -322,6 +325,8 @@ const MONTHS_SHORT_ES = ["ene.", "feb.", "mar.", "abr.", "may.", "jun.", "jul.",
 /** Dutch and Indonesian short months (wave 2). German writes `29.09.2026` and Swedish `2026-09-29`: no month word. */
 const MONTHS_SHORT_NL = ["jan.", "feb.", "mrt.", "apr.", "mei", "jun.", "jul.", "aug.", "sep.", "okt.", "nov.", "dec."];
 const MONTHS_SHORT_ID = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+/** Thai short months (CLDR), with the Gregorian year the app stores — not the Buddhist Era. */
+const MONTHS_SHORT_TH = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
 
 export function formatDate(date?: string | null, lang: FigureLanguage = "en"): string {
   if (!date) return "—";
@@ -341,6 +346,9 @@ export function formatDate(date?: string | null, lang: FigureLanguage = "en"): s
   if (lang === "fa") return `${y}/${String(m).padStart(2, "0")}/${String(d).padStart(2, "0")}`;
   // Chinese: "2026年9月29日".
   if (lang === "zh") return `${y}年${m}月${d}日`;
+  // Hindi and Burmese: numeric day-first too, as Indian and Myanmar bills write it. Thai: "29 ก.ย. 2026".
+  if (lang === "hi" || lang === "my") return `${String(d).padStart(2, "0")}/${String(m).padStart(2, "0")}/${y}`;
+  if (lang === "th") return `${d}${NBSP}${MONTHS_SHORT_TH[m - 1]}${NBSP}${y}`;
   const dd = String(d).padStart(2, "0");
   const mm = String(m).padStart(2, "0");
   if (lang === "de") return `${dd}.${mm}.${y}`;
