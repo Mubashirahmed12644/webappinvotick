@@ -76,8 +76,8 @@ Android installs, release builds, 1–28 September 2026, by the phone's language
 ### Known gaps (not fixed in this branch)
 - **The native Compose-Canvas PDF/share image is not mirrored.** It shows the Arabic words in the English layout. It is
   the renderer being retired (north star), the HTML renderer is right, and mirroring it is a rewrite of its layout.
-- Arabic plurals are written count-neutral ("الفواتير: 3") instead of the six Arabic plural forms. Correct, less
-  elegant.
+- ~~Arabic plurals are written count-neutral ("الفواتير: 3") instead of the six Arabic plural forms.~~ Fixed in wave 2
+  (addendum below): every count sentence is a `<plurals>` with each language's CLDR forms.
 
 ## What the screenshots showed, fixed in the same branch
 - The Preview button cut its own label: "Pré-visu…", "Vista pre…". It now shrinks the text (down to 10 sp) instead.
@@ -122,3 +122,36 @@ One per language, with the questions a native speaker should check first:
 - **Arabic-Indic digits (٠١٢٣).** See Right to left.
 - **Brazilian Portuguese.** About 4 installs against more than 500 African ones that follow the European norm.
 - **Presupuesto for estimates in Spanish.** Spain's word; in Latin America a "presupuesto" is a budget.
+
+## Addendum — wave 2: sixteen languages in 1.5.0 (2026-09-29)
+
+**Owner, 2026-09-29:** *"is main mujhy sari required zubanain send kerni hy"* — release 1.5.0 (versionCode 114) carries
+every language our phones use. This supersedes the first rejection above ("the small languages now"): the list made
+each one a single entry, as it promised.
+
+- **The sixteen:** English, French, Portuguese, Spanish, Arabic, and German, Persian (right to left), Hindi,
+  Indonesian (+ the identical `values-in` for Android's old code), Burmese, Dutch, Polish, Swedish, Thai, Turkish,
+  Chinese (Simplified). Built by three groups on `feat/wave2-a|b|c`, integrated on `feat/langs-integration` (app) and
+  `feat/langs-integration-invoice` (web). Russian (8 phones) is not in it.
+- **Same shared test, no new key:** every new language is dealt from `translated_ui_holdout_percent` and reports
+  `translated_ui_assigned`. **Stamps** (AGENTS-EVENTS §1.30): `lang_variant` = `fr` · `pt` · `es` · `ar` · `de` · `fa`
+  · `hi` · `id` · `my` · `nl` · `pl` · `sv` · `th` · `tr` · `zh` · `en_holdout` · `not_eligible`; `app_lang` = `en` and
+  the same fifteen. `en_holdout` is read per `device_lang`, as before.
+- **Every language writes the invoice** (web `WRITTEN`, the app's `InvoiceDocumentLanguage.WRITTEN`, in one order:
+  fr, pt, es, ar, then the wave in code order). Figures: German `1.234,50 €`, Dutch `€ 1.234,50`, Indonesian
+  `Rp1.234,50`, Swedish `1 234,50 kr`, Polish `1 234,50 zł`, Turkish `1.234,50 ₺`; Persian, Hindi, Burmese, Thai and
+  Chinese keep the app's `1,234.50`. The generated label table takes all fifteen curated rows.
+- **Counts are real plurals** (replaces the count-neutral workaround): 109 count sentences are `<plurals>`, on
+  screens through `pluralStringResource` and outside screens through `RuntimeText.p` / `counted`, which read the same
+  CLDR rules (`Plurals` in `core/common`). Arabic says `منذ يومين` / `منذ 3 أيام` / `منذ 11 يومًا`, Polish `2 lata temu` /
+  `5 lat temu`. English output is unchanged for every count.
+- **A space the English keeps, every language keeps** (`Bal: `, `Welcome to `): the first tool trimmed 45 of them; the
+  completeness test now fails on a lost edge space.
+- **The rupee is "Rs"** (owner, 2026-09-29), not the one character ₨, which iOS drew as a squeezed "Rs": PKR, NPR,
+  LKR, MUR and SCR, in front with no space like "Rp" and "Kz" (`Rs7,675.00`). The web reads an old snapshot's ₨ as Rs.
+- **Text holders tall scripts would cut** (Burmese, Thai, Hindi): the profile's Verify button and four more in three files
+  take a height floor instead of a height (LAYOUT_RULES §1).
+
+Rejected in wave 2: machine translation for the small languages (the same reason as above); one test per wave (the
+shared holdout already separates languages by `device_lang`); Thailand's Buddhist-era year on the invoice (a date must
+be the same day for both parties — a native-check question in `GLOSSARY-th.md`).

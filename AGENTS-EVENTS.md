@@ -724,8 +724,8 @@ test is added for the three new languages together.
 
 | Parameter | Values from this build | Absent means |
 |---|---|---|
-| `lang_variant` | `fr` · `pt` · `es` · `ar` · `en_holdout` · `not_eligible` | as §1.28 |
-| `app_lang` | `en` · `fr` · `pt` · `es` · `ar` | as §1.28 |
+| `lang_variant` | `fr` · `pt` · `es` · `ar` · `de` · `fa` · `hi` · `id` · `my` · `nl` · `pl` · `sv` · `th` · `tr` · `zh` · `en_holdout` · `not_eligible` | as §1.28 |
+| `app_lang` | `en` · `fr` · `pt` · `es` · `ar` · `de` · `fa` · `hi` · `id` · `my` · `nl` · `pl` · `sv` · `th` · `tr` · `zh` | as §1.28 |
 | `device_lang` | unchanged: the phone's primary subtag | unknown |
 | `lang_pick` | unchanged: `manual` | no choice made |
 
@@ -747,14 +747,20 @@ test is added for the three new languages together.
   keep it. A phone that changes its language from Portuguese to Spanish keeps its translated-test arm: the test is per
   install, not per language. Its rows keep the arm as dealt (`lang_variant=pt`) and show `app_lang=es` — intention to
   treat, as §1.28.
-- **`not_eligible`** is now any phone whose language has no interface (not en/fr/pt/es/ar), or an English phone.
+- **`not_eligible`** is now any phone whose language has no interface (not en/fr/pt/es/ar; from 1.5.0, none of the
+  sixteen below), or an English phone.
 - Rows from builds before this one carry no `pt`, `es` or `ar` value and no `translated_ui_assigned`. A pt/es/ar phone
   on 1.4.9 or 0185's build reads `not_eligible` — it was not in any test then.
-- **Wave 2, group B (2026-09-29, not released):** German, Indonesian, Dutch and Swedish join the **translated** test —
-  no new key, event or salt. `lang_variant` and `app_lang` gain `de` · `id` · `nl` · `sv`; `translated_ui_assigned`
-  fires for their phones too, and `en_holdout` is split by `device_lang` exactly as above. An Indonesian phone's
-  `device_lang` is `id` whichever code the platform reports (Android's `Locale.getLanguage()` still says `in`;
-  `InterfaceLanguages.primary` reads it as `id`). Rows before this build read `not_eligible` for them.
+- **Wave 2 (2026-09-29, 1.5.0 / versionCode 114, not released): sixteen interface languages.** German, Persian,
+  Hindi, Indonesian, Burmese, Dutch, Polish, Swedish, Thai, Turkish and Chinese (Simplified) join the **translated**
+  test beside pt/es/ar — no new key, event or salt. `lang_variant` and `app_lang` gain `de` · `fa` · `hi` · `id` ·
+  `my` · `nl` · `pl` · `sv` · `th` · `tr` · `zh` (the full list is the table above: fifteen languages plus English);
+  `translated_ui_assigned` fires for their phones too, with `lang_variant` = the phone's language or `en_holdout`,
+  and `en_holdout` is split by `device_lang` exactly as above. An Indonesian phone's `device_lang` is `id` whichever
+  code the platform reports (Android's `Locale.getLanguage()` still says `in`; `InterfaceLanguages.primary` reads it as
+  `id`). A Chinese phone is `zh` for both Simplified and Traditional settings (`zh-Hant-TW` is dealt a `zh` arm and
+  reads Simplified). Russian (8 phones) is not in this build: a Russian phone stays `not_eligible`. Rows before this
+  build read `not_eligible` for all eleven.
 
 ### 1.10 Layers
 
@@ -958,6 +964,19 @@ Full detail in `memory/mysql-binary-uuid-and-test-clock.md`. In native queries:
     Always pass the full ISO instant, and **prove the range is being read** by asking for two
     different windows and checking the numbers differ. A parameter that changes nothing is not a
     parameter.
+14. **A first open from 2026-08-25 to 2026-09-06 10:39 UTC may have no session row: its session facets are
+    "unknown", not a missing user.** *(2026-09-29)* 231 real devices from those days (builds vc91–vc94; 232 less
+    our own test phone) have **no `analytics_sessions_v2` row**. Until backend commit `7ba8ac8` (live 2026-09-06
+    10:39 UTC) the server wrote a session only on `action=start`, and 1.4.1+ almost never sends that (the cold start
+    mints the session first, so `startSession()` returns early). Their events are all stored — 21,545, none with a
+    NULL `session_id` — and they behaved like everyone else: 80.2 % passed the splash, 45 saved invoices to our
+    server. What is gone for good is everything only the session row holds: device language, model, class, screen,
+    network type and city. So any breakdown by those facets over that window shows about **27 % unknown**, and the
+    unknown are the *less* active phones (a phone that came back after the fix got a row from the fallback write).
+    Read them as unknown: never drop them as a step nobody reached, never compare that window's language or model mix
+    with a later one without saying so, and join `device_journey` (built from `analytics_events`) when the question
+    is only whether a device existed. Since the fix: 0 of 7,053 first opens without a row. Report:
+    `kaam/research/2026-09-29-installs-without-session.md`.
 
 ---
 
