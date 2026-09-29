@@ -171,3 +171,135 @@ Play nor Apple tells the app. The only place a rating appears is the Play Consol
    release.
 2. Estimate shares do not count today. Should they?
 3. A refused moment (an ad or a sheet on screen) is not recorded. Should it be, as a parameter on this event?
+
+## Addendum 2026-09-30 — reach mostly happy moments, from behaviour only
+
+- **Status:** built, not released. App `invoice-kmp-app`: `feat/review-happy-moment` off `origin/VC_113_VN_149`
+  (**pushed, not merged**). No schema change, no server change. Three new optional Remote Config keys. One new coded
+  event.
+- **Asked by:** the owner, 2026-09-30: make the store's rating request reach mostly users who are having a good
+  experience, using **only behavioural signals**, fully inside Google Play's and Apple's rules.
+
+### The line that does not move
+
+**Choosing WHEN to request, from what the user did, is allowed. Choosing WHO to ask, by how they feel, is not.**
+
+- Google Play's in-app review guidelines: nothing of ours before or during the card ("Do you like the app?", "Rate us
+  5 stars?"). Google itself advises requesting once the user has experienced the app, at a natural moment.
+- Google Play's ratings policy, and Apple's rules: steering only satisfied users to the store, and holding the
+  unsatisfied back, is review gating.
+- So none of the signals below is a question, a star picker, or a read of anything the user said. Nothing in the
+  review path reads `FeedbackDialog` (stars → WhatsApp), and that dialog never leads to the store. Source guard:
+  `TheStoreReviewPathAsksNothingTest` (three halves: the review path draws and asks nothing and never names the
+  feedback dialog or its stars; the calls that raise the store's sheet exist only in the review path; the feedback
+  dialog and every file that shows it never name the store's sheet, a listing or a write-a-review link).
+
+### Rejected, on the record
+
+- **A sentiment gate in any form:** "Do you like Invotick?" first; routing only 4–5 star answers of our feedback dialog
+  to the store; showing the card after the dialog, or only when its stars were high; a star picker of our own that
+  routes to the store; reading the WhatsApp feedback for tone. Each one is review gating, and each puts the app's
+  listing at risk for a few better ratings. Not re-proposable without a change in the stores' rules.
+- **Inferring mood from free text or from a "how was it" question of ours.** Same reason.
+- **Delaying an ad or the paywall to make the moment cleaner.** Monetisation is a requirement, not a variable. The
+  request waits for ads and the paywall, never the other way round; nothing of theirs moves.
+
+### The four new refusals (each its own reason code, all pure in `StoreReviewPolicy`)
+
+| Reason | Refuses when | Default | Remote Config key |
+|---|---|---|---|
+| `too_few_days` | fewer distinct days of use on this install, in the phone's own time zone, than the minimum | 2 | `store_review_min_days_of_use` (at least 1; 1 = off in effect; clamped to 30) |
+| `last_exit_crash` | the previous process ended in a crash, native crash or ANR: the word `app_cold_start.prev_exit` carries, read by the same call | on | none (a fixed rule) |
+| `recent_error` | an error a person saw (`ErrorReport`, the path that sends `error_shown`) was shown within the quiet time | 24 h | `store_review_error_quiet_hours` (0 = off) |
+| `just_after_ad_or_paywall` | a full-screen ad, or the paywall, closed within the window | 30 s | `store_review_after_ad_seconds` (0 = off) |
+
+The moment stays the same: right after a confirmed share (`invoice_shared_success`), once the user is back and settled
+(item 5 of the brief, unchanged). All keys are read as text, so an absent key keeps its default.
+
+**Order.** `switched_off`, `first_session`, `schedule_done`, `too_few_shares`, `gap_not_passed`, then **`too_few_days`,
+`last_exit_crash`, `recent_error`**, then the screen checks `not_in_front`, `ad_on_screen`, `prompt_on_screen`,
+`screen_covered`, and last **`just_after_ad_or_paywall`**. The new history checks are judged at the share and spend
+nothing: the count is kept and the next share tries again. `just_after_ad_or_paywall` is judged **at the moment**, not at
+the share, on purpose: an ad-gated share closes its interstitial just before the share sheet opens, so judging at the
+share would refuse nearly every ad-gated share for a reason that is gone by the time the user is back from WhatsApp.
+
+**Where each signal comes from.**
+- Days of use: a set of calendar days kept in the phone's preferences, added to at the first moment in front of each
+  process and at each confirmed share; the latest 30 kept, so it is bounded. A new install starts empty; no released
+  build ever counted them.
+- Error: `ErrorReport` (`core/common`) gains a second listener beside analytics' sink and a process-level
+  `lastReportedAtMs`; the time is kept across launches, and the process's own record is read too, so an error before the
+  listener registered (the splash) still counts. An error is counted only where `error_shown` is: not a cancellation,
+  not one nobody saw, not the same exception twice.
+- Crash: a public read of the same `PreviousProcessExit` `app_cold_start` uses. Below Android 11 there is no record, and
+  on iOS there is none; unknown never refuses, because there is nothing to hold against the user.
+- Ad and paywall: `AdVisibilityController` records the **edge** from showing to not showing (a failed show is not a
+  close); the paywall records its own leaving the screen. Both into `RecentClosings` (`core/common`), wall-clock ms, in
+  memory.
+
+### The refusals are now an event
+
+Decision 0176's open question 3 asked whether a refused moment should be recorded. It is now, because the brief needs
+"how many requests, by refusal reason".
+
+- **`store_review_not_requested`**, coded, one per confirmed share that ended without a request. Not
+  `store_review_requested`, which stays one per request. Nothing is pressed when a refusal happens, so an auto-captured
+  tap cannot carry it (AGENTS-EVENTS §1.5, 0064).
+- Parameters: `reason` (the policy's own words above and the older ones, plus `no_settled_moment` when the user did not
+  come back within 10 minutes), `trigger` (`invoice_share`), `share_count`, `share_threshold`, `request_number` (the
+  number this request would have had), `days_of_use`. Only on the reason they explain (§1.7): `closed` (`ad` or
+  `paywall`) and `since_ms` on `just_after_ad_or_paywall`; `since_ms` on `recent_error`.
+- **Not sent** for `switched_off` and `schedule_done`: nothing is being decided then, and a switched-off feature must
+  add nothing to the app.
+- A name says what was seen, never why (§1.14): `not_requested`, with the reason a fact about the app's own state.
+- Volume: at most one per confirmed share, so never above `invoice_shared_success`.
+
+### What this costs, and what to expect
+
+- **Fewer requests, by design.** On Android, a return from WhatsApp that earns a resume app-open ad closes that ad
+  seconds before the moment, so that request is refused as `just_after_ad_or_paywall` and the next share tries again.
+  How often is the first thing the event will show. If the owner finds it too costly, `store_review_after_ad_seconds`
+  can be lowered or set to 0 from Remote Config with no release.
+- The store's own quota still applies on top: Google shows the card roughly once a month at most, Apple at most 3 times a
+  year, and neither says whether a card was shown or a rating given.
+- **What this cannot claim:** the signals choose a moment, not a mood. Nothing here measures whether the user is happy.
+  Whether the ratings improve is read from the stores, below, not from our events.
+
+### How to measure after release
+
+Requests, and refusals by reason (bounded both sides, by the release's first day; arrival time is `created_at`):
+
+```sql
+SELECT event_name,
+       COALESCE(params->>'$.reason', params->>'$.outcome') AS reason_or_outcome,
+       COUNT(*) AS n, COUNT(DISTINCT session_id) AS sessions
+FROM analytics_events
+WHERE event_name IN ('store_review_requested', 'store_review_not_requested')
+  AND app_version_code >= :first_version_code
+  AND created_at >= :from AND created_at < :to
+GROUP BY event_name, reason_or_outcome
+ORDER BY event_name, n DESC;
+```
+
+Request rate against the moments that could have asked (every confirmed share is one of the two events, plus the shares
+that were still waiting):
+
+```sql
+SELECT DATE(created_at) AS day,
+       SUM(event_name = 'store_review_requested') AS requested,
+       SUM(event_name = 'store_review_not_requested') AS refused,
+       SUM(event_name = 'store_review_not_requested' AND params->>'$.reason' = 'just_after_ad_or_paywall') AS just_after_ad_or_paywall,
+       SUM(event_name = 'store_review_not_requested' AND params->>'$.reason' IN ('too_few_days','last_exit_crash','recent_error')) AS behaviour_refusals
+FROM analytics_events
+WHERE event_name IN ('store_review_requested', 'store_review_not_requested')
+  AND app_version_code >= :first_version_code AND created_at >= :from AND created_at < :to
+GROUP BY day ORDER BY day;
+```
+
+Play rating trend by version: the Reply to Reviews API (`androidpublisher v3`, `reviews.list`) returns each review's
+`starRating`, `appVersionCode` and `appVersionName`, but only reviews created or changed in the **last seven days**, so a
+trend needs a snapshot taken every week, keeping only the star rating and the version, never the text. The service
+account of `play-upload.py` needs the "reply to reviews" permission for it. The other route is Play Console → Download
+reports → Reviews, a monthly CSV in the Play bucket. Average by version from either, then compare the version with these
+signals against 1.4.9 (113). The store's own quota and the small number of reviews mean a trend needs weeks and a few
+hundred ratings before it says anything; a single week is noise.

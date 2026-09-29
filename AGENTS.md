@@ -528,6 +528,14 @@ the list is wrong, not the app.**
   - `error_code` + `error` (Play's `ReviewErrorCode` and its word) on `request_failed`; `reason` (`no_screen`,
     `prompt_taken`, our own check) on `launch_failed`; `exception_class` where something threw.
   - A `request_failed` does not move the schedule, so it can repeat once per share on a phone without Play.
+  - **Addendum 2026-09-30** (`feat/review-happy-moment`, **not merged**, decision 0176): four refusals from
+    behaviour only, never from a question or from the feedback dialog's stars (that would be review gating):
+    `too_few_days` (fewer than `store_review_min_days_of_use`, default 2), `last_exit_crash` (the same word
+    `app_cold_start.prev_exit` carries), `recent_error` (within `store_review_error_quiet_hours`, default 24) and
+    `just_after_ad_or_paywall` (within `store_review_after_ad_seconds`, default 30; judged at the moment, not the share).
+  - **`store_review_not_requested`**, coded, one per confirmed share that ended without a request: `reason`, `trigger`,
+    `share_count`, `share_threshold`, `request_number`, `days_of_use`; `closed` (`ad|paywall`) and `since_ms` only on the
+    reasons they explain. Not sent for `switched_off` or `schedule_done`.
 - **Notifications:** `notification_permission_shown` / `_allowed` / `_denied`
 - **Parameters added 2026-09-04 (release after 1.4.2, branch `VC_93_VN_142`):** `app_cold_start.prev_exit`
   (`crash|anr|crash_native|user_request|low_memory|…|unknown`, API ≥ 30 only) + `prev_exit_ms_ago`;
