@@ -44,7 +44,7 @@ function SkeletonPage({ withFooter }: { withFooter: boolean }) {
   }, []);
 
   return (
-    <div style={{ position: "fixed", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "#f7f7f7" }}>
+    <div style={{ position: "fixed", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--invotick-mat, #f7f7f7)" }}>
       <div style={{ position: "relative", width: SHEET_W * s, height: SHEET_H * s }}>
         {/* The sheet itself, scaled exactly like A4PagedFrame scales a real page. */}
         <div style={{ width: SHEET_W, height: SHEET_H, background: "#fff", boxShadow: "0 3px 16px rgba(0,0,0,0.18)", transform: `scale(${s})`, transformOrigin: "top left", position: "relative", overflow: "hidden" }}>

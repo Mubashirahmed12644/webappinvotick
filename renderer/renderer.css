@@ -13,7 +13,16 @@
 /* Match the Android WebView's own background (#F7F7F7) on html/body/#root so there is NO white flash
    between page-load and the invoice being injected — the pre-render state is a seamless grey instead
    of a white "No invoice data" flicker. */
-html, body, #root { margin: 0; background: #f7f7f7; }
+/* The app's mat when it has set one (dark theme: the desk follows the app, decision D5). */
+html, body, #root { margin: 0; background: var(--invotick-mat, #f7f7f7); }
+
+/* The desk around the paper (A4PagedFrame's `.a4-frame`, inline #e9e9ec) follows the app's mat inside
+   the app — dark theme, decision D5, dark audit R7. It lives HERE, in the offline bundle's own sheet,
+   and not in A4PagedFrame.tsx: that component also renders the public share page and the free tool,
+   whose markup must stay byte-identical (the English golden pins it). `!important` is what lets a
+   stylesheet rule outrank an inline style. The fallback is the same #e9e9ec, so with no mat set —
+   light theme, or before the app has pushed it — nothing changes. The paper stays white. */
+.a4-frame { background: var(--invotick-mat, #e9e9ec) !important; }
 
 /* Spinner on the white A4 skeleton page shown before the invoice is injected (see SkeletonPage). */
 @keyframes aospin { to { transform: rotate(360deg); } }
