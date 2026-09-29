@@ -694,6 +694,19 @@ the list is wrong, not the app.**
     Updates *to* 114 are read on the server, by the same `app_instance_id` sending a higher `app_version_code`.
 - **Lifecycle:** `app_cold_start`, `app_foreground`, `app_resumed`, `app_paused`, `app_background`,
   `app_heartbeat`, `session_break`, `screen_view`, `network_changed`, `app_exit_dialog_shown`
+  - **Splash losses, from the release after 1.4.9** (decision
+    [0190](docs/decisions/0190-a-splash-loss-names-its-way-out-its-phase-and-its-country.md), AGENTS-EVENTS §3.17–3.18;
+    app `feat/splash-loss-measurement`, backend `feat/analytics-country-from-ip`, **not merged**). No new event.
+    - `app_background.reason` = `back|home_or_recents|screen_off|other_activity|unknown` (Android; absent on iOS).
+    - `app_background.phase` = `before_first_frame|loading|ad_hold|ad_showing|after_gate`, the study's S0–S4, only
+      while the splash is in progress; both platforms.
+    - `app_cold_start.prev_ended_in_splash` (`true|false`), and when true `prev_splash_phase`, `prev_splash_ms`,
+      `prev_process_id`: how the previous process's splash ended, so a process killed on the splash is still a row.
+    - `screen_view pdf_viewer` (and its `first_screen_reached`): the PDF "Open with" screen, which announced nothing
+      before. It has no splash: exclude it from splash pass-through.
+    - `splash_ready.ad_wait_source` = `bundled|remote_cached|remote_fresh`: which ad wait applied.
+    - Server-side, `params.country_source=ip`: `country` filled from `ip_records` for a batch that sent none (backend,
+      Android and iOS only). Only the code is stored, never the address.
 
 - **The interface language, from the build after 1.4.9** (decision
   [0185](docs/decisions/0185-the-app-speaks-french-to-french-phones-with-an-english-holdout.md), AGENTS-EVENTS §1.28):
