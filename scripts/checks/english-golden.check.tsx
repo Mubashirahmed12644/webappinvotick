@@ -45,7 +45,8 @@ const englishVariants: Record<string, (d: InvoiceRenderData) => InvoiceRenderDat
   null: (d) => ({ ...d, language: null }) as InvoiceRenderData,
   en: (d) => ({ ...d, language: "en" }) as InvoiceRenderData,
   "en-GB": (d) => ({ ...d, language: "en-GB" }) as InvoiceRenderData,
-  es: (d) => ({ ...d, language: "es" }) as InvoiceRenderData,
+  // "es" was here until 0187 made Spanish a written language; German is one we still do not write by hand.
+  de: (d) => ({ ...d, language: "de" }) as InvoiceRenderData,
   empty: (d) => ({ ...d, language: "" }) as InvoiceRenderData,
 };
 

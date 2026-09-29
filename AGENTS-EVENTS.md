@@ -716,6 +716,41 @@ Events: `update_check`, `update_prompt_result`, `update_download_result`, `updat
 `update_restart_tapped`, `update_restart_failed`, and `app_cold_start.updated_from_version_code`. Decision
 [0186](docs/decisions/0186-the-play-update-prompt-is-counted-from-check-to-landing.md).
 
+### 1.30 More interface languages extend the same four stamps; each test has its own event. *(decided 2026-09-29)*
+
+Decision [0187](docs/decisions/0187-portuguese-spanish-and-arabic-with-one-shared-holdout.md). Portuguese, Spanish and
+Arabic join French. §1.28 still holds: no new name for a language (§1.1). The same four stamps are extended, and one
+test is added for the three new languages together.
+
+| Parameter | Values from this build | Absent means |
+|---|---|---|
+| `lang_variant` | `fr` · `pt` · `es` · `ar` · `en_holdout` · `not_eligible` | as §1.28 |
+| `app_lang` | `en` · `fr` · `pt` · `es` · `ar` | as §1.28 |
+| `device_lang` | unchanged: the phone's primary subtag | unknown |
+| `lang_pick` | unchanged: `manual` | no choice made |
+
+- **Two tests, never one pool.** French keeps its own test: Remote Config `french_ui_holdout_percent`, the event
+  `french_ui_assigned`, its stored arm and its bucket salt, all unchanged from 0185. The three new languages share the
+  **translated** test: Remote Config **`translated_ui_holdout_percent`** (text, default `"50"`; `"0"` releases every
+  held-out phone to its own language; `"100"` keeps new installs English), and one coded
+  **`translated_ui_assigned`** per pt/es/ar phone when its arm is dealt. Its parameters are exactly
+  `french_ui_assigned`'s: `lang_variant` (`pt|es|ar|en_holdout`), `bucket`, `holdout_percent`, `percent_source`
+  (`remote|missing|invalid`), `bucket_source` (`device_id|random`), `device_lang`; plus the second row with
+  `released=true` when `"0"` ends the test for a held-out phone.
+- **`en_holdout` is shared by both tests.** Which language a held-out phone was held out *of* is its `device_lang`
+  (`fr` → the French test, `pt|es|ar` → the translated test). Always split `en_holdout` by `device_lang` before
+  comparing with an arm: a pooled `en_holdout` mixes Angola, Venezuela, Egypt and France.
+- **Read each language against its own holdout**: `lang_variant=pt` against `lang_variant=en_holdout AND
+  device_lang=pt`. The shared percent deals the arms of all three at once, but the populations are never pooled.
+- **Sticky, any country.** The arm is dealt from the phone's language, never its country, once per install, and a
+  pick in Drawer → Language wins over it (`lang_pick=manual`), exactly as §1.28. Phones already dealt a French arm
+  keep it. A phone that changes its language from Portuguese to Spanish keeps its translated-test arm: the test is per
+  install, not per language. Its rows keep the arm as dealt (`lang_variant=pt`) and show `app_lang=es` — intention to
+  treat, as §1.28.
+- **`not_eligible`** is now any phone whose language has no interface (not en/fr/pt/es/ar), or an English phone.
+- Rows from builds before this one carry no `pt`, `es` or `ar` value and no `translated_ui_assigned`. A pt/es/ar phone
+  on 1.4.9 or 0185's build reads `not_eligible` — it was not in any test then.
+
 ### 1.10 Layers
 
 `intent.screen` · `intent.action` · `response.outcome` · `response.gate` · `response.interruption` ·

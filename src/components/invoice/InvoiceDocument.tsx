@@ -3,7 +3,7 @@ import { footerMode, type OwnFooter } from "@/lib/invotick-footer";
 import type { InvoiceRenderData, RenderItem } from "@/lib/data";
 import { discountTypeOf } from "@/lib/discount-type";
 import { formatMoney, formatDate, formatFixed2, formatPercent, hexToRgba, contrastText, onTint, blendOnWhite } from "@/lib/format";
-import { documentLabelsFor, documentLanguage, labelSeparator, type DocumentLanguage } from "@/lib/document-language";
+import { documentDir, documentLabelsFor, documentLanguage, labelSeparator, type DocumentLanguage } from "@/lib/document-language";
 import { imageProxyUrl } from "@/lib/image";
 import { BRAND_LOGO } from "@/lib/givens";
 import { LABELS, type InvoiceLabels } from "@/lib/invoice-labels";
@@ -19,7 +19,7 @@ import { LIGHT_SURROUND_TONE, toneOf } from "@/lib/generated-logo";
 //
 // `labels` (default English) + `dir` let the shared invoice render in the receiver's language: the
 // structural labels are translated by the caller, and `dir="rtl"` mirrors the layout for Arabic/Farsi.
-export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hideStamp, hideSignature, padRows, labels: labelsProp, dir = "ltr" }: { data: InvoiceRenderData; qrDataUrl?: string | null; hideFooter?: boolean; hideSummary?: boolean; hideStamp?: boolean; hideSignature?: boolean; padRows?: number; labels?: InvoiceLabels; dir?: "ltr" | "rtl" }) {
+export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hideStamp, hideSignature, padRows, labels: labelsProp, dir: dirProp }: { data: InvoiceRenderData; qrDataUrl?: string | null; hideFooter?: boolean; hideSummary?: boolean; hideStamp?: boolean; hideSignature?: boolean; padRows?: number; labels?: InvoiceLabels; dir?: "ltr" | "rtl" }) {
   // The document's own vocabulary, unless the caller passed a translated set — the shared-link view
   // does, having already run the labels through the receiver's language.
   const isEstimate = data.documentType === "ESTIMATE";
@@ -28,6 +28,13 @@ export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hide
   const lang = documentLanguage(data.language);
   const labels = labelsProp ?? documentLabelsFor(data);
   const sep = labelSeparator(lang);
+  // Which way the page reads: the caller's (a translation's), else the document's own — an Arabic document is
+  // right to left (decision 0187). English documents and every caller that passes "ltr" are exactly as before.
+  const dir = dirProp ?? documentDir(data.language);
+  // On a right-to-left page every figure, date, phone number, e-mail and invoice number is isolated (FSI … PDI), so it
+  // keeps its own order: "-$5.00" never becomes "$5.00-", "+20 100 123 4567" never reverses its groups. A
+  // left-to-right page gets the value untouched, byte for byte.
+  const iso = (v: string) => (dir === "rtl" ? `\u2068${v}\u2069` : v);
   // "TOTAL TTC" only when there is a tax to include (see invoice-labels-fr.ts); English has no such label.
   const hasTax = data.taxAmount !== 0 || data.items.some((it) => it.taxRate !== 0);
   const totalLabel = hasTax && labels.totalWithTax ? labels.totalWithTax : labels.total;
@@ -112,8 +119,8 @@ export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hide
               {[data.business?.addressLine1, data.business?.addressLine2, data.business?.city, data.business?.country].filter(Boolean).length > 0 && (
                 <p className="text-[13px] font-medium">{[data.business?.addressLine1, data.business?.addressLine2, data.business?.city, data.business?.country].filter(Boolean).join(", ")}</p>
               )}
-              {data.business?.phone && <p className="text-[13px] font-medium">{labels.phone}{sep}{data.business.phone}</p>}
-              {data.business?.emailAddress && <p className="text-[13px] font-medium">{labels.email}{sep}{data.business.emailAddress}</p>}
+              {data.business?.phone && <p className="text-[13px] font-medium">{labels.phone}{sep}{iso(data.business.phone)}</p>}
+              {data.business?.emailAddress && <p className="text-[13px] font-medium">{labels.email}{sep}{iso(data.business.emailAddress)}</p>}
             </div>
           )}
           {t.receiver && (
@@ -124,8 +131,8 @@ export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hide
               {[c?.addressLine1, c?.city, c?.country].filter(Boolean).length > 0 && (
                 <p className="text-[13px] font-medium">{[c?.addressLine1, c?.city, c?.country].filter(Boolean).join(", ")}</p>
               )}
-              {c?.phone && <p className="text-[13px] font-medium">{labels.phone}{sep}{c.phone}</p>}
-              {c?.emailAddress && <p className="text-[13px] font-medium">{labels.email}{sep}{c.emailAddress}</p>}
+              {c?.phone && <p className="text-[13px] font-medium">{labels.phone}{sep}{iso(c.phone)}</p>}
+              {c?.emailAddress && <p className="text-[13px] font-medium">{labels.email}{sep}{iso(c.emailAddress)}</p>}
             </div>
           )}
           {/* Native FlexibleInvoiceMetaModule alignRight=true: the block sits at the RIGHT of its
@@ -133,10 +140,10 @@ export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hide
           <div className="flex justify-end">
             <div className="text-start">
               <p className={label}>{labels.invoiceDetails}</p>
-              <p className="mt-1 text-[14px] font-medium">{labels.invoiceNo}{sep}{data.invoiceNumber}</p>
-              <p className="text-[14px] font-medium">{labels.issueDate}{sep}{formatDate(data.invoiceDate, lang)}</p>
-              {data.dueDate && <p className="text-[14px] font-medium">{labels.dueDate}{sep}{formatDate(data.dueDate, lang)}</p>}
-              {data.poNumber && <p className="text-[14px] font-medium">{labels.poNo}{sep}{data.poNumber}</p>}
+              <p className="mt-1 text-[14px] font-medium">{labels.invoiceNo}{sep}{iso(data.invoiceNumber)}</p>
+              <p className="text-[14px] font-medium">{labels.issueDate}{sep}{iso(formatDate(data.invoiceDate, lang))}</p>
+              {data.dueDate && <p className="text-[14px] font-medium">{labels.dueDate}{sep}{iso(formatDate(data.dueDate, lang))}</p>}
+              {data.poNumber && <p className="text-[14px] font-medium">{labels.poNo}{sep}{iso(data.poNumber)}</p>}
             </div>
           </div>
         </div>
@@ -178,11 +185,11 @@ export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hide
                     <tr key={i} style={{ backgroundColor: tint, height: 28 }}>
                       <td className="px-2 align-middle text-center font-bold">{it ? it.sn : ""}</td>
                       <td className={`px-2 align-middle font-bold ${descBody}`}>{it ? it.name : ""}</td>
-                      <td className="px-2 align-middle text-end font-bold">{it ? formatFixed2(it.quantity, lang) : ""}</td>
-                      <td className="px-2 align-middle text-end font-bold">{it ? formatMoney(it.unitPrice, cur, lang) : ""}</td>
-                      <td className="px-2 align-middle text-end font-bold">{it ? discountCell(it, cur, lang) : ""}</td>
-                      <td className="px-2 align-middle text-end font-bold">{it ? pct(it.taxRate) : ""}</td>
-                      <td className="px-2 align-middle text-end font-bold">{it ? formatMoney(it.amount, cur, lang) : ""}</td>
+                      <td className="px-2 align-middle text-end font-bold">{it ? iso(formatFixed2(it.quantity, lang)) : ""}</td>
+                      <td className="px-2 align-middle text-end font-bold">{it ? iso(formatMoney(it.unitPrice, cur, lang)) : ""}</td>
+                      <td className="px-2 align-middle text-end font-bold">{it ? iso(discountCell(it, cur, lang)) : ""}</td>
+                      <td className="px-2 align-middle text-end font-bold">{it ? iso(pct(it.taxRate)) : ""}</td>
+                      <td className="px-2 align-middle text-end font-bold">{it ? iso(formatMoney(it.amount, cur, lang)) : ""}</td>
                     </tr>
                   );
                 })}
@@ -212,10 +219,10 @@ export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hide
                 A4PagedFrame align the payment stamp's top edge to this box's top line. */}
             {t.total ? (
               <div data-totals className="relative w-full max-w-[300px]" style={{ border: `1px solid ${color}` }}>
-                <TotalRow rowKey="subtotal" label={labels.subTotal} value={formatMoney(data.subtotal, cur, lang)} tint={hexToRgba(color, 0.05)} />
-                <TotalRow rowKey="discount" label={labels.discount} value={formatMoney(data.discountAmount, cur, lang)} tint={hexToRgba(color, 0.05)} />
-                <TotalRow rowKey="tax" label={labels.tax} value={formatMoney(data.taxAmount, cur, lang)} tint={hexToRgba(color, 0.05)} />
-                <TotalRow rowKey="shipping" label={labels.shipping} value={formatMoney(data.shippingCost, cur, lang)} tint={hexToRgba(color, 0.05)} />
+                <TotalRow rowKey="subtotal" label={labels.subTotal} value={iso(formatMoney(data.subtotal, cur, lang))} tint={hexToRgba(color, 0.05)} />
+                <TotalRow rowKey="discount" label={labels.discount} value={iso(formatMoney(data.discountAmount, cur, lang))} tint={hexToRgba(color, 0.05)} />
+                <TotalRow rowKey="tax" label={labels.tax} value={iso(formatMoney(data.taxAmount, cur, lang))} tint={hexToRgba(color, 0.05)} />
+                <TotalRow rowKey="shipping" label={labels.shipping} value={iso(formatMoney(data.shippingCost, cur, lang))} tint={hexToRgba(color, 0.05)} />
                 {/* TOTAL — light tint + accent text, the lowest of three rungs on an invoice. On an
                     estimate it is the only figure that matters and the last row in the box, so it
                     takes the hero treatment BALANCE DUE would have had.
@@ -229,7 +236,7 @@ export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hide
                     branch catching up. */}
                 <div className="flex items-center justify-between px-3 py-2 text-[15px] font-extrabold" style={isEstimate ? { backgroundColor: color, color: onColor } : { backgroundColor: hexToRgba(color, 0.16), color: onTint(color, 0.16) }}>
                   <span>{totalLabel}</span>
-                  <span>{formatMoney(data.total, cur, lang)}</span>
+                  <span>{iso(formatMoney(data.total, cur, lang))}</span>
                 </div>
                 {/* AMOUNT PAID / BALANCE DUE — an invoice's two lower rungs, and nonsense on an
                     estimate: nothing has been paid against a price that is still being quoted, and
@@ -239,11 +246,11 @@ export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hide
                   <>
                     <div className="flex items-center justify-between px-3 py-2 text-[15px] font-extrabold" style={{ backgroundColor: hexToRgba(color, 0.34), color: contrastText(blendOnWhite(color, 0.34)) }}>
                       <span>{labels.amountPaid}</span>
-                      <span>{formatMoney(data.amountPaid ?? 0, cur, lang)}</span>
+                      <span>{iso(formatMoney(data.amountPaid ?? 0, cur, lang))}</span>
                     </div>
                     <div className="flex items-center justify-between px-3 py-2 text-[15px] font-extrabold" style={{ backgroundColor: color, color: onColor }}>
                       <span>{labels.balanceDue}</span>
-                      <span>{formatMoney(data.balanceDue ?? data.total, cur, lang)}</span>
+                      <span>{iso(formatMoney(data.balanceDue ?? data.total, cur, lang))}</span>
                     </div>
                   </>
                 )}

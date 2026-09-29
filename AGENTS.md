@@ -701,6 +701,13 @@ the list is wrong, not the app.**
   is drawn), **`device_lang`** (the phone's primary language) and **`lang_pick=manual`** when the person chose in
   Drawer → Language. One coded **`french_ui_assigned`** per French-language phone when its arm is dealt (Remote Config
   `french_ui_holdout_percent`, text, default 50; `0` ends the test). Not deployed until the owner approves the screens.
+  - **Portuguese, Spanish and Arabic, from the same build** (decision
+    [0187](docs/decisions/0187-portuguese-spanish-and-arabic-with-one-shared-holdout.md), AGENTS-EVENTS §1.30; app branch
+    `feat/more-languages`, **not merged**): `lang_variant` gains `pt|es|ar`, `app_lang` gains `pt|es|ar`. One shared
+    test for the three: Remote Config **`translated_ui_holdout_percent`** (text, default 50, `0` releases) and one coded
+    **`translated_ui_assigned`** per pt/es/ar phone, with `french_ui_assigned`'s parameters. French's own test is
+    unchanged. `en_holdout` is shared: **split it by `device_lang`** before comparing it with any arm. Arabic draws
+    the whole interface right to left.
 
 ⚠️ The names this section carried until 2026-09-04 (`invoice_created`, `Business_added`,
 `business_form_text_add`, `Client_added`) return **zero rows** on the live build; a funnel built on

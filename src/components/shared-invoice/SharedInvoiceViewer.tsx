@@ -5,7 +5,7 @@ import { A4PagedFrame } from "@/components/invoice/A4PagedFrame";
 import { LANGUAGES } from "@/lib/translate";
 import { translateInvoice, type TranslatedInvoice } from "@/lib/translate-invoice";
 import type { InvoiceRenderData } from "@/lib/data";
-import { documentLanguage } from "@/lib/document-language";
+import { documentDir, documentLanguage } from "@/lib/document-language";
 
 /**
  * Shared-invoice viewer with a language picker. The invoice ships in its original language; picking a
@@ -19,13 +19,14 @@ export function SharedInvoiceViewer({ data, qrDataUrl }: { data: InvoiceRenderDa
   // on "Français", and picking it again is the original, not a translation.
   const original = documentLanguage(data.language);
   const [lang, setLang] = useState<string>(original);
-  const [view, setView] = useState<TranslatedInvoice>({ data, labels: undefined as never, dir: "ltr" });
+  // The original reads the way it was written: an Arabic document right to left (decision 0187).
+  const [view, setView] = useState<TranslatedInvoice>({ data, labels: undefined as never, dir: documentDir(data.language) });
   const [loading, setLoading] = useState(false);
 
   async function pick(code: string) {
     setLang(code);
     if (code === original) {
-      setView({ data, labels: undefined as never, dir: "ltr" });
+      setView({ data, labels: undefined as never, dir: documentDir(data.language) });
       return;
     }
     setLoading(true);

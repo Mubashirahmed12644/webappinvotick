@@ -101,3 +101,4 @@ Numbering: next free number, zero-padded to 4.
 - [0184 — The Screen Map is a page of its own, read from three per-device rollups](0184-the-screen-map-is-a-page-of-its-own-read-from-per-device-rollups.md)
 - [0185 — The app speaks French to French-language phones, with a 50/50 English holdout](0185-the-app-speaks-french-to-french-phones-with-an-english-holdout.md)
 - [0186 — Google Play's update prompt is counted from the check to the landing](0186-the-play-update-prompt-is-counted-from-check-to-landing.md)
+- [0187 — Portuguese, Spanish and Arabic, with one shared English holdout](0187-portuguese-spanish-and-arabic-with-one-shared-holdout.md)
