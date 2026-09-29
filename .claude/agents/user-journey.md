@@ -101,6 +101,10 @@ Read these, in this order, at the start of every task:
   because the gateway's current screen had already moved; trust the code order, not the stamp.
 - **Dismissal is one event with `method`** (decision 0023). Never add a second "dismissed" event.
 - **Auto-captured ids are stable identities.** Never derive or rename them from code symbols.
+- **"Why is this phone on an old build" is answered by the update events, not guessed** (decision 0186, from build
+  114): `update_check` (did Play offer it), `update_prompt_result` (did they accept), `update_download_result`,
+  `update_restart_*`, and `app_cold_start.updated_from_version_code` (did it land). Builds before 114 send none of
+  them; for those, read landing as the same `app_instance_id` later on a higher `app_version_code`.
 
 ## Monetisation — a standing rule, not a preference
 
