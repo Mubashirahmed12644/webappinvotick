@@ -762,6 +762,31 @@ test is added for the three new languages together.
   reads Simplified). Russian (8 phones) is not in this build: a Russian phone stays `not_eligible`. Rows before this
   build read `not_eligible` for all eleven.
 
+### 1.31 A dialog the app shows by itself is one more door, and each time it stands down is one coded row. *(decided 2026-09-30)*
+
+Decision [0189](docs/decisions/0189-rate-us-in-the-drawer.md), the automatic showing the owner approved on 2026-09-30.
+The rating dialog every door opens (`FeedbackDialog`) also shows itself after a confirmed invoice share (Android only).
+
+- **The showing is a door, not an event.** It opens the same dialog, whose taps keep the drawer's ids
+  (`components_FeedbackDialog_2.star_2` / `.submit_feedback_3` / `.close_1`) with **`trigger=auto`** (on the star
+  taps too, from this build: a star tap carried only `stars` before). No
+  `rate_us_shown`, no `rate_us_submitted`: the stars, the outcome and the close already ride on those ids (§1.1,
+  §1.8), and a second name would split their history. A showing that was closed unanswered is the close id with
+  `trigger=auto`.
+- **Standing down is coded, one row per share at most:** **`rate_us_not_shown`** with `reason`, `trigger`
+  (`invoice_share`, the moment), `auto_shows` (showings so far on this install) and `days_of_use`. Nothing is pressed
+  when a share is let go, so no tap can carry it — the same shape as `store_review_not_requested` (0176). `reason` is
+  what was seen (§1.14): `first_session`, `gap_not_passed`, `after_low_rating`, `too_few_days`, `last_exit_crash`,
+  `recent_error`, `store_card_this_session`, `not_in_front`, `ad_on_screen`, `prompt_on_screen`, `screen_covered`,
+  `just_after_ad_or_paywall`, `no_settled_moment`.
+- **A standing state says nothing:** `switched_off` (`rate_us_auto_enabled=false`), `rated_five` and `cap_reached`
+  send no row, so a switched-off or finished schedule adds nothing to the stream. Read "never shown" from the absence
+  of `trigger=auto` taps, not from `rate_us_not_shown`.
+- **One ask per process, both ways.** Where our dialog was on screen (any door), the store card's
+  `store_review_not_requested` says **`reason=rate_us_dialog_this_session`**; where the card went first,
+  `rate_us_not_shown` says `store_card_this_session`.
+- **Filter on `trigger` before reading any dialog total**: `auto` rows are asked, every other door was pressed.
+
 ### 1.10 Layers
 
 `intent.screen` · `intent.action` · `response.outcome` · `response.gate` · `response.interruption` ·

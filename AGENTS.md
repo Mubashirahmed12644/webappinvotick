@@ -531,7 +531,8 @@ the list is wrong, not the app.**
   merged into `VC_113_VN_149` at `a4846d44`; the owner's schedule is `feat/store-review-schedule` @ `6b680e1f`,
   **not merged**; **not released**).
   - **`store_review_requested`**, coded, one per request, on Android and iOS. Nothing is asked of the user first,
-    and our own feedback dialog (stars → WhatsApp) is never connected to it.
+    and our own feedback dialog (stars → WhatsApp) is never connected to it — except that the two never go in one
+    process (0189): after our dialog was on screen, `store_review_not_requested` says `reason=rate_us_dialog_this_session`.
   - When: the 1st request after the 2nd `invoice_shared_success` (Remote Config `store_review_after_shares`), once the
     app has been in front 2 s with no ad, sheet, dialog or native question on screen.
   - Then the owner's schedule, `store_review_schedule_days` = `7,7,7,14,14,14,30,30,30`: the 2nd and 3rd request 7
@@ -557,6 +558,20 @@ the list is wrong, not the app.**
   - **`store_review_not_requested`**, coded, one per confirmed share that ended without a request: `reason`, `trigger`,
     `share_count`, `share_threshold`, `request_number`, `days_of_use`; `closed` (`ad|paywall`) and `since_ms` only on the
     reasons they explain. Not sent for `switched_off` or `schedule_done`.
+- **The rating-and-feedback dialog, from the build that carries `feat/rate-us-drawer` + `feat/rate-us-auto`**
+  (decision [0189](docs/decisions/0189-rate-us-in-the-drawer.md); **not merged, not released**; AGENTS-EVENTS §1.31).
+  - One dialog, every door: `trigger` = `top_bar`, `drawer` (Rate Us, Android), `drawer_feedback`, `exit`,
+    `invoice_saved`, `estimate_saved`, and **`auto`** (shown by itself, Android). The taps keep their old ids; the
+    press (`…submit_feedback_3`) carries `stars`, `outcome` (`play_store|play_store_unavailable|feedback|note`),
+    `trigger`, and on a Send `feedback_topics`, `has_text`, `sent=true`; the close carries `method`, `had_input`,
+    `step`, `trigger`; a star tap `stars` + `trigger`. New auto id: `feedback_topic` (`topic`, `selected`, `trigger`).
+  - **Shown by itself (Android only)** after a confirmed invoice share, once the user is back and settled 5 s: at most
+    once per `rate_us_gap_days` (30), `rate_us_max_auto_shows` (3) per install, never after five stars from any door,
+    not for 2× the gap after one to four, never in a process where the store card went, and never with
+    `rate_us_auto_enabled` = `false` (the off switch; all three keys read as text, absent = default; iOS is hard off).
+    A showing closed unanswered is counted. It opens the same dialog with the drawer's ids and `trigger=auto`.
+  - **`rate_us_not_shown`**, coded, at most one per share: `reason`, `trigger=invoice_share`, `auto_shows`,
+    `days_of_use`. Silent for the standing states (`switched_off`, `rated_five`, `cap_reached`).
 - **Notifications:** `notification_permission_shown` / `_allowed` / `_denied`
 - **Screen Map signals, from the build that carries `feat/screen-map-app-signals`** (off `VC_113_VN_149`, **not
   merged, not released**; decision [0183](docs/decisions/0183-the-screen-map-measures-the-tour-dead-taps-and-ad-clicks.md),

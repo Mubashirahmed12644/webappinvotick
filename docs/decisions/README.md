@@ -104,3 +104,4 @@ Numbering: next free number, zero-padded to 4.
 - [0186 — Google Play's update prompt is counted from the check to the landing](0186-the-play-update-prompt-is-counted-from-check-to-landing.md)
 - [0187 — Portuguese, Spanish and Arabic, with one shared English holdout](0187-portuguese-spanish-and-arabic-with-one-shared-holdout.md)
 - [0188 — Ad requests follow Google's consent rules, and the returning splash wait gets a 50/50 test](0188-ad-requests-follow-googles-consent-rules.md)
+- [0189 — Rate Us: one feedback dialog, five stars opens our Play Store page (Android only); it also shows itself after a share, with an off switch](0189-rate-us-in-the-drawer.md)
