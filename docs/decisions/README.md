@@ -112,3 +112,4 @@ Numbering: next free number, zero-padded to 4.
 - [0194 — A received invoice is one row, whatever its links](0194-a-received-invoice-is-one-row-whatever-its-links.md)
 - [0195 — A deleted invoice takes its own payments with it](0195-a-deleted-invoice-takes-its-own-payments.md)
 - [0196 — A local country file answers when `ip_records` does not know the address yet](0196-a-local-country-file-answers-when-ip-records-does-not-know-the-address-yet.md)
+- [0197 — The PDF viewer records its taps, and a Download says how it ended](0197-the-pdf-viewer-records-its-taps-and-a-download-says-how-it-ended.md)

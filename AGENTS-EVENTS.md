@@ -850,6 +850,31 @@ the saved estimate left the More menu for the top bar: one tap instead of two.
   0193 is measured: before, 619 of the 1,776 phones that saw the saved invoice opened More (30 days to 2026-09-30),
   and 344 of them pressed Edit.
 
+### 1.34 Every window provides the tap logger; a result nobody presses is one coded row per press. *(decided 2026-09-30)*
+
+Decision [0197](docs/decisions/0197-the-pdf-viewer-records-its-taps-and-a-download-says-how-it-ended.md).
+
+**What went wrong.** `PdfViewerActivity` ("Open with" → Invotick) sets its own content, and the auto-tap logger was a
+lambda inside `App()`, which is `MainActivity`'s composition only. Its four buttons carried stable ids and sent **0
+rows in 60 days, in every build, debug included**. Nothing failed: `guardedTrackedClick` found no logger and did
+what a preview does. Separately, a press of Download PDF (2,360 on the saved invoice in 30 days) ended in a toast and
+nowhere else, so whether a file was written was not knowable.
+
+The rules:
+- **An id is not a row.** A window that sets its own content must provide `LocalUiActionLogger` and `LocalScreenId`,
+  from the one `AutoTapLogger.create`. Before trusting a screen's taps, count rows under its ids (§2.1) — a stable id
+  with 0 rows is a missing logger until proven otherwise.
+- **A screen outside the nav hosts names itself** with the same string its `screen_view` carries (§1.2).
+- **The system Back is the close button's event with `method=back_press`**, sent on the auto channel (§1.11), then
+  passed on unchanged.
+- **A result that arrives after the press is one coded event per press** (§1.23): `pdf_download_result` (the in-app
+  Downloads) and `pdf_print_result` (the viewer's Print / Save as PDF). One answer per press; a cancelled screen sends
+  none (§1.19); a failure keeps its `error_shown` — one counts the attempt, the other the sentence read.
+
+Events: `tap:pdf_viewer:PdfViewerActivity.close_1` (`method`, `page_count`, `pages_seen`), `.share`, `.print`,
+`.create_yours_1`; `pdf_print_result` (`outcome`, `failed_at`, `exception_class`);
+`pdf_download_result` (`document`, `outcome`, `reason`, `elapsed_ms`).
+
 ### 1.10 Layers
 
 `intent.screen` · `intent.action` · `response.outcome` · `response.gate` · `response.interruption` ·

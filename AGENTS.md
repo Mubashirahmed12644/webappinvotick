@@ -598,6 +598,18 @@ the list is wrong, not the app.**
     A showing closed unanswered is counted. It opens the same dialog with the drawer's ids and `trigger=auto`.
   - **`rate_us_not_shown`**, coded, at most one per share: `reason`, `trigger=invoice_share`, `auto_shows`,
     `days_of_use`. Silent for the standing states (`switched_off`, `rated_five`, `cap_reached`).
+- **The PDF viewer and Download results, from the build carrying app `feat/pdf-viewer-events` @ `de0df1c3a`** (off
+  `release/1.5.1`, **not merged**; decision
+  [0197](docs/decisions/0197-the-pdf-viewer-records-its-taps-and-a-download-says-how-it-ended.md)).
+  - The viewer ("Open with" → Invotick, Android only) sent **0 rows ever** from its buttons: no tap logger was provided
+    there. Now: `tap:pdf_viewer:PdfViewerActivity.close_1` (`method` = `close_button|back_press`, `page_count`,
+    `pages_seen`), `.share`, `.print`, `.create_yours_1`; `screen_view pdf_viewer` from 0190.
+  - **`pdf_print_result`**, coded, one per Print press: `outcome` (`sent|cancelled|failed|launch_failed|unknown_<n>`),
+    `failed_at`, `exception_class`. `sent` does not say file or paper (the printer's service is hidden API).
+  - **`pdf_download_result`**, coded, one per Download PDF press, Android and iOS: `document`
+    (`invoice|estimate|ledger|received_invoice`), `outcome` (`saved|failed|sheet_shown|refused`), `reason`
+    (`not_loaded`), `elapsed_ms`. Payment slip is left out (Payments review on hold).
+  - The received invoice's save failure now reports `error_shown export/invoice`; it was never counted before.
 - **Notifications:** `notification_permission_shown` / `_allowed` / `_denied`
 - **Screen Map signals, from the build that carries `feat/screen-map-app-signals`** (off `VC_113_VN_149`, **not
   merged, not released**; decision [0183](docs/decisions/0183-the-screen-map-measures-the-tour-dead-taps-and-ad-clicks.md),
