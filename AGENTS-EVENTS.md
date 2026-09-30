@@ -95,7 +95,9 @@ nav shell may set it.
 The owner's rule, in their words: *"tm automatic waly ko meaningful banao gy, na ky meaningful ky
 liye alag sy aik or manual coding likh do."* A coded call is allowed **only where automatic cannot
 reach** — for a long time that was exactly one place, the ad dialog, which is neither a route nor a
-sheet.
+sheet. *(2026-09-30, decision 0199: the ad dialog no longer is one. Its presses are the buttons' own taps
+now — `watch_ad_click`, `ad_dailog_premium_click` — and its ✕ is reported once, by `ad_dialog_dismissed`, which also
+covers back/outside and carries the draft's outcome.)*
 
 From 2026-09-23 there is a **second**, and it passes the same test for a sharper reason: the Google
 UMP consent form (`screen_view` for `consent_form`, decision 0162). It is not our composable at all —
@@ -281,6 +283,25 @@ somebody meant.
 > `LocalUiActionLogger.current ?: return onClick`, which hands back the caller's own lambda in
 > release builds: a guard behind that line protects debug devices and nobody else.
 
+**The window is measured on the finger's clock, not the app's.** *(2026-09-30, decision
+[0199](docs/decisions/0199-a-tap-is-timed-by-the-finger-and-one-press-is-one-event.md))* The gate compares the
+pointer events' own times (`PointerInputChange.uptimeMillis`), read by a non-consuming `pointerInput` on the control
+between the event's Initial and Final passes. The clock is only the fallback for a click with no finger behind it
+(TalkBack, keyboard), and the two are never compared with each other.
+
+> **Incident (Pixel, 2026-09-30).** Two taps 100–150 ms apart on "Receive Payment" sent `more_receive_payment_click`
+> twice, 493–536 ms apart, 3/3 tries; the dashboard FAB sent `db_create_invoice_fab_click` twice, 807 ms apart, the
+> second under the screen the first had opened. The first press took the main thread for ~530 ms (`Skipped 64
+> frames`), the second waited behind it, and a gate that stamped a tap when it was *handled* saw it 530 ms late. On a
+> Save whose first press is that slow, the action itself could run twice.
+
+**A control that does not pass through the gate has no guard at all.** `guardedTrackedClick` returns a `GuardedClick`
+(`onClick` + `touchTime`), so a call site that passes on only the lambda does not compile, and
+`EveryPressPassesTheGateTest` fails on any Material control or raw click modifier whose handler is not gated. The
+sweep that added it found **118** such controls — among them every list screen's row, where a raw `toggleable` after
+the tracked clickable took every tap (`list_ClientListScreen.client_item_4`: 0 rows ever). Two click handlers chained
+on one node is the same bug as no gate: the inner one wins.
+
 ### 1.11 When one press produces two events, the UI layer keeps it. *(decided 2026-09-05)*
 
 An `analyticsId` / `navigationAnalyticsId` on the clickable **and** an `analytics.trackClick` in the
@@ -322,6 +343,15 @@ that reads it lists the old spellings too.
 > (`first_ad_moment` | `privacy_options`) — the shape decision 0155 gave the paywall. Nothing is
 > lost, because the coded call was carrying no parameter the tap could not (§1.1). The cheapest time
 > to apply this rule is before the event exists.
+
+**The second sweep, 2026-09-30 (decision [0199](docs/decisions/0199-a-tap-is-timed-by-the-finger-and-one-press-is-one-event.md)).**
+Eighteen presses were still two events in production. The survivor is the **name with the history**, moved onto the
+button when it was the coded one (`create_inv_saved_click` 7,167 rows in 30 days against `invoice_action_bar_secondary`
+602), with the coded call's parameters (`source` on the discard dialog's four presses). Where the coded event is an
+**outcome reached by routes the button cannot see** — the ad gate's ✕ (`ad_dialog_dismissed`), the exit dialog's
+Stay and Exit (`app_exit_cancelled` / `app_exit_confirmed`, which gained `method`) — the outcome is the one row and the
+button is guarded but silent. `OnePressArrivesUnderOneNameTest` fails when a name is sent by a button and by a
+`trackClick`, or when a retired twin comes back.
 
 ### 1.12 A dimension is only as alive as the row it hangs on. *(decided 2026-09-05)*
 

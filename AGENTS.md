@@ -407,6 +407,28 @@ the list is wrong, not the app.**
   minimum that clears validation** — the G1 question. Putting those back means **parameters on the
   surviving event** (`AGENTS-EVENTS.md` §1.1), never a second event. *For the item, answered from 1.4.9:
   `Item_added` carries them (below).*
+- ⚠️ **1.5.1 (branch `fix/tap-gate-uses-touch-time`, decision
+  [0199](docs/decisions/0199-a-tap-is-timed-by-the-finger-and-one-press-is-one-event.md)) — one press, one event, for
+  eighteen more presses.** The survivor is the name with the history, from the button; release rows in the 30 days to
+  2026-09-30, our phones excluded:
+
+  | Press | Survives (auto) | Gone |
+  |:--|:--|:--|
+  | Invoice / estimate Save | `create_inv_saved_click` (7,167) / `create_est_saved_click` (151) | `invoice_action_bar_secondary` (602) / `esitmated_save_click` (151) |
+  | Discard dialog ✕ · Discard · Keep editing | `discard_dialog_closed` · `discard_confirmed` · `discard_cancelled`, each with `source` | `…DiscardChangesDialog.close_1`, `create_inv_discard_click`, `…keep_editing_4` |
+  | Invoice Save as draft | `Draft_click` (+ `source`) | `…discard_changes_dialog_2`, **`Saved_clicked`** |
+  | Ad gate Watch ad · Premium | `watch_ad_click` · `ad_dailog_premium_click`, with their parameters | `AdOrPremiumDialog.loading_ad_2` · `.go_premium_3` |
+  | Guest-merge ✕ · estimate Convert · paywall cards | `guest_merge_notice_dismissed` · `estimate_converted_to_invoice` · `p_*_click` | `GuestMergeNoticeStrip.dismiss_1` · `dropdown Convert to Invoice` · `…hero_feature_card_*` |
+  | Business form toggle · category | `business_form.toggle_details` · `business_form.select_category` | `BusinessFormScreen.business_form_content_1` · that field's `TextFiedl.invotick_clickable_text_field_2` |
+  | Ad gate ✕ · exit Stay · exit Exit | the outcome only: `ad_dialog_dismissed` · `app_exit_cancelled` · `app_exit_confirmed` | `AdOrPremiumDialog.dismiss_1` · `exit_dailog_stay_click` · `app_exit_click` |
+
+  **`app_exit_confirmed` / `app_exit_cancelled` gain `method`** (`exit_button|after_feedback|stay_button|
+  back_or_outside|sign_in`). Counts for these presses **halve** at 1.5.1: the fix, not behaviour. No journey query
+  changes (they read the survivors); the Screen Map's dialog gates must add `ad_dailog_premium_click` and
+  `ad_dialog_dismissed` (0199). `create_inv_saved_click`, `watch_ad_click` and `ad_dailog_premium_click` can now be
+  switched off from the panel: **never deny them.** The same build also passes **118 more controls** through the
+  double-tap gate (list rows, menus, cards, chips, the bottom bar), so new `tap:` names arrive, and the gate now
+  compares **the finger's own time**, not when the app got to the tap (AGENTS-EVENTS §1.9a).
 - **Abandonment:** a sheet's **own per-sheet close id** (`invoice_create_client_screen_close`, …)
   carries `method` (`close_button` | `swipe` | `scrim_or_back`) and `had_input`. There is **no**
   separate dismissal event: one action, one event, with parameters — decision
