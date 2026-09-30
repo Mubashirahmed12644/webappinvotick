@@ -68,3 +68,45 @@ the app, had no row at all.
    on screen. The press is recorded; no result ever follows. Hide it on iOS, or build it?
 3. Should the viewer's Share report which app was picked, like `invoice_shared_success`'s `target`? It would be a new
    event (a received PDF is not the sender's own invoice, so it must not reuse that name, §1.17).
+
+## Addendum 2026-09-30 — the owner's three answers
+
+App: `feat/pdf-viewer-events` @ `3fa5c785f` (on top of `de0df1c3a`). Not merged, not released. Gate
+(`--rerun-tasks`, every XML): Android 2390 (+3), jvm 130, iOS-sim 138, 0 failures; `xcodebuild` BUILD SUCCEEDED. Red
+without the change: the share tests fail 2 of 3.
+
+**Verified on a fresh iPhone 17 / iOS 26.5 Simulator** (our own share link `49iu…`, eaglegroup005): a one-page
+595 × 842 pt PDF with the invoice drawn, "Save to Files" up, `pdf_download_result` `sheet_shown` `elapsed_ms=1194`; an
+early press gave `refused` / `not_loaded`. Two traps found there and fixed: WebKit does not paint a web view outside
+the window (the first PDFs were the loading page), and the bundle's `__setInvoice` is still undefined at
+`didFinishNavigation` (the invoice handed in then was dropped). The PDF shows the sheet on the renderer's desk with a
+small margin, as Android's does.
+
+1. **"Pehly wo report kero"** — a Share whose chooser never opens is **counted, not told**. No sentence and no
+   `error_shown` yet. It is `outcome=launch_failed` on the share's result event (below), the shape Print's
+   `launch_failed` already has. **What past data can say about it: nothing.** The viewer sent 0 rows of any kind in
+   the 60 days to 2026-09-30 (no tap, no `screen_view`, no row with `screen_name = 'pdf_viewer'`), and the old code
+   swallowed the failure inside a `runCatching` with no event and no sentence. So the count starts from this build.
+2. **"Feature bana do"** — the received invoice's **Download PDF works on iPhone.** It was an empty function while
+   the button was on screen. The invoice is written as one A4 page from the same offline bundle the screen shows
+   (`WKWebView.createPDF`, core/ui `InvoiceHtmlPdf`) and handed to "Save to Files", the sheet the ledger's Download
+   opens. It reports `pdf_download_result` `document=received_invoice` with `outcome=sheet_shown` (what the person
+   picks in the system sheet is not reported to us), or `failed` with the shared `ShownError` sentence and
+   `error_shown export/invoice`.
+3. **"Haan, gino"** — **`pdf_share_result`**, coded, one per Share press that reaches an answer:
+   - `outcome` = `target_picked` | `launch_failed`;
+   - `target` on `target_picked`: the picked app's package, the same value `invoice_shared_success.target` carries,
+     from the same confirmed chooser (`startConfirmedShareChooser` + `EXTRA_CHOSEN_COMPONENT`); absent when the
+     platform named none (§1.7);
+   - `exception_class` on `launch_failed`.
+   - A chooser closed without a pick sends nothing: Android reports picks, never cancels. "Opened and closed" is the
+     Share tap with no result after it.
+   - One event, with the outcome as a parameter (§1.1), not a `_failed` twin. Not `invoice_shared_success`: a PDF
+     somebody else sent is not the person's own invoice (§1.17).
+   - **iOS:** the viewer does not exist on iPhone (no "Open with" for PDFs), so there is nothing to send there.
+
+### Rejected in the addendum
+- **`launch_failed` as its own event** (`pdf_share_failed`): one press, one result event, the outcome a parameter.
+- **A sentence for the failed share now.** The owner wants the count first.
+- **Reporting the "Save to Files" choice on iPhone** (saved vs cancelled) by a picker delegate. It would give the
+  ledger's and the received invoice's `sheet_shown` two different meanings in one release; do both together, later.

@@ -610,6 +610,12 @@ the list is wrong, not the app.**
     (`invoice|estimate|ledger|received_invoice`), `outcome` (`saved|failed|sheet_shown|refused`), `reason`
     (`not_loaded`), `elapsed_ms`. Payment slip is left out (Payments review on hold).
   - The received invoice's save failure now reports `error_shown export/invoice`; it was never counted before.
+  - **`pdf_share_result`**, coded, one per viewer Share press that reaches an answer (addendum, the owner
+    2026-09-30): `outcome` (`target_picked|launch_failed`), `target` (the picked app's package, as
+    `invoice_shared_success.target`), `exception_class`. A chooser closed without a pick sends nothing. A failed Share is
+    counted only — no sentence, no `error_shown`, until the owner decides. Android only (no viewer on iPhone).
+  - **iPhone's received-invoice Download PDF works** from the same build (it did nothing before): `pdf_download_result`
+    `document=received_invoice`, `outcome` `sheet_shown` (Save to Files) or `failed` + `error_shown`.
 - **Notifications:** `notification_permission_shown` / `_allowed` / `_denied`
 - **Screen Map signals, from the build that carries `feat/screen-map-app-signals`** (off `VC_113_VN_149`, **not
   merged, not released**; decision [0183](docs/decisions/0183-the-screen-map-measures-the-tour-dead-taps-and-ad-clicks.md),

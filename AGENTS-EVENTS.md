@@ -875,6 +875,13 @@ Events: `tap:pdf_viewer:PdfViewerActivity.close_1` (`method`, `page_count`, `pag
 `.create_yours_1`; `pdf_print_result` (`outcome`, `failed_at`, `exception_class`);
 `pdf_download_result` (`document`, `outcome`, `reason`, `elapsed_ms`).
 
+**Addendum (the owner, 2026-09-30).** The viewer's Share reports **`pdf_share_result`** (`outcome` =
+`target_picked|launch_failed`, `target` = the picked package as `invoice_shared_success.target` carries it,
+`exception_class`), through the one confirmed chooser. A failure that no sentence tells the person about yet is still
+counted as an outcome — the count comes first, the sentence is the owner's later call. A cancelled chooser sends nothing;
+it is the tap with no result. The received invoice's Download PDF now works on iPhone and reports
+`pdf_download_result` with `sheet_shown` or `failed`.
+
 ### 1.10 Layers
 
 `intent.screen` · `intent.action` · `response.outcome` · `response.gate` · `response.interruption` ·
