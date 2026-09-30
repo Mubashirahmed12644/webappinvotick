@@ -799,6 +799,30 @@ The rating dialog every door opens (`FeedbackDialog`) also shows itself after a 
   `store_review_not_requested` says **`reason=rate_us_dialog_this_session`**; where the card went first,
   `rate_us_not_shown` says `store_card_this_session`.
 - **Filter on `trigger` before reading any dialog total**: `auto` rows are asked, every other door was pressed.
+### 1.32 A sender's own open is one event, and its parameters say whose it was and how it ended. *(decided 2026-09-30)*
+
+A document made on this phone is never answered on this phone (decision
+[0191](docs/decisions/0191-a-document-made-on-this-phone-is-never-answered-on-it.md)). Before this, the check missed
+estimates, other accounts on the phone and every debug build. So a sender's own look arrived as a receiver's
+`shared_invoice_opened`: 16 of the 17 first estimate-link opens in the app, 2026-08-25 to 09-29. Each one also dated
+the link "viewed" for its sender.
+
+- **`shared_invoice_opened_by_owner` carries `account`.**
+  - `open`: the open account made it, and it opens as that account's saved document.
+  - `other`: another account or guest on this phone made it.
+- **With `account=other` it fires once per screen, when the open is settled**, never at the press:
+  - **`switched=true`**: that account opened, and the document is on its saved screen;
+  - **`switched=false`**: the person stayed, and **`reason`** says why:
+    - `cancelled`: Cancel, a swipe or Back;
+    - `no_place`: nothing to switch to, so no question was asked;
+    - `busy`, `not_on_this_phone`, `failed`, `too_many_accounts`: the switch's own refusal, in its own words.
+      `failed` also sends `error_shown`, because the person reads it.
+- **The sheet's two buttons carry no tap id**, like Decline and Approve (§1.11). The coded row is the result. A tap id
+  beside it would count one press twice.
+- **`shared_invoice_decision_failed` gains `reason=sender`.** The server refused the answer (409, `viewerIsSender`)
+  because the asking account made the document. Nothing was recorded, and the phone's own check had missed it.
+- **Rows up to the build before this one have no `account`.** Their estimate-link `shared_invoice_opened` rows include
+  senders. Exclude a device's opens of its own user's links before reading them as receivers.
 
 ### 1.10 Layers
 
