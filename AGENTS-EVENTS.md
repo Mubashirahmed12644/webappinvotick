@@ -134,6 +134,13 @@ starting with `tap:` is left alone). One gate, 550 ids, no call site edited — 
 reaches the ones somebody remembered. `InvotickButton` was the proof it keeps happening: it held a
 fourth copy of the emit, so it bypassed both the screen and the double-tap guard.
 
+> **Record (1.5.1, 2026-09-30).** The received invoice's "Create your own invoice — free" is drawn in three states and
+> had an id in two: the answered state and the error state both send `ReceivedInvoiceScreen.create_your_own_invoice_2`,
+> and the pending state — the one most receivers see first — sent nothing at all. Rather than rename an id with history
+> (§1.8) or reuse it a third time, the pending button got its own stable id,
+> `ReceivedInvoiceScreen.create_your_own_invoice_pending`. An auto-captured tap has no parameter channel, so a `state`
+> parameter was not an option. Count the action as the two ids together; split by id when the state matters.
+
 Unique is now structural; **meaningful is not**. 182 of the 550 labels say nothing (`tap_2`, `btn_3`,
 `ib_1`), and 141 of those have nothing in the surrounding code to name them from. They are listed in
 `invoice-kmp-app/docs/AUTO-EVENT-NAMES-REVIEW.md`, each to be named or deleted — some are not
@@ -564,6 +571,12 @@ Two defects, one shape: the event was sent from a place where the thing it names
 > **`consent_decision`, `dismissed` for a person who pressed Consent.** A 4 s wait for UMP started before the form
 > appeared. When it ran out, the flow wrote its one row with what UMP held then (nothing chosen yet), and the real
 > answer arrived as a second row and was dropped.
+
+**`payment_added` from 1.5.1** gains two parameters on the invoice screens (R5 of the double-payments investigation,
+2026-09-30), measurement only: `over_balance` (`true|false` — with this payment the invoice's payments exceed its total,
+to the cent) and `entry_count` (payments one save wrote for the invoice). `source` gains `saved_invoice` (More →
+Receive Payment on the saved invoice). The Payments screen sends neither parameter: absent means not measured (§1.7),
+never `false` or `0`.
 
 The rules:
 - **Send a result where it becomes true**: after the write, after the store answers, after the form closes. Never on

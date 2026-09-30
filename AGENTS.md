@@ -349,6 +349,12 @@ the list is wrong, not the app.**
   - `source` = `create_invoice|edit_invoice|payments_screen`, `invoice_count` = invoice rows written. A receipt the
     Payments screen splits over N invoices is **one** row with `invoice_count=N`. No amount, reference or id;
   - so until 1.4.9 spreads, **G1's payment leg reads zero because nothing measured it**, not because nobody paid.
+  - **from 1.5.1** (R5 of the double-payments investigation, 2026-09-30; measurement only, nothing is refused on it):
+    `source` also takes `saved_invoice` (the saved invoice's More → Receive Payment), and the invoice screens add
+    `over_balance` (`true|false`: with this payment the invoice's payments exceed its total, to the cent — cash
+    rounding and advances are real) and `entry_count` (payments the same save wrote for the invoice; 2+ is a split or
+    a payment entered twice). The Payments screen caps each share at the balance and sends neither: absent = not
+    measured (§1.7 of `AGENTS-EVENTS.md`).
 - **Form-typing proxies:** `business_form_text_typed`, `client_form_text_add`, `item_form_text_add` —
   fired **once per form**, on the first non-blank keystroke in the *name* field. They prove the user
   started typing, **not** that the data was real. Plus `client_add_success` and `Item_added`.
@@ -408,6 +414,13 @@ the list is wrong, not the app.**
   auto-captured, so the **send policy** decides whether they ship; do not add a channel that bypasses it.
 - **Auth:** `login_success`, `register_success`, `guest_login_success`, **`guest_login_failed`**,
   `otp_verify_success`, `guest_merge_notice_dismissed`
+- **Received invoice taps, from 1.5.1** (auto-captured, `tap:received_invoice:ReceivedInvoiceScreen.<id>`):
+  - `create_your_own_invoice_pending` — "Create your own invoice — free" while the invoice still waits for an answer.
+    Until 1.5.1 that button sent **nothing**: only the answered and error states sent `create_your_own_invoice_2`, which
+    keeps its name and history. **A G2 count of "made their own" must read both ids**, and rows before 1.5.1 miss every
+    receiver who pressed it before answering.
+  - `note_for_sender` — the one-line note row in the fixed bottom bar, which opens into the field (the note moved out
+    of the scroll when the page became one whole A4 at once). `i_ve_paid`, `download_pdf` and `translate` keep their ids.
 - **Growth (G2), receiver side — in the app:** `shared_invoice_opened`,
   `shared_invoice_opened_by_owner`, `shared_invoice_create_own_click`, `shared_invoice_approved`,
   `shared_invoice_rejected`, `shared_invoice_open_failed`, `shared_invoice_decision_failed`,
