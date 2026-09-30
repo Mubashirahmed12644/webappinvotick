@@ -67,7 +67,33 @@ export function formatMoney(amount: number | string, currency = "USD", lang: Fig
   }
 }
 
-// ─── French documents (decision 0185) ───────────────────────────────────────────────────────────
+/**
+ * BALANCE DUE as the document shows it (owner's decision, 2026-09-30).
+ *
+ * A client may pay more than an invoice's total — an advance. The balance is then negative, and it is shown the
+ * way the app's invoice card already shows it: the figure in brackets, the symbol where that language puts it —
+ * `Rs(1,500.00)`, `$(1,500.00)`, `(1 500,00) €`. The amount is formatMoney's own, digit for digit; only the
+ * brackets are added around the figure, never a minus sign and never a different number. The app's snapshot used
+ * to send 0 here; a balance that is zero or positive is formatMoney's output, byte for byte.
+ */
+export function formatBalanceDue(amount: number | string, currency = "USD", lang: FigureLanguage = "en"): string {
+  const shownValue = roundShown((typeof amount === "string" ? parseFloat(amount) : amount) || 0);
+  if (!(shownValue < 0)) return formatMoney(amount, currency, lang);
+  const shown = formatMoney(-shownValue, currency, lang);
+  // The figure is everything from its first digit to its last; the symbol and its gap stay outside.
+  let first = -1;
+  let last = -1;
+  for (let i = 0; i < shown.length; i++) {
+    if (shown[i] >= "0" && shown[i] <= "9") {
+      if (first < 0) first = i;
+      last = i;
+    }
+  }
+  if (first < 0) return formatMoney(amount, currency, lang);
+  return `${shown.slice(0, first)}(${shown.slice(first, last + 1)})${shown.slice(last + 1)}`;
+}
+
+// ─── French documents (decision 0185)───────────────────────────────────────────────────────────
 //
 // A document written in French shows its figures the French way: `1 234,50 €` — a narrow no-break space
 // (U+202F) between thousands, a decimal comma, and the symbol AFTER the amount behind a no-break space

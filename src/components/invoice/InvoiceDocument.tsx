@@ -2,7 +2,7 @@
 import { footerMode, type OwnFooter } from "@/lib/invotick-footer";
 import type { InvoiceRenderData, RenderItem } from "@/lib/data";
 import { discountTypeOf } from "@/lib/discount-type";
-import { formatMoney, formatDate, formatFixed2, formatPercent, hexToRgba, contrastText, onTint, blendOnWhite } from "@/lib/format";
+import { formatBalanceDue, formatMoney, formatDate, formatFixed2, formatPercent, hexToRgba, contrastText, onTint, blendOnWhite } from "@/lib/format";
 import { documentDir, documentLabelsFor, documentLanguage, labelSeparator, type DocumentLanguage } from "@/lib/document-language";
 import { imageProxyUrl } from "@/lib/image";
 import { BRAND_LOGO } from "@/lib/givens";
@@ -241,7 +241,9 @@ export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hide
                 {/* AMOUNT PAID / BALANCE DUE — an invoice's two lower rungs, and nonsense on an
                     estimate: nothing has been paid against a price that is still being quoted, and
                     a "BALANCE DUE" on a quotation reads as a bill the client never agreed to. On an
-                    estimate TOTAL is the last row, so it takes the dark hero treatment instead. */}
+                    estimate TOTAL is the last row, so it takes the dark hero treatment instead.
+                    Paid past the total (an advance), BALANCE DUE is the negative figure in brackets,
+                    `Rs(1,500.00)`, as the app's invoice card writes it — never 0 (formatBalanceDue). */}
                 {!isEstimate && (
                   <>
                     <div className="flex items-center justify-between px-3 py-2 text-[15px] font-extrabold" style={{ backgroundColor: hexToRgba(color, 0.34), color: contrastText(blendOnWhite(color, 0.34)) }}>
@@ -250,7 +252,7 @@ export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hide
                     </div>
                     <div className="flex items-center justify-between px-3 py-2 text-[15px] font-extrabold" style={{ backgroundColor: color, color: onColor }}>
                       <span>{labels.balanceDue}</span>
-                      <span>{iso(formatMoney(data.balanceDue ?? data.total, cur, lang))}</span>
+                      <span>{iso(formatBalanceDue(data.balanceDue ?? data.total, cur, lang))}</span>
                     </div>
                   </>
                 )}
