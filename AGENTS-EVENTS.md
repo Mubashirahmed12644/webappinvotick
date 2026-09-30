@@ -823,6 +823,32 @@ the link "viewed" for its sender.
   because the asking account made the document. Nothing was recorded, and the phone's own check had missed it.
 - **Rows up to the build before this one have no `account`.** Their estimate-link `shared_invoice_opened` rows include
   senders. Exclude a device's opens of its own user's links before reading them as receivers.
+### 1.33 A control that moves to another place gets a name of its own; the old name keeps its history. *(decided 2026-09-30)*
+
+Decision [0193](docs/decisions/0193-edit-is-one-tap-in-the-saved-documents-top-bar.md). Edit on the saved invoice and
+the saved estimate left the More menu for the top bar: one tap instead of two.
+
+| | Name | Screens | Builds |
+|---|---|---|---|
+| Old: More → Edit | `more_edit_click` | both, told apart only by `screen` (`saved_inv_scr` / `save_estimate_scr`) | up to 1.5.0 (versionCode 114) |
+| New: the top bar's Edit | `saved_inv_edit_click` · `saved_est_edit_click` | one name per screen | the first build after 1.5.0 (versionCode > 114) |
+
+- **Auto-captured, no coded twin** (§1.3, §1.11). The press still sends the same `EditClicked` intent, and nothing in
+  the view model emits.
+- **Why a new name, not the old one.** The old name meant two presses — More, then Edit — and a funnel reads it that
+  way. Kept on a button that never opens More, it would describe a path nobody took. It was also one name for two
+  screens (§1.4); a new control is the moment to give each screen its own.
+- **Why not `rename-applied`.** It moves the config row to the new name and deletes the old one (§1.8), so every old
+  row would lose its display name, and one old name cannot move to two new ones. `more_edit_click` stays in the panel
+  as it is. It is deliberately **not** in `tools/analytics/renamed-events.tsv`.
+- **Joining the two.** *Pressed Edit on the saved invoice* = `more_edit_click` with `screen = 'saved_inv_scr'` ∪
+  `saved_inv_edit_click`; the estimate is `more_edit_click` with `screen = 'save_estimate_scr'` ∪
+  `saved_est_edit_click`. No build sends both — Edit left More in the same change — so nothing is counted twice.
+  Split by `app_version_code` whenever the window spans the release.
+- **The More count changes meaning at the same build.** `saved_inv_more_click` and `saved_estimate_more_click` no
+  longer lead to Edit and are expected to fall. That is Edit moving out, not people editing less — and it is how
+  0193 is measured: before, 619 of the 1,776 phones that saw the saved invoice opened More (30 days to 2026-09-30),
+  and 344 of them pressed Edit.
 
 ### 1.10 Layers
 
@@ -1186,6 +1212,11 @@ list containing none of the devices being tested on.
 **Renaming**
 - [ ] Old rows keep the old name. Say where the history splits.
 - [ ] Anything keyed on the name — panel config, allowlist, `ScreenFlowRepository` — moves with it.
+
+**Moving a control to another place** (§1.33)
+- [ ] It gets a name of its own; the old name keeps its rows and its config row. Not a rename, not `rename-applied`.
+- [ ] Write the join (old name ∪ new name, and the build that switches) where the funnel reads it.
+- [ ] Remove the old door in the same change, or say why both stay — two doors split one action across two names.
 
 **Removing**
 - [ ] Coded events ignore the allowlist; deleting the call is the only way to stop one.
