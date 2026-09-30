@@ -1016,6 +1016,55 @@ Full detail in `memory/mysql-binary-uuid-and-test-clock.md`. In native queries:
     is only whether a device existed. Since the fix: 0 of 7,053 first opens without a row. Report:
     `kaam/research/2026-09-29-installs-without-session.md`.
 
+17. **A first-open experiment cannot run through Remote Config. It needs a bundled default for each arm and a local
+    assignment.** *(decided 2026-09-30, decision
+    [0190](docs/decisions/0190-a-splash-loss-names-its-way-out-its-phase-and-its-country.md))*
+    - The app-open wait is read from the stored Remote Config copy, and a fresh install has none. On the first open the
+      splash's own fetch had come back by `splash_ready` in **31 of 3,683** (study 2026-09-29, §6.2). So a Remote Config
+      A/B of anything the first open decides — the ad wait, whether the splash shows an ad — changes nothing on the
+      opens it is meant to change, and both arms read as the control.
+    - **How it must be built:**
+      1. **Every arm's value is compiled into the build** (a bundled default per arm), never fetched.
+      2. **The arm is dealt on the phone at the first open**, from a stable hash of the install's own id
+         (`app_instance_id`) into buckets, and stored, so the same phone keeps its arm. Remote Config may carry only the
+         **split** (for example `…_holdout_percent`, read as text with a bundled default, as 0185 does), and even that
+         applies only from the second open; the first open uses the bundled split.
+      3. **The arm rides on every event** as a stamp, and one coded `…_assigned` event marks the dealing (0185's shape).
+      4. **Compare arms on first opens only when the arm was dealt before the value was read.**
+    - **Every reading of the wait says which value applied:** `splash_ready.ad_wait_source` — `bundled` (nothing stored,
+      or Remote Config answered with our own default), `remote_cached` (stored by an earlier run), `remote_fresh`
+      (fetched during this run). Absent: a copy a build before 0190 stored, which does not say where it came from.
+      Filter on it before reading any `app_open_decision` timing as a test result. A returning-open A/B through Remote
+      Config does work — its rows read `remote_cached`.
+
+18. **Reading a splash loss: phase, reason, a process that sent nothing, a screen with no splash, and a country from
+    the server.** *(2026-09-30, decision 0190; app from the release after 1.4.9, backend after its deploy)*
+    - **`app_background.phase`** (`before_first_frame|loading|ad_hold|ad_showing|after_gate`) is the study's S0–S4,
+      taken from the same events on the phone: `screen_view splash_scr` ends S0, `splash_ready` ends S1, `ad_shown`
+      (`type=app_open`, `path=splash`) starts S3, `app_open_decision` (`path=splash`) starts S4, `first_screen_reached`
+      ends the splash for the life of the process. Absent after it. On Android it is taken at the **activity's** stop,
+      700 ms before `app_background` is sent, so a gate that decided in those 700 ms does not move the leaver.
+    - **`app_background.reason`** (Android only; absent on iOS): `back` (the activity was finishing, or a back press
+      within 3 s of the stop), `home_or_recents` (the user-leave hint), `screen_off`, `other_activity` (an activity we
+      started — share sheet, picker, camera, browser, Play — an in-app excursion, an ad click, or the ad's own activity
+      in front), `unknown` (a notification that opened another app, a call). `unknown` is a real answer: the platform
+      was asked and did not say. A leave in `ad_showing` with `other_activity` and an `ad_clicked` in the process is a
+      click; without one, the user left from the ad's screen (home, recents).
+    - **`app_cold_start.prev_ended_in_splash`**: `true` when the previous cold start of this install never reached a
+      first screen, with `prev_splash_phase`, `prev_splash_ms` (its `ms_since_start` when it entered that phase) and
+      `prev_process_id` (a join key, §1.18). `false` when it got past. Absent on a fresh install and on the first start
+      of the build that brings it. **A silent loss** is a `prev_ended_in_splash=true` whose `prev_process_id` has no
+      `app_background` — killed or crashed in the foreground before the queue flushed. With one, it is a leave that was
+      reported and then killed later, already counted by its `app_background`.
+    - **`screen_view pdf_viewer`** is Invotick in "Open with" for a PDF. It never had a splash, and until 0190 it
+      announced nothing, which put ~3 % of returning cold starts into S0 by mistake. Its `first_screen_reached` carries
+      `screen=pdf_viewer`: **exclude those processes from splash pass-through**, on both sides of the build boundary
+      (before it, they are the returning processes with no `screen_view` at all).
+    - **`params.country_source=ip`** marks an event whose `country` the server filled from `ip_records` because the
+      batch sent none. Never over the phone's own, never for `platform=Web`. Expect it on few first-open leavers: a new
+      phone's address reaches `ip_records` up to 3 h later (6.7 % were there already, 2026-09-22..28). A per-country
+      rate must say how much of it is `country_source=ip`, and `country IS NULL` stays unknown, never a country.
+
 ---
 
 ## 4. Admin panel rules
