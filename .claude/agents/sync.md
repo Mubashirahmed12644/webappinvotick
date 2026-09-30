@@ -162,6 +162,9 @@ Memory is dated observation. Verify any file:line against the code before relyin
     - Calibrated at a 320 MB test heap: without the cap, 33 of 641 tests failed with
       OutOfMemoryError; with it, 641/641 passed in 1m05s.
     - Prefer adding a test to an existing context class over creating a new one.
+13. **A received invoice is one row, whatever its links** (0194). The phone store keys received invoices by the
+    sender's `invoiceId` + `documentType`, not by token; the newest link wins, older rows are hidden, never deleted.
+    Guard: the received-list tests on `fix/received-list-one-row-safe-area`.
 
 ## Decided by the owner, 2026-09-11
 
