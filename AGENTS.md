@@ -422,10 +422,15 @@ the list is wrong, not the app.**
   | Business form toggle · category | `business_form.toggle_details` · `business_form.select_category` | `BusinessFormScreen.business_form_content_1` · that field's `TextFiedl.invotick_clickable_text_field_2` |
   | Ad gate ✕ · exit Stay · exit Exit | the outcome only: `ad_dialog_dismissed` · `app_exit_cancelled` · `app_exit_confirmed` | `AdOrPremiumDialog.dismiss_1` · `exit_dailog_stay_click` · `app_exit_click` |
 
+  | Created invoice (not a press) | `invoice_created_success` | `create_inv_completed_scr` (owner, 2026-09-30) |
+
   **`app_exit_confirmed` / `app_exit_cancelled` gain `method`** (`exit_button|after_feedback|stay_button|
   back_or_outside|sign_in`). Counts for these presses **halve** at 1.5.1: the fix, not behaviour. No journey query
   changes (they read the survivors); the Screen Map's dialog gates must add `ad_dailog_premium_click` and
-  `ad_dialog_dismissed` (0199). `create_inv_saved_click`, `watch_ad_click` and `ad_dailog_premium_click` can now be
+  `ad_dialog_dismissed` (0199, built on backend `feat/0199-screen-map-reads-the-surviving-names`, to go live before
+  1.5.1). Old rows of every retired name keep it; nothing new arrives under it. `invoice_screen_close`
+  `method=discard_confirmed` stays beside `discard_confirmed` (owner: "Dono rehne do"). `create_inv_saved_click`,
+  `watch_ad_click` and `ad_dailog_premium_click` can now be
   switched off from the panel: **never deny them.** The same build also passes **118 more controls** through the
   double-tap gate (list rows, menus, cards, chips, the bottom bar), so new `tap:` names arrive, and the gate now
   compares **the finger's own time**, not when the app got to the tap (AGENTS-EVENTS §1.9a).

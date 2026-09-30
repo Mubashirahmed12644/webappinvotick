@@ -1,9 +1,10 @@
 # 0199 — A tap is timed by the finger, and one press is one event
 
 - **Date:** 2026-09-30
-- **Status:** built, **not merged**. App: branch `fix/tap-gate-uses-touch-time` off `origin/release/1.5.1`
-  (`55efcd98c`). Docs: this branch. No schema change, no backend change in this decision (the backend follow-ups are
-  listed below and are not built).
+- **Status:** app **merged into `release/1.5.1`** (`a6eddc161`, 2026-09-30; branch `fix/tap-gate-uses-touch-time`
+  `41f9b8d45`). Backend follow-up built on `feat/0199-screen-map-reads-the-surviving-names` (`7cc77f5`), **not
+  deployed — it must be live before 1.5.1 ships**. Panel map on `feat/screen-map-navmap-1.5.1` (`9b33032`), not
+  deployed. Docs: this branch. No schema change.
 - **Follows:** [0024](0024-a-double-tap-is-stopped-at-the-button-not-counted-later.md) (the gate),
   [0037](0037-the-ui-layer-owns-the-press.md) (the UI layer owns the press), AGENTS-EVENTS §1.9a and §1.11.
 - **Evidence:** the Pixel run of 2026-09-30 (`kaam/research/pixel-checks-2026-09-30/events-filtered.txt`), and
@@ -88,12 +89,9 @@ this build.
   banao"): press + result, not twins.
 - **A press and what it opened** — `saved_inv_send_invoice` + `share_bottom_sheet_open`, the estimate's send +
   `estimate_share_sheet_opened`, any press + a permission prompt. Two facts (the Health Centre's `isByDesign`).
-- **`invoice_created_success` + `create_inv_completed_scr`** (2,880 / 2,879, 1 ms apart). One outcome, two coded names,
-  not a press. **Open question for the owner**: `create_inv_completed_scr` is read by nothing in the backend or the
-  panel; remove it?
 - **The discard press on the invoice screen still sends `invoice_screen_close` with `method=discard_confirmed`** beside
   `discard_confirmed`: the owner's rule for that screen (0037 addendum 3, "Aik event, sab maloomat us me") is one event
-  for leaving it. **Open question**: should that `method` go, now that `discard_confirmed` carries the press?
+  for leaving it. **Kept on purpose** — see the addendum.
 
 **Verified.** `OnePressArrivesUnderOneNameTest` (source floor): no name on both channels, the coded twins gone, each
 survivor on its button, the retired ids unsent, the exit outcomes carry `method`. Red with the production files put back
@@ -135,3 +133,31 @@ build that ships this.
   `app_version_code` across the boundary.
 - `create_inv_saved_click` and `watch_ad_click` now carry the screen the button was on, not the gateway's lagging one.
 - New tap names arrive from list rows, menus, cards and the bottom bar.
+
+## Addendum 2026-09-30 — the owner answers the two open questions
+
+1. **`invoice_created_success` + `create_inv_completed_scr`: "Haan, doosra hatao."** The create screen no longer sends
+   `create_inv_completed_scr` (it fired 1 ms after `invoice_created_success` for the same invoice, on both ways out —
+   2,879 against 2,880 in 30 days, read by nothing in the backend or the panel). `invoice_created_success` stays the one
+   event for a created invoice. Old rows keep the name; nothing new arrives under it from 1.5.1.
+   `OnePressArrivesUnderOneNameTest` fails if it is sent again. App commit `41f9b8d45`.
+2. **`invoice_screen_close` with `method=discard_confirmed` beside `discard_confirmed`: "Dono rehne do."** Both stay:
+   `discard_confirmed` is the dialog's answer (with `source`, and 0198's `had_payments` / `advance`), and
+   `invoice_screen_close` is the screen's one leave event with every route in `method` (0037 addendum 3). A reader that
+   counts discards reads `discard_confirmed`; one that counts ways off the screen reads `invoice_screen_close`. Do not
+   re-propose removing either without new evidence.
+
+### Built with it
+
+- **Merged into `release/1.5.1`** with 0198 (the shared delete dialog): the leave dialog's Discard is the button's own
+  `discard_confirmed` tap carrying `source` **and** 0198's `had_payments` / `advance`; the shared `DeleteInvoiceDialog`
+  already passes the gate with fixed ids, its confirm parameters on its own tap. Gate on the merge: Android 2428, jvm 148,
+  iOS-sim 178, 0 failures; dark gate 0 defects, 0 light pictures moved; `xcodebuild` Debug succeeded.
+- **Backend** (`7cc77f5`): the Screen Map's `gatePremium` also reads `ad_dailog_premium_click`, `gateDismiss` also reads
+  `ad_dialog_dismissed` with `method=close_button` (back/outside is not the ✕), both are counted on `ad_dialog_shown`, and
+  an old build's ✕ (its tap plus its dismissal) is counted once. No journey query needed a change. 1,687 tests, 0 failed.
+- **Panel** (`9b33032`): the navigation map follows 1.5.1's ids against the pipeline's release-114 pictures. Still open:
+  **30 screens the 114 pipeline pictures for the first time** have no navigation points yet (drawer, landing, exit,
+  feedback, delete and leave dialogs, sheets, auth screens); `npm run check:screen-map-nav -- --out
+  ../kaam/screen-map/out/114` lists them.
+
