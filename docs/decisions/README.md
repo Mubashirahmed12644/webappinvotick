@@ -107,5 +107,6 @@ Numbering: next free number, zero-padded to 4.
 - [0189 — Rate Us: one feedback dialog, five stars opens our Play Store page (Android only); it also shows itself after a share, with an off switch](0189-rate-us-in-the-drawer.md)
 - [0190 — A splash loss names its way out, its phase, and its country](0190-a-splash-loss-names-its-way-out-its-phase-and-its-country.md)
 - [0191 — A document made on this phone is never answered on it](0191-a-document-made-on-this-phone-is-never-answered-on-it.md)
+- [0192 — An overpaid invoice shows its balance due in brackets, as the card does](0192-an-overpaid-invoice-shows-its-balance-in-brackets.md)
 - [0195 — A deleted invoice takes its own payments with it](0195-a-deleted-invoice-takes-its-own-payments.md)
 - [0196 — A local country file answers when `ip_records` does not know the address yet](0196-a-local-country-file-answers-when-ip-records-does-not-know-the-address-yet.md)
