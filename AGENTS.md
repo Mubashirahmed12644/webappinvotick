@@ -335,7 +335,8 @@ the list is wrong, not the app.**
   `estimate_converted_to_invoice`
   - ⚠️ **`ci_celebration_shown` is not sent by any build since 1.4.1** (app `d6b4ada8` renamed it
     `create_inv_completed_scr`). Since 0149 that name fires on **every** create-mode save, not only on the
-    celebration. The celebration is `invoice_created_success.is_first_invoice=true`, and, from decision
+    celebration. **From 1.5.1 `create_inv_completed_scr` is not sent at all** (decision 0199 addendum, owner
+    2026-09-30): it was `invoice_created_success`'s 1 ms twin. `Saved_clicked` stops with it (0199). The celebration is `invoice_created_success.is_first_invoice=true`, and, from decision
     [0180](docs/decisions/0180-an-estimates-save-has-the-invoices-gate-and-its-first-is-celebrated.md),
     `estimated_success.is_first_estimate=true`.
 - **G1 primary — proof an invoice is real:** **`invoice_shared_success`** (fires only on a **confirmed**
