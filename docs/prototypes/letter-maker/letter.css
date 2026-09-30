@@ -1,0 +1,107 @@
+/* ── Invoice masthead, letterhead body and footer ────────────────────────────────────────────
+   Header and the three-column row are the invoice's, number for number, so a client who receives
+   an invoice in this template receives a letter in it. Below that line the letterhead's own
+   typography takes over: 11pt on a 22px baseline, every vertical space 11, 22 or 33.
+
+   One inset — 32px, the invoice's — carries all of it: masthead, row, body, contact strip and bar.
+   The earlier letterhead used 76px, but mixing the two would have left the body indented from the
+   row above it, which is the kind of half-alignment that reads as a mistake rather than a choice.
+   The paragraphs cap their MEASURE at 640px instead, so the column starts where everything else
+   does and still stops before prose runs to 135 characters.                                   */
+.sheet{width:794px;height:1123px;background:#fff;color:#1c1b1f;flex:none;display:flex;
+  flex-direction:column;overflow:hidden;box-shadow:0 12px 32px rgba(20,20,32,.2);border-radius:3px;
+  margin-bottom:22px}
+
+/* ── masthead: InvoiceDocument.tsx, height 165, px-8, logo 112, title 53/900 ── */
+.hd{position:relative;height:165px;flex:none;display:flex;align-items:center;justify-content:space-between;
+    gap:16px;padding:0 32px;overflow:hidden;background:#0D4DC0}
+.hd .photo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 30%}
+.hd .logo{position:relative;z-index:1;height:112px;display:flex;align-items:center}
+.hd .logo .mark{width:104px;height:104px;background:#1565f0;border-radius:6px;display:flex;
+  flex-direction:column;align-items:center;justify-content:center;color:#fff;line-height:1}
+.hd .logo .mark b{font-size:40px;font-weight:700;letter-spacing:.02em}
+.hd .logo .mark span{font-size:9px;margin-top:5px;opacity:.95}
+.hd .ttl{position:relative;z-index:1;font-size:53px;line-height:1;font-weight:700;color:#fff;
+  text-shadow:0 1px 4px rgba(0,0,0,.45)}
+
+.pg{flex:1;display:flex;flex-direction:column;padding:16px 32px 0;min-height:0;position:relative;z-index:1}
+/* The one gap in a letter that is deliberately double.
+   Block format puts two blank lines between the date line and the inside address and one blank line
+   everywhere else; that difference is what tells a reader where the running head ends and the letter
+   begins. This was 34px — 11 padding, a 1px rule and 22 margin — which is 1.55 baselines, barely
+   more than the single gaps around it, so the letter appeared to start nowhere in particular.
+   11 + 1 + 44 puts the address exactly two lines below the rule. */
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;line-height:1.375;
+  padding-bottom:11px;border-bottom:1px solid #e6ecf2;margin-bottom:44px}
+.lbl{font-size:15px;font-weight:700;color:#1c1b1f;margin:0}
+/* label and value on one line: a reference and a date are each a single fact, and stacking the
+   label above the value made two lines of a thing that reads as one. */
+.grid3 p.inline{font-size:14px;font-weight:500;margin:0;line-height:1.375;white-space:nowrap}
+.grid3 p.inline .lbl{display:inline;margin-right:4px}
+.grid3 p.v{font-size:14px;font-weight:500;margin:0}
+.grid3 p.v.first{margin-top:4px}
+.grid3 .right{display:flex;justify-content:flex-end}
+.grid3 .right .in{text-align:start}
+
+/* the inside address: its own block, left, in the standard place for a letter */
+/* one blank line from here on, as the convention has it */
+.to{margin:0 0 22px}
+.to p.v{font-size:14px;font-weight:500;margin:0;line-height:1.375}
+.to p.v.first{margin-top:4px}
+
+/* ── body: the letterhead's system — 11pt on a 22px baseline, left-aligned ── */
+.letter{font-size:14.67px;line-height:22px;color:#23252b;flex:1;min-height:0}
+.letter .subj{font-weight:700;color:#12233f;max-width:640px;margin:0 0 22px}
+/* Justified, as asked — with hyphenation ON. Justifying without it is what opens rivers of white
+   down a column: the browser can only stretch the spaces, so a line with three long words in it
+   pulls them to the margins. Allowed to break a word, it stretches far less. */
+/* Limits, or hyphenation takes every word it is offered: one paragraph came back with so-cial,
+   con-tent and re-ceipts broken in three consecutive lines, which reads worse than the loose
+   spacing it was meant to cure. 7/4/3 = only words of 7+ letters, at least 4 before the break and
+   3 after, and never more than two hyphenated lines in a row. */
+.letter p{margin:0 0 22px;max-width:640px;text-align:justify;
+  hyphens:auto;-webkit-hyphens:auto;overflow-wrap:break-word;
+  hyphenate-limit-chars:7 4 3;-webkit-hyphenate-limit-lines:2;hyphenate-limit-lines:2}
+.letter p:last-child{margin-bottom:0}
+.letter h3{font-size:15px;font-weight:700;color:#12233f;margin:0 0 11px;padding-top:11px;line-height:22px}
+.letter ul,.letter ol{margin:0 0 22px;padding-left:22px;max-width:640px}
+.letter li{margin-bottom:11px;text-align:justify;hyphens:auto;-webkit-hyphens:auto;
+  hyphenate-limit-chars:7 4 3}
+.letter li:last-child{margin-bottom:0}
+.facts{border:1px solid #dde3ea;border-radius:5px;overflow:hidden;margin:0 0 22px;max-width:640px;font-size:13px}
+.facts div{display:flex;border-bottom:1px solid #eef1f5}
+.facts div:last-child{border-bottom:0}
+.facts span:first-child{width:250px;flex:none;padding:6px 12px;background:#f7fafc;color:#5a6b83}
+.facts span:last-child{padding:6px 12px;font-weight:700;color:#1c1b1f}
+.callout{background:#fff8e6;border:1px solid #e8cf94;border-left:3px solid #c9a227;border-radius:4px;
+  padding:11px 14px;margin:0 0 22px;font-size:13.5px;line-height:21px;color:#6b5300;max-width:640px}
+.callout b{color:#4a3900}
+.sign{margin-top:22px}
+.sign .rule{width:170px;border-top:1px solid #8a919c;margin:44px 0 6px}
+
+/* ── footer: the letterhead's contact strip and bar ── */
+.ft{flex:none;position:relative;z-index:1}
+.contact{display:flex;justify-content:space-between;gap:18px;padding:11px 32px;border-top:1px solid #e6ecf2}
+.ci{display:flex;align-items:center;gap:9px}
+.ci .ico{width:28px;height:28px;border-radius:5px;background:#2f80e8;display:grid;place-items:center;flex:none}
+.ci .ico svg{width:14px;height:14px;fill:#fff}
+.ci .tx{font-size:11px;line-height:15px;color:#5a6b83}
+.ci .tx b{display:block;font-weight:700;color:#1c1b1f}
+/* #0D4DC0, the invoice's own primary — white on the lighter #2f80e8 measures 3.91:1, under the 4.5
+   small text needs, and this is the only blue on the sheet carrying words. */
+.bar{height:26px;background:#0D4DC0;display:flex;align-items:center;justify-content:space-between;
+     padding:0 32px;color:#fff;font-size:10.5px;font-weight:700;letter-spacing:.04em}
+.bar .made{display:flex;align-items:center;gap:7px;font-weight:400;letter-spacing:.02em}
+.bar .made b{font-weight:700}
+.bar .made .chip{width:15px;height:15px;border-radius:3px;background:#fff;flex:none;display:grid;place-items:center;overflow:hidden}
+.bar .made .chip img{width:15px;height:15px;object-fit:contain}
+
+/* the letter column is a measured box: the paginator asks it whether the next block still fits */
+.letter{overflow:hidden}
+/* "Continued on page n →" — a page that is not the end must say so, or a sheet that goes missing
+   reads as the whole letter. */
+.cont{margin-top:22px;text-align:right;font-size:12px;font-style:italic;color:#5a6b83}
+/* Space genuinely left over — the next block would not fit — is ruled through. An unexplained gap
+   at the foot of a signed letter is room for a clause to be typed in afterwards. */
+.ruled{margin-top:11px;border-top:1px solid #cfd6df;
+  background:repeating-linear-gradient(135deg,transparent 0 9px,#eef1f5 9px 10px)}
