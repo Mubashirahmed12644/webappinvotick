@@ -2,7 +2,7 @@
 
 - **Date:** 2026-10-03
 - **Status:** built, not merged, not released. App `invoice-kmp-app`: `feat/print-option` off `release/1.5.1`
-  (`aa2b41fee`) @ `21665a5c4`, pushed. Web `ivotickwebapp`: `feat/share-page-print-label` off `gitlab/main` @ `83a3dfd`,
+  (`aa2b41fee`) @ `6bce66f0c`, pushed. Web `ivotickwebapp`: `feat/share-page-print-label` off `gitlab/main` @ `f09e14d`,
   pushed to `gitlab` and `ghdev`, **not merged, not deployed** (the owner does that). No schema change, no server change,
   no new dependency, no Remote Config key.
 - **Asked by:** the owner, 2026-10-03 — approved the design in `kaam/research/print-option-2026-10-03/index.html`, and said
