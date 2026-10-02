@@ -897,6 +897,47 @@ backend does not have to change for 26 keys**, provided the 40 is the deployed v
 about to cut keys silently. Check the deployed value before reading Event detail for `app_cold_start` on the first
 build with the fix.
 
+### 1.35 Print is the glyph's own tap plus one result with the existing name; the document, where it failed and how long the PDF took are parameters. *(decided 2026-10-03)*
+
+Decision [0201](docs/decisions/0201-print-is-on-the-documents-that-print-and-makes-the-pdf-download-makes.md). Print joined the
+saved invoice, the saved estimate, the client ledger and the received invoice, beside the PDF viewer's older one.
+
+**The press** is each glyph's own auto-captured tap, one id per screen, no coded twin (§1.3, §1.11):
+`saved_inv_print_click` · `saved_est_print_click` · `CustomerLedgerTopBar.print` · `ReceivedInvoiceScreen.print` ·
+`PdfViewerActivity.print` (0197). They arrive as `tap:<screen>:<id>`. From the first build after 1.5.0 that carries 0201.
+
+**The result** is the existing coded `pdf_print_result` (0197, §1.23), one per press, sent when the system dialog closes —
+nothing is pressed then, so no tap can carry it. **No new event name.** Its parameters, all of them:
+
+| key | values |
+|:--|:--|
+| `document` | `invoice`, `estimate`, `ledger`, `received_invoice`. **Absent on the PDF viewer's rows** (it has no document of ours; `screen=pdf_viewer` says it). Absent is not `invoice`. |
+| `outcome` | `sent` (the dialog took the document: a printer or "Save as PDF" — Android cannot tell them apart), `cancelled`, `failed`, `launch_failed` (the dialog never opened), `unknown_<state>` (a job state not in the table, kept as its number, §1.15) |
+| `failed_at` | only on `failed`: **`prepare`** (our PDF was not made — new), `write` (our copy of the file into the dialog failed), `print_service` |
+| `prepare_ms` | press to PDF ready; on every row with a `document` (`sent`, `cancelled`, `failed` at any stage, `launch_failed`). For `failed_at=prepare` it is how long the press waited, up to the 20 s the PDF is given. |
+| `exception_class` | only on `launch_failed` |
+
+iPhone: the print sheet's completion handler — completed is `sent`, closed with nothing printed `cancelled`, an error `failed` with
+`failed_at=print_service`.
+
+**A PDF that could not be made is two facts sent at the same moment on the same screen**: `pdf_print_result` with
+`failed_at=prepare`, and `error_shown` `action=export` `subject=<invoice|estimate|ledger>` (the received invoice counts as
+`invoice`) — the one plain sentence the person read, "Couldn't get this ready to print. Please try again.". They join by device and
+time; neither replaces the other. The same shape as `pdf_download_result` and its `error_shown` (0197). A printer's own trouble (a
+jam, offline) is the dialog's, and is at most `failed_at=print_service`.
+
+**A press whose screen closed before the PDF was ready sends nothing** (§1.19): not a failed print. A second press while the
+glyph spins is not a press (the control is disabled and the view model ignores it, §1.9a), so one press is one row.
+
+**Reading it.**
+- *Printed or saved* = `outcome=sent`. Never call it "printed on paper".
+- *Our PDF failed* = `failed_at=prepare`. Split `prepare_ms` by `document`: the ledger and the received invoice (a web view) are
+  the slow ones.
+- The PDF viewer's older rows have no `document` and no `prepare_ms`; filter them out of any per-document figure.
+- **Web:** the share page's browser route is unchanged in the data — `shared_invoice_pdf_click` with `destination=print_dialog` —
+  only its label changed ("Print or save PDF"). The free tool's Print sends **nothing**: the tool has no analytics route, and a
+  button does not earn one.
+
 ### 1.10 Layers
 
 `intent.screen` · `intent.action` · `response.outcome` · `response.gate` · `response.interruption` ·
@@ -1255,6 +1296,7 @@ list containing none of the devices being tested on.
 - [ ] Auto or coded, and is that the right channel (§1.5)?
 - [ ] Is the id unique across the whole app (§1.4)?
 - [ ] Does it need `screen`, and does anything already stamp it?
+- [ ] A new button that ends in a system dialog (print, a share sheet)? The press is its own auto tap; the dialog's answer is one coded result with a `document`/`target` parameter, never a second event for the press (§1.35).
 
 **Renaming**
 - [ ] Old rows keep the old name. Say where the history splits.
