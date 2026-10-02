@@ -899,12 +899,12 @@ build with the fix.
 
 ### 1.35 Print is the glyph's own tap plus one result with the existing name; the document, where it failed and how long the PDF took are parameters. *(decided 2026-10-03)*
 
-Decision [0201](docs/decisions/0201-print-is-on-the-documents-that-print-and-makes-the-pdf-download-makes.md). Print joined the
+Decision [0202](docs/decisions/0202-print-is-on-the-documents-that-print-and-makes-the-pdf-download-makes.md). Print joined the
 saved invoice, the saved estimate, the client ledger and the received invoice, beside the PDF viewer's older one.
 
 **The press** is each glyph's own auto-captured tap, one id per screen, no coded twin (§1.3, §1.11):
 `saved_inv_print_click` · `saved_est_print_click` · `CustomerLedgerTopBar.print` · `ReceivedInvoiceScreen.print` ·
-`PdfViewerActivity.print` (0197). They arrive as `tap:<screen>:<id>`. From the first build after 1.5.0 that carries 0201.
+`PdfViewerActivity.print` (0197). They arrive as `tap:<screen>:<id>`. From the first build after 1.5.0 that carries 0202.
 
 **The result** is the existing coded `pdf_print_result` (0197, §1.23), one per press, sent when the system dialog closes —
 nothing is pressed then, so no tap can carry it. **No new event name.** Its parameters, all of them:
