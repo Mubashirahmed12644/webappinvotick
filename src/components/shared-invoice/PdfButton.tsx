@@ -13,6 +13,11 @@ import { trackWebEvent } from "@/lib/analytics/client";
  * The card and the page description say "download the PDF" without listing the steps, and that stays
  * true either way: the receiver does get a PDF. Only the route differs.
  *
+ * **The browser route is named for what it is** (decision 0201). It read "Download PDF", and it has always opened the
+ * browser's print dialog — "Print or save PDF" with a printer glyph says so, and is the same button doing the same thing
+ * (one job, one door; no new button, no new event). The Android route is untouched: it is the growth door of decision
+ * 0017, and Print for an Android receiver is in the app, on the received invoice, after they install it.
+ *
  * **The browser route is the print dialog, deliberately.** Every desktop and mobile browser offers
  * "Save as PDF" there, so the file is produced on the receiver's own machine from the page they are
  * already looking at. The alternative — rendering PDFs on a server — would mean running a headless
@@ -56,10 +61,14 @@ export function PdfButton({
         trackWebEvent("shared_invoice_pdf_click", { destination: "print_dialog" });
         window.print();
       }}
-      className="flex-1 rounded-full border border-neutral-300 px-4 py-2.5 text-center text-sm font-medium text-neutral-800"
-      aria-label={`Download this ${kind.toLowerCase()} as a PDF`}
+      className="flex flex-1 items-center justify-center gap-1.5 rounded-full border border-neutral-300 px-4 py-2.5 text-center text-sm font-medium text-neutral-800"
+      aria-label={`Print or save this ${kind.toLowerCase()} as a PDF`}
     >
-      Download PDF
+      <svg aria-hidden="true" className="h-[18px] w-[18px] shrink-0" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M19 8h-1V3H6v5H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zM8 5h8v3H8V5zm8 14H8v-4h8v4zm4-4h-2v-2H6v2H4v-4c0-.55.45-1 1-1h14c.55 0 1 .45 1 1v4z" />
+        <circle cx="18" cy="11.5" r="1" />
+      </svg>
+      Print or save PDF
     </button>
   );
 }

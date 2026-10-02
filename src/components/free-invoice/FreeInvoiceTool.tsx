@@ -36,7 +36,7 @@ export function FreeInvoiceTool({ fi, onPickLogo }: { fi: FreeInvoiceController;
     inv, set, setItem, addItem, removeItem,
     saved, showSaved, setShowSaved, openInvoice, removeSaved,
     surpriseMe, newInvoice, changeCurrency, applyTemplate, noteTyping,
-    downloadPdf, downloading, setBackupOpen,
+    downloadPdf, downloading, printPdf, printing, setBackupOpen,
     logoError,
     setShowBizDetails, bizDetailsOpen, hasBizDetails,
     setShowClientDetails, clientDetailsOpen, hasClientDetails,
@@ -328,6 +328,11 @@ export function FreeInvoiceTool({ fi, onPickLogo }: { fi: FreeInvoiceController;
             <Button type="button" size="md" loading={downloading} onClick={downloadPdf} className="flex-1 xl:w-full xl:flex-none">
               ⬇ Download PDF
             </Button>
+            {/* Print (decision 0201): outlined, under Download — one filled button on this rail. The same PDF Download
+                makes, in the browser's print dialog, which also offers "Save as PDF". No ad and no event here. */}
+            <Button type="button" variant="outline" size="md" loading={printing} onClick={printPdf} className="flex-1 xl:w-full xl:flex-none">
+              <PrinterIcon /> Print
+            </Button>
             <Button type="button" variant="outline" size="md" onClick={() => setBackupOpen(true)} className="flex-1 xl:w-full xl:flex-none">
               ☁ Back up my invoices
             </Button>
@@ -347,6 +352,16 @@ export function FreeInvoiceTool({ fi, onPickLogo }: { fi: FreeInvoiceController;
 }
 
 /* ---------- small local UI helpers (match the app's tokens) ---------- */
+
+/** The printer glyph the app's Print uses (Material Outlined `print`). Decorative: the button's label is the name. */
+function PrinterIcon() {
+  return (
+    <svg aria-hidden="true" className="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M19 8h-1V3H6v5H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zM8 5h8v3H8V5zm8 14H8v-4h8v4zm4-4h-2v-2H6v2H4v-4c0-.55.45-1 1-1h14c.55 0 1 .45 1 1v4z" />
+      <circle cx="18" cy="11.5" r="1" />
+    </svg>
+  );
+}
 
 function Section({ title, action, children }: { title: string; action?: ReactNode; children: ReactNode }) {
   return (

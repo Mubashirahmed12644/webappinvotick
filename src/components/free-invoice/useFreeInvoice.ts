@@ -6,7 +6,7 @@ import { createEmptyInvoice, nextInvoiceNumber, toRenderData, totalsFor, uuid } 
 import { randomSample } from "@/lib/free-invoice/samples";
 import { getAllInvoices, putInvoice, deleteInvoice, getActiveId, setActiveId, hasContent } from "@/lib/free-invoice/store";
 import { initialCurrency, setPreferredCurrency } from "@/lib/free-invoice/currency-detect";
-import { exportInvoicePdf } from "@/lib/free-invoice/pdf";
+import { exportInvoicePdf, printInvoicePdf } from "@/lib/free-invoice/pdf";
 import { completionParams, isComplete, originAfterEdit, sourceOf, touchesContent } from "@/lib/free-invoice/funnel";
 import { trackWebEvent, trackWebEventOnce } from "@/lib/analytics/client";
 import type { InvoiceTemplate } from "@/lib/free-invoice/templates";
@@ -57,6 +57,7 @@ export function useFreeInvoice() {
   const [showSaved, setShowSaved] = useState(false);
   const [logoError, setLogoError] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
+  const [printing, setPrinting] = useState(false);
   const [backupOpen, setBackupOpen] = useState(false);
   const [showBizDetails, setShowBizDetails] = useState(false);
   const [showClientDetails, setShowClientDetails] = useState(false);
@@ -115,6 +116,22 @@ export function useFreeInvoice() {
       });
     } finally {
       setDownloading(false);
+    }
+  }
+
+  /**
+   * Print (decision 0201): the same PDF Download makes, in the browser's print dialog. **No event**: this tool has no
+   * analytics route of its own and a button is not a reason to make one, so a print is not counted — and it is not the
+   * "value moment" `downloadPdf` is, so it does not offer the install either.
+   */
+  async function printPdf() {
+    setPrinting(true);
+    try {
+      await printInvoicePdf("fi-paper");
+    } catch (e) {
+      console.error("PDF print failed", e);
+    } finally {
+      setPrinting(false);
     }
   }
 
@@ -289,6 +306,8 @@ export function useFreeInvoice() {
     noteTyping,
     downloadPdf,
     downloading,
+    printPdf,
+    printing,
     backupOpen,
     setBackupOpen,
     offerOpen,
