@@ -113,3 +113,4 @@ Numbering: next free number, zero-padded to 4.
 - [0195 — A deleted invoice takes its own payments with it](0195-a-deleted-invoice-takes-its-own-payments.md)
 - [0196 — A local country file answers when `ip_records` does not know the address yet](0196-a-local-country-file-answers-when-ip-records-does-not-know-the-address-yet.md)
 - [0200 — `app_cold_start.prev_exit` reads the app's own process, not the WebView's renderer](0200-prev-exit-reads-the-apps-own-process-not-the-webviews.md)
+- [0201 — `error_shown` names a database refusal as local and carries SQLite's primary code](0201-error-shown-names-a-database-refusal-and-its-sqlite-code.md)

@@ -615,11 +615,21 @@ below `domain`. The same call returns the sentence, logs the cause and sends **`
 cannot come apart.
 
 **The rules.**
-- **Codes only.** `action`, `subject`, `exception_class`, `http_status`, `kind`. Never the sentence and never the
-  exception's message (§1.22 — there is no closed-vocabulary key for the free text to ride beside).
+- **Codes only.** `action`, `subject`, `exception_class`, `http_status`, `kind`, and from the next build after 1.5.0
+  `sqlite_code`. Never the sentence and never the exception's message (§1.22 — there is no closed-vocabulary key for
+  the free text to ride beside).
 - **`kind` is decided in one place** (`ErrorShown.kindOf`). `server` when a status came back. `network` when the
-  exception, or anything it wraps, is a connection failure. `local` for a class only this process throws. Otherwise
-  `unknown`: a bare `Exception` is never guessed into a bucket (§1.7).
+  exception, or anything it wraps, is a connection failure. `local` for a class only this process throws, **including
+  the phone's database refusing: `SQLException` (Room's bundled driver, `androidx.sqlite`) and the `SQLite…` family.**
+  Otherwise `unknown`: a bare `Exception` is never guessed into a bucket (§1.7). On 1.5.0, 7 `error_shown` rows
+  ("Couldn't save…", `exception_class=SQLException`) read `kind=unknown` because only the `SQLite…` prefix was
+  recognised; those rows stay as sent. Count them by `exception_class`, not `kind`, up to the build that fixes this.
+- **`sqlite_code`** (decision [0201](docs/decisions/0201-error-shown-names-a-database-refusal-and-its-sqlite-code.md))
+  is SQLite's **primary** result code (5 busy, 19 constraint, 13 full, 11 corrupt, …), a number. It rides on the
+  existing event, never a second one. Present only when a database exception in the cause chain stated a code; absent
+  means unknown or not a database error (§1.7). It is read from the digits of the driver's sentence and reduced to
+  the low byte (extended 1299 → 19, 517 → 5); the sentence itself is never copied. A code is a breakdown, so it is
+  not an id (§1.18).
 - **Shown means drawn.** Nothing is sent for a cancelled screen (§1.19), a second showing of the same exception, or a
   state field no screen draws (`drawn = false`). Counting an undrawn sentence would make the number lie.
 - **A domain event is not replaced by it.** `sync_failed`, `guest_login_failed` and `shared_invoice_open_failed` keep
