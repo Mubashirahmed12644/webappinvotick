@@ -13,7 +13,7 @@ import { trackWebEvent } from "@/lib/analytics/client";
  * The card and the page description say "download the PDF" without listing the steps, and that stays
  * true either way: the receiver does get a PDF. Only the route differs.
  *
- * **The browser route is named for what it is** (decision 0201). It read "Download PDF", and it has always opened the
+ * **The browser route is named for what it is** (decision 0202). It read "Download PDF", and it has always opened the
  * browser's print dialog — "Print or save PDF" with a printer glyph says so, and is the same button doing the same thing
  * (one job, one door; no new button, no new event). The Android route is untouched: it is the growth door of decision
  * 0017, and Print for an Android receiver is in the app, on the received invoice, after they install it.

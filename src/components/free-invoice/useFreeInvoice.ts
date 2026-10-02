@@ -120,7 +120,7 @@ export function useFreeInvoice() {
   }
 
   /**
-   * Print (decision 0201): the same PDF Download makes, in the browser's print dialog. **No event**: this tool has no
+   * Print (decision 0202): the same PDF Download makes, in the browser's print dialog. **No event**: this tool has no
    * analytics route of its own and a button is not a reason to make one, so a print is not counted — and it is not the
    * "value moment" `downloadPdf` is, so it does not offer the install either.
    */

@@ -328,7 +328,7 @@ export function FreeInvoiceTool({ fi, onPickLogo }: { fi: FreeInvoiceController;
             <Button type="button" size="md" loading={downloading} onClick={downloadPdf} className="flex-1 xl:w-full xl:flex-none">
               ⬇ Download PDF
             </Button>
-            {/* Print (decision 0201): outlined, under Download — one filled button on this rail. The same PDF Download
+            {/* Print (decision 0202): outlined, under Download — one filled button on this rail. The same PDF Download
                 makes, in the browser's print dialog, which also offers "Save as PDF". No ad and no event here. */}
             <Button type="button" variant="outline" size="md" loading={printing} onClick={printPdf} className="flex-1 xl:w-full xl:flex-none">
               <PrinterIcon /> Print

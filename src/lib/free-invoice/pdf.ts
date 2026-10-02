@@ -68,7 +68,7 @@ export async function exportInvoicePdf(sourceId: string, filename: string): Prom
  * on every desktop browser also offers "Save as PDF". Printed from a hidden frame that holds the PDF rather than from
  * the page itself, so the printout is the document and not the editor around it.
  *
- * No analytics: this tool has no event route of its own and a new one is not made for a button (decision 0201).
+ * No analytics: this tool has no event route of its own and a new one is not made for a button (decision 0202).
  */
 export async function printInvoicePdf(sourceId: string): Promise<void> {
   const pdf = await buildInvoicePdf(sourceId);
