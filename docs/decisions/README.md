@@ -112,3 +112,4 @@ Numbering: next free number, zero-padded to 4.
 - [0194 — A received invoice is one row, whatever its links](0194-a-received-invoice-is-one-row-whatever-its-links.md)
 - [0195 — A deleted invoice takes its own payments with it](0195-a-deleted-invoice-takes-its-own-payments.md)
 - [0196 — A local country file answers when `ip_records` does not know the address yet](0196-a-local-country-file-answers-when-ip-records-does-not-know-the-address-yet.md)
+- [0200 — `app_cold_start.prev_exit` reads the app's own process, not the WebView's renderer](0200-prev-exit-reads-the-apps-own-process-not-the-webviews.md)

@@ -850,6 +850,43 @@ the saved estimate left the More menu for the top bar: one tap instead of two.
   0193 is measured: before, 619 of the 1,776 phones that saw the saved invoice opened More (30 days to 2026-09-30),
   and 344 of them pressed Edit.
 
+### 1.34 `app_cold_start.prev_exit` changed meaning on the build after 114, and gained three keys. *(decided 2026-10-03)*
+
+Decision [0200](docs/decisions/0200-prev-exit-reads-the-apps-own-process-not-the-webviews.md). App branch
+`fix/150-crashes-and-anrs` (`aa2b41fee`), not yet in a released build.
+
+**(a) The meaning changes at the first build that ships it.** Up to and including versionCode 114, `prev_exit` came
+from the newest exit record of the **package**, and the package also hosts the WebView's sandboxed renderer
+(`:sandboxed_process0`). Android kills that renderer a few milliseconds after our process dies, for any reason, so the
+newest record was mostly the renderer's, which reads as `other`. From the fix on, only our own process's records count;
+of those since the last open, the newest `crash`, `crash_native` or `anr` wins, else the newest of ours.
+
+- **A crash or ANR ratio must be split by `app_version_code`.** One ratio across the boundary is two instruments.
+- **The rows from 113 and 114 are blind, not clean.** Measured 2026-10-03 (`release`, 2026-09-03 → 10-03, rows that
+  carry a `prev_exit`): crash or ANR is **0 of 712** on 113 and **1 of 801** on 114, against **17 of 8,231** on 97–107;
+  `other` is 40 % of 113's and 114's. The rule is the same in every build up to 114, so that gap says nothing about
+  stability. A comparison between builds is trustworthy only from the first build that carries the fix.
+- **`prev_exit=other` on those builds is not "an ordinary death".** It is the renderer's record, or ours when nothing
+  newer existed. Never read it as proof that the previous run ended well.
+- Anything built on the old value reads the same blind record. The store-review card's "not after a crash" check
+  (`previousRunEndedBadly`) did, and moves with the fix.
+
+**(b) Three new keys on `app_cold_start`; no new event.** `prev_exit_detail` (Android's own sentence for the exit),
+`prev_stack` (an ANR's main-thread frames from the system trace, or a crash's innermost frames) and `prev_crash` (the
+exception class chain, **never the message**). All three are free text capped at 200 characters, so `prev_stack` is
+the one to read as a list of frames, not a dimension (§1.18). Absent means unknown (§1.7), and every row up to 114
+has none.
+
+**(c) The key count, and the cap that matters.** The most keys one `app_cold_start` row carries goes from **23 to 26**.
+There is **no ingestion cap**: `POST /v2/analytics/track` stores a row's `params` whole. The only cap is on the
+**read** side — the panel's *Event detail* takes the **union** of the keys every shape of the event was sent with, and
+cuts it at `LiveEventsController.MAX_PARAM_KEYS`. That is **40 on `stage`** since `b301b21` (2026-09-21, decision
+0150); it was 30 before. Measured 2026-10-03 over the last 7 days: the union for `app_cold_start` is **26** keys
+(23 in the widest single row). With the three new ones it is about **29**, under 40 and one key from the old 30. **The
+backend does not have to change for 26 keys**, provided the 40 is the deployed value: a panel still on 30 would be
+about to cut keys silently. Check the deployed value before reading Event detail for `app_cold_start` on the first
+build with the fix.
+
 ### 1.10 Layers
 
 `intent.screen` · `intent.action` · `response.outcome` · `response.gate` · `response.interruption` ·
