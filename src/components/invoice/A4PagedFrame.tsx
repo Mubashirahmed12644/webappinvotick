@@ -3,7 +3,8 @@
 import { footerMode } from "@/lib/invotick-footer";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
-import { FooterControlButton, InvoiceDocument, InvoiceFooter, ownFooterProps } from "./InvoiceDocument";
+import { FooterControlButton, InvoiceDocument, InvoiceFooter, ITEM_ROW_MIN_H, ownFooterProps } from "./InvoiceDocument";
+import { paginateRows, type PageSlice } from "@/lib/paginate-rows";
 import { type InvoiceLabels } from "@/lib/invoice-labels";
 import { documentDir, documentLabelsFor, documentLanguage, pageLine } from "@/lib/document-language";
 import { imageProxyUrl } from "@/lib/image";
@@ -16,11 +17,11 @@ import type { InvoiceRenderData } from "@/lib/data";
  * on EVERY page; the totals summary appears ONLY on the LAST page. A "Page X of Y" line sits under
  * each footer.
  *
- * Line items FILL each page (page 1 gets the maximum that fits, not an even split): a page without
- * the summary holds `nNoSummary` rows; the last page — which carries the summary box — holds fewer
- * (`nWithSummary`). We greedily fill non-last pages to `nNoSummary`, always leaving at least one item
- * for the summary page so it's never a lonely summary box. Examples (nNoSummary 24, nWithSummary 16):
- *   17 → 16 + 1 · 18 → 17 + 1 · 26 → 24 + 2.
+ * Line items FILL each page (page 1 gets the maximum that fits, not an even split); the last page —
+ * which carries the summary box — holds fewer. Non-last pages are filled greedily, always leaving at
+ * least one item for the summary page so it's never a lonely summary box. Which lines fit is decided
+ * from the height EVERY line rendered at (`paginateRows`), never from one row's height — a line whose
+ * description wraps is taller, and assuming otherwise put lines on no page at all (2026-10-03).
  *
  * Measured off-screen before first paint (no flicker) and scaled to the container width; multi-page
  * stacks vertically and scrolls.
@@ -69,30 +70,6 @@ const SIG_V_PADDING_RATIO = 0.027;
 // layout — the effect below replaces them with what this document actually rendered.
 const STAMP_DEFAULT_FRAC = { x: 0.682, y: 0.535 };
 const SIGNATURE_DEFAULT_FRAC = { x: 0.572, y: 0.739 };
-
-type Page = { start: number; count: number; summary: boolean };
-
-function paginate(total: number, nNoSummary: number, nWithSummary: number): Page[] {
-  const pages: Page[] = [];
-  let start = 0;
-  let remaining = total;
-  let guard = 0;
-  while (remaining > 0 && guard++ < 1000) {
-    if (remaining <= nWithSummary) {
-      pages.push({ start, count: remaining, summary: true }); // fits alongside the summary → last page
-      start += remaining;
-      remaining = 0;
-    } else {
-      let take = Math.min(remaining, nNoSummary);
-      if (take === remaining) take = remaining - 1; // leave ≥1 item for the summary page
-      pages.push({ start, count: take, summary: false });
-      start += take;
-      remaining -= take;
-    }
-  }
-  if (pages.length === 0) pages.push({ start: 0, count: 0, summary: true }); // no items → one page
-  return pages;
-}
 
 /**
  * A select-then-drag overlay image (stamp or signature) mirroring native's DraggableModule:
@@ -403,14 +380,11 @@ export function A4PagedFrame({
   const footerMeasureRef = useRef<HTMLDivElement>(null);
   const summarySheetRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState<number | null>(null);
-  const [pages, setPages] = useState<Page[]>([{ start: 0, count: 0, summary: true }]);
-  // Row capacity of the LAST (summary) page — everything except the item rows there (header, parties,
-  // table head, totals, notes, signature AND payment/terms) is the "chrome"; this is how many item
-  // rows still fit beside it. Passed to the summary page as `padRows` so its min-row padding never
-  // exceeds what fits: a tall payment/terms block used to push the min-9 padding past the page bottom,
-  // which overflowed and made flexbox squeeze the fixed header (its image height "shrank"). Capped at
-  // 9 so normal invoices keep the native min-9 look.
-  const [summaryRows, setSummaryRows] = useState(9);
+  // Each page's lines and how many rows its table draws (its lines plus the blank rows that still fit,
+  // up to the native minimum of 9). Padding only with blank rows that fit matters: a tall
+  // payment/terms block used to push the min-9 padding past the page bottom, which overflowed and
+  // made flexbox squeeze the fixed header (its image height "shrank").
+  const [pages, setPages] = useState<PageSlice[]>([{ start: 0, count: 0, summary: true, padRows: 9 }]);
   // Measured footer height — the per-page content area is (SHEET_H − footerH) so the trailing
   // summary can anchor (mt-auto) to just above the footer instead of floating under the table.
   const [footerH, setFooterH] = useState(110);
@@ -472,33 +446,55 @@ export function A4PagedFrame({
 
   useLayoutEffect(() => {
     const measure = () => {
-      const container = containerRef.current;
       const withT = withTotalsRef.current;
       const noT = noTotalsRef.current;
-      if (!container || !withT || !noT) return;
+      if (!withT || !noT) return;
+
+      // ── Which lines go on which page ──
+      //
+      // Read off the two hidden copies, laid out at the sheet's own 794px. Every height is measured —
+      // the whole copy, its table body, and each line's own row — because a line whose description
+      // wraps is taller than one that does not, and one row's height standing in for every row's put
+      // lines past the bottom of a page and onto none (2026-10-03).
+      //
+      // `k` turns screen pixels back into sheet pixels should anything above this frame scale it.
+      // A copy with no layout (width 0: hidden, or print media, which hides `.a4-measure`) has nothing
+      // to say, and the pages stay as they were rather than being re-cut from zeros — zeros once made
+      // every line look 0px tall, which is one page holding the whole invoice, cut at its bottom.
+      const wr = withT.getBoundingClientRect();
+      const nr = noT.getBoundingClientRect();
+      if (wr.width > 0 && nr.width > 0) {
+        const k = wr.width / SHEET_W;
+        // A premium document has no footer band (decision 0147): its content area runs down to the
+        // bottom margin, where "Page X of Y" still sits.
+        const footerHMeasured = branded ? footerMeasureRef.current?.offsetHeight ?? 100 : 0;
+        setFooterH(footerHMeasured);
+        const usableH = SHEET_H - footerHMeasured - FOOTER_BOTTOM_MARGIN - 10;
+        const bodyH = (copy: HTMLElement) => (copy.querySelector("tbody")?.getBoundingClientRect().height ?? 0) / k;
+        // Everything but the rows ("chrome"): header, parties, the table's head and border, and — on
+        // the copy that has it — the summary.
+        const chromeWith = wr.height / k - bodyH(withT);
+        const chromeNo = nr.height / k - bodyH(noT);
+        const rows = [...noT.querySelectorAll("tbody tr")] as HTMLElement[];
+        const rowHeights = data.items.map((_, i) => (rows[i]?.getBoundingClientRect().height ?? 0) / k);
+        // A blank padding row has no content, so it is exactly the row minimum; measured where the
+        // copy happens to draw one.
+        const blank = rows[totalItems];
+        const blankRowHeight = blank ? blank.getBoundingClientRect().height / k : ITEM_ROW_MIN_H;
+        setPages(paginateRows({
+          rowHeights,
+          blankRowHeight,
+          roomWithoutSummary: usableH - chromeNo,
+          roomWithSummary: usableH - chromeWith,
+        }));
+      }
+
+      // ── How big a page is drawn ──
+      const container = containerRef.current;
+      if (!container) return;
       const cw = container.clientWidth;
       const ch = container.clientHeight;
       if (cw <= 0 || ch <= 0) return;
-
-      // A premium document has no footer band (decision 0147): its content area runs down to the
-      // bottom margin, where "Page X of Y" still sits.
-      const footerHMeasured = branded ? footerMeasureRef.current?.offsetHeight ?? 100 : 0;
-      setFooterH(footerHMeasured);
-      const usableH = SHEET_H - footerHMeasured - FOOTER_BOTTOM_MARGIN - 10;
-
-      const rowH = (withT.querySelector("tbody tr") as HTMLElement | null)?.offsetHeight ?? 28;
-      const renderedRows = Math.max(9, totalItems);
-      // Chrome = everything except the item rows. "With" includes the totals box; "No" excludes it.
-      const chromeWith = withT.scrollHeight - renderedRows * rowH;
-      const chromeNo = noT.scrollHeight - renderedRows * rowH;
-      const nWith = Math.max(1, Math.floor((usableH - chromeWith) / rowH));
-      const nNo = Math.max(nWith, Math.floor((usableH - chromeNo) / rowH));
-
-      const pg = paginate(totalItems, nNo, nWith);
-      setPages(pg);
-      // Cap the summary page's min-row padding at what actually fits (≤ nWith), never above the native 9.
-      setSummaryRows(Math.min(9, nWith));
-
       // Fit ONE whole page to the pane (width OR height, whichever is tighter) at max zoom —
       // single- and multi-page alike, so a multi-page invoice opens on its full first page and the
       // rest are reached by scrolling down. Accounts for the top/bottom stack padding.
@@ -515,6 +511,7 @@ export function A4PagedFrame({
     const ro = new ResizeObserver(measure);
     if (containerRef.current) ro.observe(containerRef.current);
     if (withTotalsRef.current) ro.observe(withTotalsRef.current);
+    if (noTotalsRef.current) ro.observe(noTotalsRef.current);
     return () => ro.disconnect();
   }, [data, qrDataUrl, totalItems, branded]);
 
@@ -745,7 +742,7 @@ export function A4PagedFrame({
                     <div style={{ position: "absolute", top: 0, left: 0, width: SHEET_W, height: SHEET_H - footerH - FOOTER_BOTTOM_MARGIN, display: "flex", flexDirection: "column" }}>
                       {/* Every page uses the native min-9 table (Math.max(9, items)): a page with ≥9
                           items shows exactly that many (no blanks); a page with fewer pads up to 9. */}
-                      <InvoiceDocument data={pageData} qrDataUrl={qrDataUrl} hideFooter hideSummary={!pg.summary} hideStamp hideSignature padRows={pg.summary ? summaryRows : undefined} labels={labels} dir={dir} />
+                      <InvoiceDocument data={pageData} qrDataUrl={qrDataUrl} hideFooter hideSummary={!pg.summary} hideStamp hideSignature padRows={pg.padRows} labels={labels} dir={dir} />
                     </div>
                     {/* Footer band pinned FOOTER_BOTTOM_MARGIN above the sheet's bottom edge (equal to
                         its 32px side inset). No pageLabel here — it sits in the margin below. */}

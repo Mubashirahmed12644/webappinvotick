@@ -12,6 +12,13 @@ import { QrSvg } from "./QrSvg";
 import { GeneratedLogo } from "./GeneratedLogo";
 import { LIGHT_SURROUND_TONE, toneOf } from "@/lib/generated-logo";
 
+/**
+ * The least a table row is tall, in sheet px. A row whose text wraps is taller; a blank padding row
+ * (no content at all) is exactly this. A4PagedFrame reads it only for those blank rows — every row
+ * that carries a line is measured, never assumed to be this tall.
+ */
+export const ITEM_ROW_MIN_H = 28;
+
 // Faithful invoice document — mirrors the mobile app's rendered PDF:
 // full-bleed header image + logo + title, decorative themed background,
 // From / Bill To / Details, an S#/Desc/Qty/Price/Disc/Tax/Amount table,
@@ -182,7 +189,7 @@ export function InvoiceDocument({ data, qrDataUrl, hideFooter, hideSummary, hide
                   // (theme.tableRowBackground = primary @ 0.05).
                   const tint = i % 2 === 1 ? hexToRgba(color, 0.05) : "#ffffff";
                   return (
-                    <tr key={i} style={{ backgroundColor: tint, height: 28 }}>
+                    <tr key={i} style={{ backgroundColor: tint, height: ITEM_ROW_MIN_H }}>
                       <td className="px-2 align-middle text-center font-bold">{it ? it.sn : ""}</td>
                       <td className={`px-2 align-middle font-bold ${descBody}`}>{it ? it.name : ""}</td>
                       <td className="px-2 align-middle text-end font-bold">{it ? iso(formatFixed2(it.quantity, lang)) : ""}</td>
