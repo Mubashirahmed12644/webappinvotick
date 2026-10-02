@@ -115,3 +115,4 @@ Numbering: next free number, zero-padded to 4.
 - [0200 — `app_cold_start.prev_exit` reads the app's own process, not the WebView's renderer](0200-prev-exit-reads-the-apps-own-process-not-the-webviews.md)
 - [0201 — `error_shown` names a database refusal as local and carries SQLite's primary code](0201-error-shown-names-a-database-refusal-and-its-sqlite-code.md)
 - [0202 — Print is on the documents that print, and makes the PDF Download makes](0202-print-is-on-the-documents-that-print-and-makes-the-pdf-download-makes.md)
+- [0203 — Every line of an invoice is on exactly one page](0203-every-line-of-an-invoice-is-on-exactly-one-page.md)
