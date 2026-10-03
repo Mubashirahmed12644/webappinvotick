@@ -1,7 +1,7 @@
 "use client";
 
 import { footerMode } from "@/lib/invotick-footer";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import { FooterControlButton, InvoiceDocument, InvoiceFooter, ITEM_ROW_MIN_H, ownFooterProps } from "./InvoiceDocument";
 import { paginateRows, type PageSlice } from "@/lib/paginate-rows";
@@ -9,6 +9,7 @@ import { type InvoiceLabels } from "@/lib/invoice-labels";
 import { documentDir, documentLabelsFor, documentLanguage, pageLine } from "@/lib/document-language";
 import { imageProxyUrl } from "@/lib/image";
 import { PAYMENT_STAMP_SIZE, PAYMENT_STAMP_START, startInDirection } from "@/lib/overlay-start";
+import { clampFrac, dragFrac, screenPerSheet } from "@/lib/overlay-drag";
 import type { InvoiceRenderData } from "@/lib/data";
 
 /**
@@ -72,24 +73,46 @@ const STAMP_DEFAULT_FRAC = { x: 0.682, y: 0.535 };
 const SIGNATURE_DEFAULT_FRAC = { x: 0.572, y: 0.739 };
 
 /**
- * A select-then-drag overlay image (stamp or signature) mirroring native's DraggableModule:
- *   • unselected → inert (never captures the pointer) so pinch-zoom/pan pass through
- *   • single tap → select (light dashed container + corner dots)
- *   • selected → drag to move
+ * A stamp or signature box on the page: touch it and it is selected AND in your hand; drag to move it.
  *
- * Drag is JITTER-FREE: while dragging we move the DOM node imperatively (no React re-render per
- * frame) and use an anchor model (startFrac + total delta, not accumulated deltas), then commit the
- * final position to React state on release. This kills the vibration a static finger used to cause.
+ * Decision 0204 — what the owner's Pixel showed (2026-09-30) and what each rule here answers:
+ *
+ *  1. SELECTION IS ON THE FIRST TOUCH. It used to be decided on the finger's RELEASE, and only if the finger had
+ *     moved less than 6 px since it landed — so a tap with any wobble selected nothing and the stamp "needed
+ *     tapping again" (measured: 12 of 36 taps selected, none at touch-down). Now `pointerdown` selects and
+ *     starts the drag together, so there is no tap to repeat and a grab-and-move is one gesture.
+ *  2. THE BOX FOLLOWS THE FINGER, EXACTLY. Its place is where it was grabbed plus the pointer's TOTAL movement,
+ *     divided by the scale of the sheet AS DRAWN (measured once, at the grab — never assumed, never read per move),
+ *     so a jump of any size lands where the finger is and nothing accumulates. It moves by a transform on the
+ *     compositor (no layout, no React render per move) and the pointer is captured, so a finger that leaves the
+ *     box keeps it.
+ *  3. THE WHOLE BOX STAYS ON THE SHEET (`clampFrac`), on all four sides; the stored value is only ever
+ *     written by a move, and a stored position outside the page is just drawn inside it.
+ *  4. WHO OWNS WHICH GESTURE, deliberately:
+ *       - one finger on a box → the box (`touch-action: pinch-zoom` from the first touch, so the browser never
+ *         takes the gesture for a scroll and cancels it half way — that was the other half of "tap again");
+ *       - a second finger anywhere → the page: the drag is abandoned, the box goes back to where it was, and the
+ *         browser's pinch-zoom runs;
+ *       - one finger anywhere else → the page's (scroll, pan), and the box is deselected;
+ *       - the host (the app's WebView) is told the box is held from the grab until it ends by ANY route —
+ *         release, cancel, abandon, lost capture, unmount — so it stops treating touches as a drag.
  */
+// Selecting a box, or ending a drag, changes this frame's own state — and rendering the frame again used to
+// render every page's whole document again with it (two hidden measuring copies and each page). The documents
+// do not depend on which overlay is selected or where one is, so they are memoised: the same props, no render.
+const DocBody = memo(InvoiceDocument);
+
+const GRAB_SLOP = 4; // screen px: below this a touch is a tap — it selects, and does not write a position
+
 function DraggableOverlay({
-  url, alt, size, frac, selected, scale, sheetW, sheetH, onSelect, onCommit, onRemove,
+  url, alt, size, frac, selected, sheetW, sheetH, onSelect, onCommit, onRemove,
 }: {
   url: string;
   alt: string;
   size: number;
+  /** Where the box is drawn: already held inside the sheet. */
   frac: { x: number; y: number };
   selected: boolean;
-  scale: number;
   sheetW: number;
   sheetH: number;
   onSelect: () => void;
@@ -97,10 +120,7 @@ function DraggableOverlay({
   onRemove: () => void;
 }) {
   const elRef = useRef<HTMLDivElement>(null);
-  const drag = useRef<{ sx: number; sy: number; fx: number; fy: number; cx: number; cy: number; moved: boolean } | null>(null);
-  // Pointers currently down on this overlay. A second one means the user is pinching, and a pinch is
-  // always a zoom — never a move — however this overlay was grabbed first.
-  const pointers = useRef(new Set<number>());
+  const drag = useRef<{ id: number; sx: number; sy: number; fx: number; fy: number; cx: number; cy: number; k: number; moved: boolean } | null>(null);
 
   const tellHost = (v: boolean) => {
     try {
@@ -109,90 +129,87 @@ function DraggableOverlay({
     } catch { /* not hosted by the app */ }
   };
 
-  /** Abandon an in-progress drag and put the overlay back where it started. */
-  const abortDrag = () => {
+  /** Put the box back where the grab found it and let the host go. Safe to call at any time, any number of times. */
+  const abandon = () => {
     drag.current = null;
     const el = elRef.current;
-    if (el) el.style.transform = "";
+    if (el) { el.style.transform = ""; el.style.willChange = ""; }
     tellHost(false);
   };
+
+  // Unmounting mid-grab (a new document arrives, the page is replaced) must not leave the host believing a box is held.
+  useEffect(() => () => { if (drag.current) { drag.current = null; tellHost(false); } }, []);
 
   return (
     <div
       ref={elRef}
       onPointerDown={(e) => {
-        pointers.current.add(e.pointerId);
-        // Second finger down: this is a pinch. Give the page back its gesture and leave the overlay
-        // where it was — zooming with a stamp selected must not drag the stamp along with it.
-        if (pointers.current.size > 1) {
-          abortDrag();
-          return;
-        }
-        drag.current = { sx: e.clientX, sy: e.clientY, fx: frac.x, fy: frac.y, cx: frac.x, cy: frac.y, moved: false };
-        // Only a SELECTED overlay grabs the pointer to drag; unselected we leave the event alone so
-        // the host (WebView pinch, or react-zoom-pan-pinch) still gets both fingers for a pinch.
-        if (selected) {
-          e.stopPropagation();
-          try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); } catch { /* no active pointer */ }
-        // Tell the Android host the overlay owns this gesture now.
+        if (e.pointerType === "mouse" && e.button !== 0) return;
+        // A second finger is a pinch, and a pinch is always the page's — whichever box it landed on.
+        if (!e.isPrimary) { abandon(); return; }
+        // This box has the touch: the sheet's "tap elsewhere deselects" must not also run for it.
+        e.stopPropagation();
+        const el = e.currentTarget as HTMLElement;
+        // Measured once per grab: how many screen px one sheet px is, right now, wherever the page is zoomed to.
+        const k = screenPerSheet(el.parentElement?.getBoundingClientRect().width ?? 0, sheetW);
+        drag.current = { id: e.pointerId, sx: e.clientX, sy: e.clientY, fx: frac.x, fy: frac.y, cx: frac.x, cy: frac.y, k, moved: false };
+        try { el.setPointerCapture(e.pointerId); } catch { /* no active pointer */ }
+        el.style.willChange = "transform";
+        // Tell the Android host the box owns this gesture now.
         //
-        // Its touch listener otherwise reads a downward drag on a page with nothing left to scroll
-        // as "the user wants the sheet", hands the gesture away, and the stamp stops after a few
-        // pixels. Dragging upward was unaffected, which is what made this look like slowness rather
-        // than a stolen gesture. Harmless in a browser, where the interface does not exist.
-        try { (window as unknown as { AndroidStamp?: { setDragging?: (v: boolean) => void } })
-          .AndroidStamp?.setDragging?.(true); } catch { /* not hosted by the app */ }
-        }
+        // Its touch listener otherwise reads a downward drag on a page with nothing left to scroll as "the user
+        // wants the sheet", hands the gesture away, and the box stops after a few pixels. Harmless in a browser,
+        // where the interface does not exist.
+        tellHost(true);
+        if (!selected) onSelect(); // the FIRST touch selects
       }}
       onPointerMove={(e) => {
         const d = drag.current;
-        if (!d) return;
-        // A pinch can begin after the drag has: bail the moment it does.
-        if (pointers.current.size > 1) { abortDrag(); return; }
-        if (Math.hypot(e.clientX - d.sx, e.clientY - d.sy) > 6) d.moved = true;
-        if (!selected || !scale) return;
-        d.cx = Math.min(0.96, Math.max(0, d.fx + (e.clientX - d.sx) / scale / sheetW));
-        d.cy = Math.min(0.96, Math.max(0, d.fy + (e.clientY - d.sy) / scale / sheetH));
-        const el = elRef.current;
+        if (!d || e.pointerId !== d.id) return;
+        const dx = e.clientX - d.sx, dy = e.clientY - d.sy;
+        if (!d.moved && Math.hypot(dx, dy) > GRAB_SLOP) d.moved = true;
+        const p = dragFrac({ start: { x: d.fx, y: d.fy }, dx, dy, k: d.k, sizePx: size, sheetW, sheetH });
+        d.cx = p.x; d.cy = p.y;
         // translate3d, not left/top.
         //
-        // Changing left or top asks the browser to lay the document out again on every pointer move,
-        // and this document is an A4 page carrying base64 images — logo, header, background. That is
-        // why the stamp crawled here while the same gesture was fine on a light page: the cost was
-        // never the gesture, it was re-laying-out everything behind it sixty times a second.
-        //
-        // A transform is composited on the GPU and skips layout and paint entirely. The element's
-        // own left/top stay where they were, so the offset below is a delta from that origin, and
-        // it is cleared on commit once React re-renders at the new position.
-        if (el) {
-          el.style.transform =
-            `translate3d(${(d.cx - frac.x) * sheetW}px, ${(d.cy - frac.y) * sheetH}px, 0)`;
-        }
+        // Changing left or top asks the browser to lay the document out again on every pointer move, and this
+        // document is an A4 page carrying base64 images. A transform is composited on the GPU and skips layout
+        // and paint entirely. The element's own left/top stay where they were, so the offset is a delta from
+        // that origin, cleared on release once the new left/top is written.
+        const el = elRef.current;
+        if (el) el.style.transform = `translate3d(${(p.x - d.fx) * sheetW}px, ${(p.y - d.fy) * sheetH}px, 0)`;
       }}
       onPointerCancel={(e) => {
-        pointers.current.delete(e.pointerId);
-        abortDrag();
+        // The browser took the gesture (a pinch began, the system claimed it): the box stays where it was.
+        if (drag.current && e.pointerId !== drag.current.id) return;
+        abandon();
+      }}
+      onLostPointerCapture={(e) => {
+        // After a normal release `drag` is already null and this does nothing; it matters only for a capture
+        // taken away mid-drag, which must not leave the box half way and the host waiting.
+        if (drag.current && e.pointerId === drag.current.id) abandon();
       }}
       onPointerUp={(e) => {
-        pointers.current.delete(e.pointerId);
         const d = drag.current;
+        if (d && e.pointerId !== d.id) return;
         const el = elRef.current;
         drag.current = null;
         try { (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId); } catch { /* not captured */ }
-        // Told FIRST, before any early return.
-        //
-        // This used to sit below `if (!d) return`, so a gesture that ended without a live drag — a
-        // pinch that aborted it, most commonly — never reported the end. The host went on believing
-        // an overlay drag was in progress for the rest of the session and kept deciding every touch
-        // as if it were one.
+        // Told on EVERY release, before anything can return early. The host's own touch listener has already seen
+        // this release (it runs before the page's), so what it reads of "held" for this touch is still set.
         tellHost(false);
-        if (!d) return;
-        // Drop the transform before React re-renders at the new position, or the element would sit
-        // at its new left/top *plus* the drag delta — the move applied twice.
-        if (el) el.style.transform = "";
-        if (selected && d.moved) onCommit(d.cx, d.cy);
-        else if (!d.moved && !selected) onSelect(); // first tap selects
+        if (!el) return;
+        el.style.willChange = "";
+        if (!d || !d.moved) { el.style.transform = ""; return; }
+        // Write the new place and drop the transform in the same task, so no frame shows the box at its old
+        // left/top (the move undone) or at the new left/top plus the drag (the move applied twice). React then
+        // renders the same numbers.
+        el.style.left = `${d.cx * sheetW}px`;
+        el.style.top = `${d.cy * sheetH}px`;
+        el.style.transform = "";
+        onCommit(d.cx, d.cy);
       }}
+      onContextMenu={(e) => e.preventDefault()}
       style={{
         position: "absolute",
         left: frac.x * sheetW,
@@ -201,13 +218,18 @@ function DraggableOverlay({
         height: size,
         zIndex: 20,
         cursor: selected ? "grab" : "pointer",
-        // Selected → we own a ONE-finger drag; two fingers still belong to the host.
+        // One finger on a box is the box's, from the very first touch; two fingers still belong to the page.
         //
-        // This was "none" while selected, which told the browser to send us everything — including a
-        // pinch. Zooming became impossible anywhere the stamp happened to be, and a stamp sits in
-        // the middle of the page. pinch-zoom hands multi-touch back while keeping the single-finger
-        // drag ours, and the handlers abort the drag the moment a second finger lands.
-        touchAction: selected ? "pinch-zoom" : "auto",
+        // touch-action is read when a touch STARTS and cannot be changed under a finger already down — so it
+        // cannot depend on `selected`, which only becomes true because this touch landed. It was "auto" until a
+        // box was selected, which let the browser claim a first touch that wandered a few pixels as a scroll and
+        // cancel it: no selection, no move, and a second tap. It was "none" once, which swallowed the pinch.
+        // pinch-zoom keeps the pinch and nothing else; the handlers abandon the drag when a second finger lands.
+        touchAction: "pinch-zoom",
+        userSelect: "none",
+        WebkitUserSelect: "none",
+        WebkitTouchCallout: "none",
+        WebkitTapHighlightColor: "transparent",
         // Light dashed selection container (mirrors native drawSelectionUI).
         border: selected ? "1.5px dashed rgba(37,99,235,0.85)" : undefined,
         background: selected ? "rgba(37,99,235,0.10)" : undefined,
@@ -437,6 +459,11 @@ export function A4PagedFrame({
   // slot for the page's direction: right to left, the totals box is on the left, and so is the stamp.
   const [paymentStampFrac, setPaymentStampFrac] = useState(PAYMENT_STAMP_START);
   const paymentStampAt = startInDirection(paymentStampFrac, PAYMENT_STAMP_SIZE, dir);
+  // What is DRAWN is held inside the sheet (decision 0204); what is STORED is left alone. A position saved
+  // outside the page — an older build's clamp let a box out through the right and bottom edges — is shown
+  // inside it, and is rewritten only if the user moves it. A position inside comes back as the same numbers.
+  const stampShown = clampFrac(stampFrac, stampSizePx, SHEET_W, SHEET_H);
+  const sigShown = clampFrac(sigFrac, sigSizePx, SHEET_W, SHEET_H);
   const [selectedOverlay, setSelectedOverlay] = useState<"stamp" | "signature" | null>(null);
   // Local removal — hides the overlay immediately; the app persists it via onStamp/SignatureRemove.
   const [stampRemoved, setStampRemoved] = useState(false);
@@ -644,6 +671,12 @@ export function A4PagedFrame({
 
   const s = scale ?? 0;
   const multi = pages.length > 1;
+  // One data object per page, kept while the pages and the document stay the same, so the memoised page bodies see
+  // equal props when only an overlay's state has changed.
+  const pageDatas = useMemo(
+    () => pages.map((pg) => ({ ...data, items: data.items.slice(pg.start, pg.start + pg.count) })),
+    [pages, data],
+  );
 
   // Track the page currently under the viewport centre so the "N / total" indicator updates on scroll.
   // Page stride = one page's scaled height + the inter-page gap; the stack has PAGE_MARGIN on top.
@@ -688,10 +721,10 @@ export function A4PagedFrame({
       `}</style>
       {/* Off-screen measuring copies (natural height) — never shown. */}
       <div ref={withTotalsRef} className="a4-measure" style={{ position: "absolute", left: -99999, top: 0, width: SHEET_W, visibility: "hidden", pointerEvents: "none" }} aria-hidden>
-        <InvoiceDocument data={data} qrDataUrl={qrDataUrl} hideFooter hideStamp hideSignature labels={labels} dir={dir} />
+        <DocBody data={data} qrDataUrl={qrDataUrl} hideFooter hideStamp hideSignature labels={labels} dir={dir} />
       </div>
       <div ref={noTotalsRef} className="a4-measure" style={{ position: "absolute", left: -99999, top: 0, width: SHEET_W, visibility: "hidden", pointerEvents: "none" }} aria-hidden>
-        <InvoiceDocument data={data} qrDataUrl={qrDataUrl} hideFooter hideSummary labels={labels} dir={dir} />
+        <DocBody data={data} qrDataUrl={qrDataUrl} hideFooter hideSummary labels={labels} dir={dir} />
       </div>
       {branded && (
         <div ref={footerMeasureRef} className="a4-measure" style={{ position: "absolute", left: -99999, top: 0, width: SHEET_W, visibility: "hidden", pointerEvents: "none" }} aria-hidden>
@@ -715,7 +748,7 @@ export function A4PagedFrame({
             }}
           >
             {pages.map((pg, i) => {
-              const pageData = { ...data, items: data.items.slice(pg.start, pg.start + pg.count) };
+              const pageData = pageDatas[i];
               return (
                 // Outer box carries the SCALED footprint so pages stack cleanly (transform ≠ layout).
                 // The shadow (on the outer, unscaled footprint) gives each page a PDF-viewer look.
@@ -742,7 +775,7 @@ export function A4PagedFrame({
                     <div style={{ position: "absolute", top: 0, left: 0, width: SHEET_W, height: SHEET_H - footerH - FOOTER_BOTTOM_MARGIN, display: "flex", flexDirection: "column" }}>
                       {/* Every page uses the native min-9 table (Math.max(9, items)): a page with ≥9
                           items shows exactly that many (no blanks); a page with fewer pads up to 9. */}
-                      <InvoiceDocument data={pageData} qrDataUrl={qrDataUrl} hideFooter hideSummary={!pg.summary} hideStamp hideSignature padRows={pg.padRows} labels={labels} dir={dir} />
+                      <DocBody data={pageData} qrDataUrl={qrDataUrl} hideFooter hideSummary={!pg.summary} hideStamp hideSignature padRows={pg.padRows} labels={labels} dir={dir} />
                     </div>
                     {/* Footer band pinned FOOTER_BOTTOM_MARGIN above the sheet's bottom edge (equal to
                         its 32px side inset). No pageLabel here — it sits in the margin below. */}
@@ -784,9 +817,8 @@ export function A4PagedFrame({
                           url={signatureUrl}
                           alt="Signature"
                           size={sigSizePx}
-                          frac={sigFrac}
+                          frac={sigShown}
                           selected={selectedOverlay === "signature"}
-                          scale={s}
                           sheetW={SHEET_W}
                           sheetH={SHEET_H}
                           onSelect={() => setSelectedOverlay("signature")}
@@ -794,7 +826,7 @@ export function A4PagedFrame({
                           onRemove={() => { setSignatureRemoved(true); setSelectedOverlay(null); onSignatureRemove?.(); }}
                         />
                       ) : (
-                        <StaticOverlay url={signatureUrl} alt="Signature" size={sigSizePx} frac={sigFrac} sheetW={SHEET_W} sheetH={SHEET_H} />
+                        <StaticOverlay url={signatureUrl} alt="Signature" size={sigSizePx} frac={sigShown} sheetW={SHEET_W} sheetH={SHEET_H} />
                       )
                     )}
                     {/* Company stamp — draggable in the app WebView, static (same saved position) elsewhere. */}
@@ -804,9 +836,8 @@ export function A4PagedFrame({
                           url={stampUrl}
                           alt="Stamp"
                           size={stampSizePx}
-                          frac={stampFrac}
+                          frac={stampShown}
                           selected={selectedOverlay === "stamp"}
-                          scale={s}
                           sheetW={SHEET_W}
                           sheetH={SHEET_H}
                           onSelect={() => setSelectedOverlay("stamp")}
@@ -814,7 +845,7 @@ export function A4PagedFrame({
                           onRemove={() => { setStampRemoved(true); setSelectedOverlay(null); onStampRemove?.(); }}
                         />
                       ) : (
-                        <StaticOverlay url={stampUrl} alt="Stamp" size={stampSizePx} frac={stampFrac} sheetW={SHEET_W} sheetH={SHEET_H} />
+                        <StaticOverlay url={stampUrl} alt="Stamp" size={stampSizePx} frac={stampShown} sheetW={SHEET_W} sheetH={SHEET_H} />
                       )
                     )}
                     {/* Auto PAID / PARTIALLY-PAID stamp — SEPARATE from the company stamp, pinned to the
