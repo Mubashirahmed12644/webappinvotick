@@ -116,3 +116,4 @@ Numbering: next free number, zero-padded to 4.
 - [0201 — `error_shown` names a database refusal as local and carries SQLite's primary code](0201-error-shown-names-a-database-refusal-and-its-sqlite-code.md)
 - [0202 — Print is on the documents that print, and makes the PDF Download makes](0202-print-is-on-the-documents-that-print-and-makes-the-pdf-download-makes.md)
 - [0203 — Every line of an invoice is on exactly one page](0203-every-line-of-an-invoice-is-on-exactly-one-page.md)
+- [0204 — A stamp or signature is selected on the first touch, follows the finger, and stays on the page](0204-a-stamp-is-selected-on-the-first-touch-follows-the-finger-and-stays-on-the-page.md)
