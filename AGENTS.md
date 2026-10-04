@@ -528,6 +528,10 @@ the list is wrong, not the app.**
     renders it as a link.
   - 0163's names and meanings are unchanged; the guided flow and the full editor share **one** draft
     (`useFreeInvoice`), so nothing fires twice.
+- **Paywall, from the build after 1.5.0 (decision [0208](docs/decisions/0208-continue-waits-for-the-sheet-and-a-missing-price-is-asked-again.md)):**
+  `premium_scr`'s `screen_view` carries `plans` (`loaded|partial|none`) and `plans_ms`; `premium_purchase_result` gains
+  the outcome `no_result` and, on Play's listener answers, `sub_response_code` + `sub_response`
+  (`not_applicable|insufficient_funds|user_ineligible|unknown_<n>`). No new event. `AGENTS-EVENTS.md` §1.36.
 - **Money/ads:** `premium_click`, `watch_ad_click`, `ad_request`, `ad_loaded`, `ad_shown`,
   `ad_dismissed`, `ad_load_failed`, `ad_show_failed`, `ad_load_crashed`, `ad_dialog_dismissed`,
   **`ad_impression_value`** (3,112 firings / 582 devices — what an impression actually paid, from

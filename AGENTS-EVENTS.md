@@ -938,6 +938,33 @@ glyph spins is not a press (the control is disabled and the view model ignores i
   only its label changed ("Print or save PDF"). The free tool's Print sends **nothing**: the tool has no analytics route, and a
   button does not earn one.
 
+### 1.36 A store's sub-code rides beside its code; a screen says what it had when it opened. *(decided 2026-10-05)*
+
+**What went wrong.** 27 of 27 Google purchase sheets that opened ended `user_cancelled`, and nothing could say whether
+those people walked away from the price or had no way to pay. Billing 8+ answers that on the purchase listener
+(`OnPurchasesUpdatedSubResponseCode`: `PAYMENT_DECLINED_DUE_TO_INSUFFICIENT_FUNDS`, `USER_INELIGIBLE`), and we dropped
+it. The paywall's own `screen_view` could not say whether its prices had loaded, so a paywall seen with a dash on every
+plan counted the same as one with prices.
+
+The rules:
+- **A vendor's sub-code is a parameter beside the code it refines, never a new outcome** (§1.1, §1.15). The integer is
+  stored as the vendor's ground truth (`sub_response_code`), with the vendor's own word beside it (`sub_response`:
+  `not_applicable` · `insufficient_funds` · `user_ineligible` · `unknown_<n>`). It is present only where the vendor
+  gave it — here, answers that came through Play's purchase listener. Absent is unknown (§1.7), and every iOS row has
+  none.
+- **What a screen had when it opened is a parameter on its own `screen_view`**, read once, at the moment it opened
+  (§1.23's `entry`, the same road). For the paywall: `plans` = `loaded|partial|none` and `plans_ms` = how long the last
+  price lookup took, ask to answer, good or failed. `plans=none` with `plans_ms` = asked and failed; without it = the
+  first ask was still out. Read them together.
+- **One press that the store never answers is still one row.** `premium_purchase_result` gains the outcome
+  `no_result`: the app had been back from the sheet 10 s with nothing, and the user pressed again. Never a failure —
+  nobody said no. A press ignored because an attempt was still open sends nothing (§1.9a).
+
+Events: `premium_purchase_result` (`outcome` adds `no_result`; `sub_response_code`, `sub_response`) and `screen_view`
+for `premium_scr` (`plans`, `plans_ms`). Count `screen_view`'s keys before adding more: it is shared by every screen,
+and the panel's Event detail reads a limited number (§1.22). Decision
+[0208](docs/decisions/0208-continue-waits-for-the-sheet-and-a-missing-price-is-asked-again.md).
+
 ### 1.10 Layers
 
 `intent.screen` · `intent.action` · `response.outcome` · `response.gate` · `response.interruption` ·

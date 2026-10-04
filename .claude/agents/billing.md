@@ -111,6 +111,14 @@ Memory is dated observation. Verify any file:line against the code before relyin
    installed from Play.
 8. **Release builds and store uploads happen only on the owner's word.** The version name is the live
    release + 1.
+9. **One press of Continue at a time, and only for a priced plan** (0208, built 2026-10-05, not released).
+   - The paywall stays busy from the press until the store answers or the app is back from the sheet
+     (`PurchaseAttemptGate`, shared). A press while an attempt is open is ignored, never a second attempt and
+     never "Purchase failed". A Play that never answers is closed as `no_result` only when the app has been
+     back 10 s and the user presses again.
+   - Prices are asked again until every plan has one (`PlanLookup`, shared): 2, 5, 15, 30 s, and at every
+     paywall opening and retry. A plan without a price shows the existing retry line; Continue is offered
+     only for a priced plan. Android now sets `productsUnavailable` too.
 
 ## How you get at the data (read-only)
 
