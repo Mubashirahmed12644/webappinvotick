@@ -117,3 +117,4 @@ Numbering: next free number, zero-padded to 4.
 - [0202 — Print is on the documents that print, and makes the PDF Download makes](0202-print-is-on-the-documents-that-print-and-makes-the-pdf-download-makes.md)
 - [0203 — Every line of an invoice is on exactly one page](0203-every-line-of-an-invoice-is-on-exactly-one-page.md)
 - [0204 — A stamp or signature is selected on the first touch, follows the finger, and stays on the page](0204-a-stamp-is-selected-on-the-first-touch-follows-the-finger-and-stays-on-the-page.md)
+- [0205 — The backend deploys to the new server through one switch and one forced command](0205-the-backend-deploys-to-the-new-server-through-one-switch-and-one-forced-command.md)
