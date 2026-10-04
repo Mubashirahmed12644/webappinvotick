@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import path from "node:path";
+import { LEGACY_REDIRECTS } from "./src/lib/legacy-redirects";
 
 const nextConfig: NextConfig = {
   // Pin the workspace root to this project (a stray lockfile exists in the home dir).
@@ -12,16 +13,7 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: ["192.168.18.68", "10.0.2.2", "localhost"],
 
   async redirects() {
-    return [
-      {
-        // One address for the policy. /privacy-policy is what goes into the app stores and the apps;
-        // /privacy is where the old site linked, so it keeps working with a permanent (308) redirect
-        // instead of serving the same text twice under two addresses.
-        source: "/privacy",
-        destination: "/privacy-policy",
-        permanent: true,
-      },
-    ];
+    return LEGACY_REDIRECTS;
   },
 
   async headers() {
