@@ -119,3 +119,4 @@ Numbering: next free number, zero-padded to 4.
 - [0204 — A stamp or signature is selected on the first touch, follows the finger, and stays on the page](0204-a-stamp-is-selected-on-the-first-touch-follows-the-finger-and-stays-on-the-page.md)
 - [0206 — A payment method with no fields names itself on the document](0206-a-payment-method-with-no-fields-names-itself-on-the-document.md)
 - [0207 — `/free-invoice` redirects to the free tool at `/` with a 308](0207-free-invoice-address-redirects-to-the-tool-at-the-landing-page.md)
+- [0208 — Continue waits for the purchase sheet, a missing price is asked again, and the paywall says what it had](0208-continue-waits-for-the-sheet-and-a-missing-price-is-asked-again.md)
