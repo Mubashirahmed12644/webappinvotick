@@ -4,6 +4,8 @@
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
 <!-- END:nextjs-agent-rules -->
 
+> **Servers moved 2026-10-05/06:** production is the new VPS `72.61.95.120`; read the section "Servers (2026-10-06)" at the top of [`docs/HANDOVER.md`](docs/HANDOVER.md) before touching a server, DNS or CI.
+
 ---
 
 # Invotick — project constitution
@@ -105,9 +107,11 @@ The authoritative source is **GitLab**, group `invotick`. GitHub copies are clon
 |---|---|---|---|
 | **Web app** (this repo) | GitLab `invotick/ivotickwebapp` | `~/Documents/Webinvotick` | Vercel on push to `main` |
 | **Mobile app** (Kotlin Multiplatform) | GitLab `invotick/invoice-kmp-app` | `~/Documents/invoice-kmp-app` | Play Store |
-| **Backend** (Spring Boot) + admin API | GitLab `invotick/invotick-apis` | `~/Documents/invotick-apis` (default branch `stage`) | Docker → Hostinger VPS `:8085` |
+| **Backend** (Spring Boot) + admin API | GitLab `invotick/invotick-apis` | `~/Documents/invotick-apis` (default branch `stage`) | Docker on the **new Hostinger VPS** (`72.61.95.120`, container `invotick-server`, `:8085` behind Caddy); `stage` push → CI → `deploy-invotick`. See [Servers](docs/HANDOVER.md) and decision [0210](docs/decisions/0210-production-moved-to-the-new-kvm-4.md) |
 | **Admin panel** (Next.js) | GitHub `Mubashirahmed12644/invotick-admin-panel` | `~/Documents/invotick-admin-panel` | Vercel → `admin.invotick.com` |
-| **Exchange rates** (Spring/Kotlin) | GitLab `invotick/exchange-rate-service` | `~/Documents/invotick-exchange` | Docker on the same VPS |
+| **Exchange rates** (Spring/Kotlin) | GitLab `invotick/exchange-rate-service` | `~/Documents/invotick-exchange` | systemd `exchange-rates.service` on the new VPS (`127.0.0.1:8083`, behind Caddy as `excahnge`) |
+
+⚠️ **The servers moved on 2026-10-05/06** (decision [0210](docs/decisions/0210-production-moved-to-the-new-kvm-4.md)). Production is the new Hostinger VPS **`72.61.95.120`**; the old one (`82.112.253.168`) is stopped and **expires 2026-10-22, not renewed**. A push to `stage` deploys to the new box. Backend, Caddy edge, MySQL, exchange service, Jariya, monitoring and backups: [`docs/HANDOVER.md`](docs/HANDOVER.md) → "Servers (2026-10-06)". Any older line in this file that says "the VPS" or `82.112.253.168` means the old box.
 
 ⚠️ **Decoy — do not touch:** `~/Documents/invotickapis` is a stale GitHub clone
 (`Touchpedia/invotickapis`, one "Initial commit"). The real backend is `invotick-apis`.
@@ -127,7 +131,7 @@ Rules:
 - **The pipeline is the safety net, not a reviewer.** `.gitlab-ci.yml` runs `test → docker → deploy`
   on the `stage` branch, with a real MySQL service, and deploy only runs if the tests pass. So the
   way to have CI verify a backend change is to merge it to `stage` — a failure blocks the deploy
-  rather than reaching the VPS. Vercel does the equivalent for the web repos with per-branch preview
+  rather than reaching production (the new VPS). Vercel does the equivalent for the web repos with per-branch preview
   deployments.
 - ⚠️ CI's `test` job is `only: - stage`, so **nothing on a feature branch has been tested by CI** —
   only locally, if at all. Do not describe a feature branch as "green" on CI's authority.

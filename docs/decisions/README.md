@@ -121,3 +121,4 @@ Numbering: next free number, zero-padded to 4.
 - [0207 — `/free-invoice` redirects to the free tool at `/` with a 308](0207-free-invoice-address-redirects-to-the-tool-at-the-landing-page.md)
 - [0208 — Continue waits for the purchase sheet, a missing price is asked again, and the paywall says what it had](0208-continue-waits-for-the-sheet-and-a-missing-price-is-asked-again.md)
 - [0209 — Meta hears the first confirmed invoice share, once per install, and nothing else about it](0209-meta-hears-the-first-confirmed-share-once.md)
+- [0210 — Production moved to the new KVM 4 (72.61.95.120); the old VPS is not renewed](0210-production-moved-to-the-new-kvm-4.md)
