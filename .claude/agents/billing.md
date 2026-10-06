@@ -98,7 +98,10 @@ Memory is dated observation. Verify any file:line against the code before relyin
     ask" as a 503 `UNVERIFIED`;
   - `PlaySubscriptionAdmin` — `orders.get`, `subscriptionsv2`, defer;
   - `BillingAdminController` — `POST /v2/admin/billing/subscriptions/defer`, ADMIN only;
-  - `PlayNotificationController` — real-time notifications;
+  - `PlayNotificationController` — real-time notifications; a refund is applied by `PlayVoidedPurchases`, shared with the
+    daily check;
+  - `PlayDailyCheck` — the daily check with Google (rule 12), `POST /v2/admin/billing/daily-check`, Health Centre
+    `play-daily-check`;
   - **App Store** (0112):
     - `AppleJwsVerifier` checks the JWS chain up to the bundled Apple Root CA - G3, pinned by SHA-256.
     - `AppStoreVerifier` handles the signed transaction, `checkNow`, and notifications.
@@ -205,6 +208,19 @@ Memory is dated observation. Verify any file:line against the code before relyin
       account's Invotick ID.
     - Backend `feat/account-deletion`; not deployed.
 
+12. **Once a day we ask Google ourselves; notifications are never the only road** (0140, built 2026-09-21, not deployed).
+    - Refunds first: Google's Voided Purchases list, its whole 30-day window, `type=1`. Each entry goes through
+      `PlayVoidedPurchases`, the same code as the notification. A refund already applied is never written again.
+    - Then every Play grant in ACTIVE, GRACE, ON_HOLD or CANCELLED is asked of Google and written by the same writer
+      a device's check uses (`googlesWordOn`). "Could not ask" changes nothing. No row is deleted, and an ending
+      records why.
+    - **Dry run until the owner says so:** `BILLING_PLAY_DAILY_CHECK_APPLY` defaults to false. Apply only after the
+      dry run has been shown to him.
+    - **Brake:** more than 5 endings and more than a quarter of a run means no ending is written. A lifetime is not
+      asked while `GOOGLE_PLAY_LIFETIME_PRODUCTS` omits it. A legacy row's token comes from its order and is not stored.
+    - The card goes red after 36 h without a good run, when Google refuses the refunds read (the "View financial
+      data" permission), and on the brake.
+
 13. **A purchase follows its phone's newest account — by itself from a guest, with a yes from anyone else, three times
     a year** (0143; the owner, 2026-09-21: *"latest UUID ko premium assign ker dain … 4thi per deny"*). Built on branches,
     not deployed.
@@ -272,6 +288,55 @@ Memory is dated observation. Verify any file:line against the code before relyin
     - Kill switch `store_nothing_watch_enabled` (Remote Config, default on). Off: every empty answer is acted on at
       once, as up to 1.4.8.
     - "Could not ask" still leaves premium untouched (rule 3). The server's grant (rule 9) is unchanged.
+
+17. **Premium revenue is what reaches the owner, one row per store order** (0182; the owner, 2026-09-28). Built on
+    `invotick-apis` `feat/user-revenue`, not deployed.
+    - **Net = price − tax − the store's fee.** Google's own `developerRevenueInBuyerCurrency` (Orders API) when it gives
+      it (`net_source = STORE_REPORTED`); otherwise the fee tier (`FEE_TIER`, `revenue.fee.google-play` 0.15). Apple
+      states no tax: `FEE_TIER_TAX_UNKNOWN`, `revenue.fee.apple` 0.30 until the owner confirms the Small Business
+      Program. Every `purchase_charge` row says which.
+    - **A refund counts 0; a cancelled auto-renew counts what was paid; a yearly charge counts in full on its day.**
+    - **USD** at the rate held when the row is converted; `rate_date` is frozen on the row (a backfilled row shows the
+      backfill day's rate, not the charge day's — the rates service keeps no history).
+    - **Written wherever a store answer already arrives** (register, restore, a device's check, the daily check, a
+      notification), after the caller commits, in its own transaction, never throwing. **No extra call to Google on a
+      buyer's request:** the order's money is asked by the revenue job afterwards. A refund of an order is labelled
+      even in the daily check's dry run — it is our count, not a grant.
+    - **It never decides premium.** Nothing that grants, dates, restores or moves a purchase reads `purchase_charge`.
+    - Test purchases (0156) are kept with the store's flag and count 0; NULL counts as real.
+
+## Every feature carries its own free/premium decision — *standing instruction, owner, 2026-09-25*
+
+His words: *"ab hamain apny features per premium and freemium ki distribution per bhi sath sath faisla
+kerna chahye, and premium dailogue per wo claim bhi kerna chahye."* And, when I mistook his example for the
+point: *"main ny aik example di hy tmhain — and wo is liye di hy ky next kisi feature main hamain lagy ky
+isko hamain premium and freemium per distribute kerna chahye, and wo result bhi dy sakti hy, to wo apply
+kerdain."*
+
+So this is a **practice**, not a single decision about one feature:
+
+1. **Every feature ships with its tier already decided** — free, premium, or free-but-limited — decided at
+   design time, alongside the feature, not bolted on afterwards. A feature that reaches the owner without a
+   tier proposal is unfinished work.
+2. **If it can earn, propose it.** He is explicit that where a split would produce a result, apply it. Do not
+   quietly default everything to free because free is safer to argue for.
+3. **What premium gives must be claimed on the paywall.** The proof this rule exists: a real user bought
+   premium **to remove the Invotick footer from his invoice** — something we had never promised anywhere. We
+   were already selling it and did not know. Anything premium actually delivers is listed where it is sold,
+   or we are being paid by accident.
+4. **The free tier must never look broken.** This is the line that separates a paywall from a defect, and it
+   is G3, which outranks revenue:
+   - *Withheld and named* is a paywall — the user sees what they are missing and why ("HD logo — Premium").
+   - *Silently degraded* is a bug — the user concludes the app is careless and uninstalls. Our invoices also
+     travel to the user's client (G2), so a degraded free invoice damages us twice.
+   - Test for any proposed split: **would a free user who did not read a word of marketing think something
+     was broken?** If yes, it is the wrong split, or it needs to be named on the screen where it bites.
+5. **Never remove or weaken something free users already have** to create a premium tier. Taking back is not
+   the same as withholding, and it is the fastest way to lose the trust the product runs on.
+6. **Bring the whole list, not one feature at a time.** The owner decides tier by tier; give him the full
+   inventory with a recommendation per row and the reasoning in one line each.
+7. The measurement rule still binds ([[monetisation-measure-never-assume]]): a split is proposed with its
+   expected gain **and** its cost, as a question for the owner, never as a finding.
 
 ## Known gaps (2026-09-12, found while checking 1.4.5)
 
@@ -373,10 +438,41 @@ Memory is dated observation. Verify any file:line against the code before relyin
    again~~ **Closed 2026-09-14 by the owner's design** (rule 9): inside the 48 h refund window a device holds
    premium a day at a time, so an offline one runs out within a day. A refund we or a bank issue after the
    window reaches an offline device only when it next asks; online, at its next daily check.
-10. **Play notifications are not arriving** (0 in the 15 days to 2026-09-13; Play Console → Monetisation
-    setup → Real-time developer notifications is the owner's to check).
-    - Without them, the server's copy of a renewal date moves only on the buying phone's launch restore,
-      or when a device asks after the date has passed (then the server asks Google). Built into 0041.
+10. **Play has never once told us about a purchase** (decision 0139, proven 2026-09-20; was "0 in the 15
+    days to 2026-09-13").
+    - **Proven, not assumed.** 0 requests to `POST /v1/billing/play/notifications` in every day nginx
+      keeps (12–20 Sep), while the same window carried 681 entitlement reads, 145 restores and 135
+      registrations; and decisive from the data for the tables' whole life — three subscriptions that
+      **expired five minutes after purchase on 27 Aug are still `ACTIVE`**, and **no entitlement row has
+      ever been revoked, expired, refunded, cancelled, in grace or on hold**. Loki is dark for the recent
+      weeks: its silence is not evidence.
+    - **Two links are broken, not one.**
+      - Play publishes to a Cloud Pub/Sub topic; a **push subscription** on it is what calls a URL. None
+        delivers to us. Which of "no topic" / "no subscription" / "aimed elsewhere" needs Play Console →
+        Monetisation setup → Real-time developer notifications — the owner's screen.
+      - **`GOOGLE_PLAY_RTDN_SECRET` has never been set anywhere** (not `.env.prod`, not compose,
+        `printenv` says not set). The handler refuses on a blank secret, so **every delivery would have
+        been answered 403 anyway**. **Secret first, console second** — the other order refuses the first
+        delivery and Pub/Sub drops it after its retention.
+    - URL, TLS, nginx and the handler are **working** (probed 2026-09-20: TLS verified, routed, 403).
+    - **What the silence misses.** Our only channel is a device of that account asking us. That misses a
+      user who stops opening the app (the row stays `ACTIVE` up to a year), an expiry on a quiet phone,
+      and — worst — **a refund or chargeback: Google's subscription record has no refunded state, so
+      `voidedPurchaseNotification` is the only way it can ever be learned.** Built into 0041.
+    - **Fixed in our half** on `fix/play-notifications-arrive` (not deployed): a refund of a **renewal**
+      is now keyed on `baseOrderId` (rule 5) with a purchase-token fallback — it could never find its
+      purchase before; a message Google could not be asked about is a **500** so Pub/Sub redelivers,
+      while a genuine refusal stays 200; Play's test notification is logged; and every arrival **and**
+      every refusal is written to `processing_state`, which is what the new Health Centre card
+      `store-notifications` reads. No migration.
+    - **Health Centre `store-notifications`** covers both stores: CRITICAL on an unset secret, on a store
+      that has sold and never spoken, and on **a sale with no message within 24 h**; WARNING only after
+      **35 days** of plain silence (the monthly renewal is the only guaranteed repeat at three live
+      subscriptions); a store that has sold nothing is OK.
+    - **Apple is structurally the same** and costs nothing yet: 1 call ever (a `curl` probe, 400) and 0
+      App Store purchases. But `APPLE_ISSUER_ID`/`KEY_ID`/`PRIVATE_KEY` are all empty in production, so
+      notifications are Apple's **only** channel and its refund window is 14 days — the App Store Connect
+      URL must be set **before** the first iPhone sale.
 11. **The App Store cannot sell yet** (0112, 2026-09-15). The code is built on `feat/146-ios-storekit` (app) and
     `feat/apple-purchases` (server); it is not merged or deployed. Still open:
     - the App Store Connect products, the Paid Apps agreement, and the notification URL (the owner's);
@@ -388,8 +484,8 @@ Memory is dated observation. Verify any file:line against the code before relyin
 
 ## How you get at the data (read-only)
 
-- Production SQL:
-  `ssh -i ~/.ssh/invotick_ro -o BatchMode=yes root@82.112.253.168 'mysql -uroot invotick_prod'` —
+- Production SQL: Since 2026-10-05 the production DB is on N (72.61.95.120); the old server O (82.112.253.168) is frozen/stale.
+  `ssh -i ~/.ssh/invotick_kvm4 -o BatchMode=yes root@72.61.95.120 'mysql -uroot invotick_prod'` —
   one-shot, always with a date range. Look at:
   - `entitlement`, `purchase_identity`, `purchase_restore_answer`;
   - the app's `ad_*`, `app_open_decision` and `ad_dailog_premium_click` events in `analytics_events`.

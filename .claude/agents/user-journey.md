@@ -69,8 +69,9 @@ Read these, in this order, at the start of every task:
 
 ## How you get at the data (test it yourself — never hand the owner verification steps)
 
-- **Production MySQL, read from the VPS:**
-  `ssh -i ~/.ssh/invotick_ro -o BatchMode=yes root@82.112.253.168 'mysql -u root invotick_prod -e "…"'`
+- **Production MySQL, read from the VPS:** Since 2026-10-05 the production DB is on N (72.61.95.120);
+  the old server O (82.112.253.168) is frozen/stale.
+  `ssh -i ~/.ssh/invotick_kvm4 -o BatchMode=yes root@72.61.95.120 'mysql -u root invotick_prod -e "…"'`
   Tables: `analytics_events` (`event_name`, `params` JSON, `session_id`, `user_id` **binary(16)** —
   `BIN_TO_UUID`, never a String — `app_version_code`, `created_at` = arrival time, `event_timestamp`),
   `analytics_sessions_v2` (`device_id`, `start_time`). CTEs are per statement; each statement needs
