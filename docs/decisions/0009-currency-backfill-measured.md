@@ -79,6 +79,6 @@ server-side backfill would have reached into people's local data on their next s
 
 ## How this was measured
 
-Read-only production access, created for this: `ssh -i ~/.ssh/invotick_ro claudero@82.112.253.168`,
-then `mysql invotickdb_dev -e "…"`. SELECT only — no sudo, no docker, no writes. Root was deliberately
-not requested, which is also why the DB grant had to be done by hand.
+Read-only production access, created for this: `ssh -i ~/.ssh/invotick_kvm4 -o BatchMode=yes root@72.61.95.120`
+then `mysql -uroot invotick_prod -e "…"`. SELECT only — no sudo, no docker, no writes. (Since 2026-10-05
+the production DB is on N = 72.61.95.120; O = 82.112.253.168 is frozen/stale.)
