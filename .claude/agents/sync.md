@@ -181,6 +181,12 @@ Memory is dated observation. Verify any file:line against the code before relyin
       up to 1.5.0 still leaves its payments live; a server cascade waits, like the lines', for the version rule.
     - A pulled (server) delete of an invoice still does not touch payments (`ServerDeleteDao`).
     - Guards: `ADeletedInvoiceTakesItsOwnPaymentsTest`, `ADeletedDocumentTakesItsLinesTest`.
+14. **An estimate carries its own currency, and a copy without one never clears it** (decision
+    [0211](../../docs/decisions/0211-an-estimate-stores-its-own-currency.md), 1.5.1). `EstimateDto.currency` is optional both
+    ways; the server has read and sent it since 2026-08-21. On a pull, `EstimateSyncHandler` keeps the phone's currency when
+    the incoming copy has none (an old server row, or an edit from a build ≤ 1.5.0). Open on the server: `updateFromSync`
+    still writes `existing.currency = dto.currency`, so an old build's edit blanks it there — the fix is
+    `dto.currency ?: existing.currency`, a separate decision. Guard: `AnEstimateKeepsItsOwnCurrencyTest`.
 ## Decided by the owner, 2026-09-11
 
 - **The order of the structural fixes:**
