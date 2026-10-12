@@ -113,6 +113,29 @@ export async function PUT(request: Request) {
       return NextResponse.json({ success: false, message: "Not approved yet." });
     }
 
+    // A registered account (Google, email) has a name, an email and a verified flag, and the session
+    // must show them: the browser used to show "Invotick <id>" with no email and "Verify your email"
+    // for everybody, so an owner who linked a Gmail account saw a guest. A guest has only the
+    // placeholder address "<id>@guest.com", which says nothing a person can recognise.
+    let username = data.data.shortCode ? `Invotick ${data.data.shortCode}` : "My account";
+    let email = "";
+    let isEmailVerified = false;
+    try {
+      const me = await fetch(`${config.backendUrl}/v1/profile/me`, {
+        headers: { Authorization: `Bearer ${data.data.accessToken}` },
+        cache: "no-store",
+      });
+      const profile = (await me.json()) as ApiResponse<{ username?: string; email?: string; isVerified?: boolean }>;
+      const real = profile.success && profile.data?.email && !profile.data.email.endsWith("@guest.com");
+      if (real) {
+        email = profile.data!.email!;
+        username = profile.data!.username || email;
+        isEmailVerified = profile.data!.isVerified === true;
+      }
+    } catch {
+      // The sign-in itself succeeded; a profile that cannot be read just keeps the placeholder.
+    }
+
     await createSession({
       token: data.data.accessToken,
       // Kept for the life of the session so every later call can name this device. Held server-side
@@ -121,12 +144,10 @@ export async function PUT(request: Request) {
       deviceId,
       user: {
         id: data.data.userId,
-        // A guest has no name or email to show; the Invotick id is what they can recognise, and
-        // inventing a placeholder would only make the account look like somebody else's.
-        username: data.data.shortCode ? `Invotick ${data.data.shortCode}` : "My account",
-        email: "",
+        username,
+        email,
         role: "USER",
-        isEmailVerified: false,
+        isEmailVerified,
         createdAt: new Date().toISOString(),
       },
     });
