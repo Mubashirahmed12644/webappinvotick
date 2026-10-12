@@ -4,10 +4,10 @@ import { BLOG_POSTS, TEMPLATE_PAGES } from "@/lib/content";
 const SITE = "https://www.invotick.com";
 
 export default function sitemap(): MetadataRoute.Sitemap {
+  // Only pages a signed-out visitor can actually open (see PUBLIC_PREFIXES in src/proxy.ts).
+  // /templates and /blog redirect to /login, so they are not listed (test row WEB-STATIC-01).
   const staticPages: MetadataRoute.Sitemap = [
     { url: `${SITE}/`, lastModified: new Date(), changeFrequency: "weekly", priority: 1 },
-    { url: `${SITE}/templates`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.8 },
-    { url: `${SITE}/blog`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.7 },
     { url: `${SITE}/privacy-policy`, lastModified: new Date("2026-09-15"), changeFrequency: "yearly", priority: 0.3 },
     { url: `${SITE}/terms`, lastModified: new Date("2026-09-15"), changeFrequency: "yearly", priority: 0.3 },
   ];
