@@ -205,6 +205,7 @@ test("the badge press and the offer press stay two names, because they are two p
   assert.notEqual("free_invoice_store_badge_click", "free_invoice_install_offer_click");
   assert.ok(isWebEventName("free_invoice_store_badge_click"));
   assert.ok(isWebEventName("free_invoice_install_offer_click"));
+});
 
 // Decision 0110 addendum: the iPhone's own-app button goes to the App Store.
 test("the App Store button is recorded as the own-app click, destination app_store", () => {
@@ -225,3 +226,4 @@ test("the PDF button has no App Store route, so app_store is refused there", () 
 
 test("a destination nobody built is refused, not stored", () => {
   assert.equal(sanitiseParams("shared_invoice_create_own_click", { destination: "open_in_app" }), null);
+});
