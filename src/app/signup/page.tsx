@@ -9,6 +9,7 @@ import { TextField } from "@/components/ui/TextField";
 import { GoogleButton } from "@/components/auth/GoogleButton";
 import { EmailSuggestionChip } from "@/components/auth/EmailSuggestionChip";
 import { SignupCodeStep } from "@/components/auth/SignupCodeStep";
+import { AUTH_STAGE_CLASS } from "@/components/auth/authStage";
 import {
   EMPTY_GATE,
   gateOnAccept,
@@ -154,7 +155,7 @@ function SignupView() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-6">
+    <div className={AUTH_STAGE_CLASS}>
       <div className="w-full max-w-sm">
         <div className="mb-8">
           <Logo />

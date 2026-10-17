@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
+import { AUTH_STAGE_CLASS } from "@/components/auth/authStage";
 import { Logo } from "@/components/ui/Logo";
 import { cn } from "@/lib/cn";
 import {
@@ -163,7 +164,7 @@ export function SignupCodeStep({
   );
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-6">
+    <div className={AUTH_STAGE_CLASS}>
       <div className="w-full max-w-sm">
         <div className="mb-8">
           <Logo />
