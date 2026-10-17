@@ -266,7 +266,7 @@ export function SignupCodeStep({
 
         {helpShown ? (
           <div className="mt-6 space-y-2 border-t border-[var(--color-outline-variant)] pt-4">
-            <h3 className="text-[15px] font-extrabold text-[var(--color-on-surface)]">
+            <h3 className="text-[0.9375rem] font-extrabold text-[var(--color-on-surface)]">
               Didn&apos;t receive the code?
             </h3>
             <p className="text-sm text-[var(--color-on-surface-variant)]">
