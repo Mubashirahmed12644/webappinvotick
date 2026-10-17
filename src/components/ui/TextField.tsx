@@ -1,9 +1,11 @@
 import { cn } from "@/lib/cn";
-import type { InputHTMLAttributes } from "react";
+import type { InputHTMLAttributes, Ref } from "react";
 
 interface TextFieldProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   error?: string;
+  /** React 19 passes `ref` as an ordinary prop; this lets a page reach the input (focus, caret). */
+  ref?: Ref<HTMLInputElement>;
 }
 
 export function TextField({ label, error, className, id, ...props }: TextFieldProps) {
