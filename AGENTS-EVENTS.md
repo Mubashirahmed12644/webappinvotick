@@ -638,6 +638,33 @@ Events: `premium_purchase_result` (`outcome`, `plan`, `response_code`, `failed_a
 `screen_view.entry` for `premium_scr`. Decision
 [0155](docs/decisions/0155-the-paywall-names-its-door-and-each-continue-names-its-result.md).
 
+### 1.37 A press that hands off to someone else's screen is one coded result; the door keeps the name `trigger`. *(decided 2026-10-19)*
+
+Option A of the rating redesign (decision
+[0225](docs/decisions/0225-rate-invotick-goes-straight-to-the-stores-own-sheet.md)). The lists' support icon opens a
+sheet with "I need help" (topics, a note, WhatsApp) and "Rate Invotick" (the store's own sheet). Both presses end on a
+screen that is not ours, so what happened is only known after the press, and no tap can carry it (§1.23).
+
+- **`support_help_whatsapp`**, coded, one per press of Open WhatsApp or Copy message: `trigger`, `feedback_topics`,
+  `has_note`, `outcome` (`whatsapp_opened|unavailable|copied`). `whatsapp_opened` means WhatsApp opened with the
+  message typed, **never** that it was sent: nothing tells us. Never the note's words (`has_note` only).
+- **`rate_sheet_result`**, coded, one per press of Rate Invotick: `trigger`, `outcome`
+  (`card_completed|fast_end_listing|error_listing|listing_opened|listing_unavailable`), `elapsed_ms`. Only on a failure,
+  each absent otherwise (§1.7): `error_code` and `error` in Play's own table (§1.15), `reason` for our own check
+  (`prompt_taken`, `no_screen`), `exception_class`. `card_completed` is a flow that ran past 1,500 ms; it does not say
+  that a card was drawn or that anyone rated.
+- **The door is `trigger`**, the stars dialog's existing name, and the topics are `feedback_topics`, the dialog's
+  existing name for the same codes. A second name for one fact (`door`, `topics`) would split every query that
+  reads both paths (§1.15).
+- The press's own tap stays auto-captured (`support_sheet_rate_card`, `support_sheet_help_card`); the result is the
+  coded row. Open WhatsApp and Copy message have no tap of their own: the coded row is their one event (§1.11).
+- **Remote Config `rate_sheet_direct_enabled`** (text; off only on `false`): off, the support icon opens the stars
+  dialog and neither event is sent.
+
+⚠️ **`outcome=play_store` on the stars dialog's submit id can carry 1–4 stars from the build after 1.5.3.** Until then
+every row was five stars (89 of 89), because the Play button showed only after five. Read `stars`, never infer it
+from the outcome. `store_review_not_requested.reason` gains `rate_sheet_this_session`.
+
 ### 1.10 Layers
 
 `intent.screen` · `intent.action` · `response.outcome` · `response.gate` · `response.interruption` ·
