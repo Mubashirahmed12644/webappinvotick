@@ -665,6 +665,41 @@ screen that is not ours, so what happened is only known after the press, and no 
 every row was five stars (89 of 89), because the Play button showed only after five. Read `stars`, never infer it
 from the outcome. `store_review_not_requested.reason` gains `rate_sheet_this_session`.
 
+### 1.38 A question's whole life is one coded row; its answers are codes read with the question. *(decided 2026-10-19)*
+
+The paywall's exit question (decision
+[0226](docs/decisions/0226-leaving-the-paywall-asks-one-tap-what-stopped-you.md)). After the paywall is left without
+buying, "What stopped you?"; after the store's own purchase sheet is closed by the user, "What happened?". One strip,
+one-tap answers, Skip, and nothing typed.
+
+- **`paywall_exit_reason`**, coded, **one row per strip shown**, sent the moment the strip ends:
+  - `question`: `exit` | `sheet_closed`;
+  - `outcome`: `answered` | `skipped` | `timed_out` | `interrupted`. `timed_out` is the strip leaving by itself after
+    8 s (12 s at a large font); it does **not** mean the user did not care (§1.14). `interrupted` is the user moving on
+    before an answer: another screen, the app left, a touch outside the strip, another sheet opening, the paywall closing
+    under it;
+  - `reason`, **only on `answered`** (§1.7): for `exit` `too_expensive|not_now|unclear_value|free_is_enough|payment_problem|other`;
+    for `sheet_closed` `price_unexpected|wrong_plan|cannot_pay|only_looking|other`;
+  - `entry`: 0155's door code, when known; `plan`: the product of the visit's last Continue, the same text as
+    `premium_purchase_result.plan`, only when Continue was pressed (a plan merely shown selected is not a choice);
+  - `position`: where the chosen chip stood, 1 first, only on `answered`; `shown_ms`: time on screen, steps of 100 ms.
+- **Coded, because the event is the strip's whole life, not a press** (§1.23). The chips and Skip carry **no
+  auto-captured id**, or one press would be two rows (§1.11).
+- **Read `reason` with `question`, always** (§1.15). `other` is the one code both share, with one meaning and one
+  string; no other code appears in both.
+- **The denominator is in the same event**: every strip shown leaves one row, so shown, answered and skipped come from
+  one name. Only a strip during which the process died leaves none. A refusal sends nothing.
+- **Never** any typed text (there is none), a user id or invoice data. Country and platform are the gateway's stamps.
+  `entry` and `plan` are counted codes, not ids.
+- **Remote Config**: `exit_question_enabled` (text, off only on `false`; the denylist cannot stop a coded event, so this
+  is its only switch) and `exit_question_gap_days` (default 30; empty, unreadable, below 1 or above 365 reads 30).
+- `store_review_not_requested.reason` and `rate_us_not_shown.reason` gain **`exit_question_this_session`**: the
+  question holds the process's one ask (`OneAskGate.Ask.EXIT_QUESTION`).
+
+⚠️ **Answers are hints, not proof.** Read `too_expensive` and `price_unexpected` beside net revenue per paywall viewer,
+never alone. No first session is ever asked, and 57 % of Continue pressers press on their first open: "What happened?"
+cannot speak for them.
+
 ### 1.10 Layers
 
 `intent.screen` · `intent.action` · `response.outcome` · `response.gate` · `response.interruption` ·
