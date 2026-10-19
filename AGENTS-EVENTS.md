@@ -645,6 +645,11 @@ Option A of the rating redesign (decision
 sheet with "I need help" (topics, a note, WhatsApp) and "Rate Invotick" (the store's own sheet). Both presses end on a
 screen that is not ours, so what happened is only known after the press, and no tap can carry it (§1.23).
 
+**Both platforms show both cards** (owner, 2026-10-19, after iOS build 33 opened the help directly; iOS 1.0.2 build 34
+on). On an iPhone, "Rate Invotick" opens the App Store's own "write a review" page by Apple's link
+(`https://apps.apple.com/app/id6757918977?action=write-review`), never StoreKit's capped, silent request. iOS build 33
+had no Rate card and sent no `rate_sheet_result`.
+
 - **`support_help_whatsapp`**, coded, one per press of Open WhatsApp or Copy message: `trigger`, `feedback_topics`,
   `has_note`, `outcome` (`whatsapp_opened|unavailable|copied`). `whatsapp_opened` means WhatsApp opened with the
   message typed, **never** that it was sent: nothing tells us. Never the note's words (`has_note` only).
@@ -653,6 +658,10 @@ screen that is not ours, so what happened is only known after the press, and no 
   each absent otherwise (§1.7): `error_code` and `error` in Play's own table (§1.15), `reason` for our own check
   (`prompt_taken`, `no_screen`), `exception_class`. `card_completed` is a flow that ran past 1,500 ms; it does not say
   that a card was drawn or that anyone rated.
+  - **On iOS only two outcomes exist:** `listing_opened` = the App Store's review page opened, `listing_unavailable` =
+    it could not open (no `error*` fields; `exception_class` if the open threw). On Android `listing_opened` means
+    "no Play Store, the listing opened instead". **Split by platform** before reading `listing_opened`: the same word
+    is the normal path on an iPhone and a fallback on Android.
 - **The door is `trigger`**, the stars dialog's existing name, and the topics are `feedback_topics`, the dialog's
   existing name for the same codes. A second name for one fact (`door`, `topics`) would split every query that
   reads both paths (§1.15).

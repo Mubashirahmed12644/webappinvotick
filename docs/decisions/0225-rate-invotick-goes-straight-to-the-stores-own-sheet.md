@@ -92,7 +92,7 @@ icon**. 74 % closed without a star. Many who press a "support" icon want help, n
 2. **The 1,500 ms threshold** (`RateSheetResult.FAST_END_MS`): an estimate between the 20 ms quota refusals and the
    seconds a card a person read runs. A very fast cancel can open the listing by mistake. Tune after a device test.
 3. **"Couldn't open the store."** — the sentence when even the listing fails (counted as `error_shown`).
-4. **iOS:** no Rate card. Apple asks that its rating prompt is not raised from a button, and 0189's guard keeps every
+4. ~~**iOS:** no Rate card.~~ **Decided 2026-10-19 — see the addendum below: iOS shows the Rate card.** Apple asks that its rating prompt is not raised from a button, and 0189's guard keeps every
    store link off iOS, so the support icon on an iPhone opens the help directly (`SupportHelp.rateCardShown`). The App
    Store listing exists since 2026-10-15 (id6757918977); a direct link there is a new decision.
 5. **"Copy message"** when WhatsApp is missing — built, as the mockup proposed.
@@ -103,7 +103,7 @@ icon**. 74 % closed without a star. Many who press a "support" icon want help, n
 
 `TheStoreReviewPathAsksNothingTest` keeps rules 1–3 and gains rule 4: the press's code (`StoreSheetOnPress`) lives in
 the review path, so it reads nothing the user said and draws nothing; the feedback flow reaches it only through
-`RateSheet`, bound once and only on Android; nothing that shows our stars names `RateSheet`. Each rule has a probe that
+`RateSheet`, bound once per platform (Android, and iOS since the addendum below); nothing that shows our stars names `RateSheet`. Each rule has a probe that
 breaks it. The listing is still opened in one file, `FeedbackRating.kt`.
 
 ## How to measure after release
@@ -124,3 +124,30 @@ should sit. Whether anyone actually rated is still not measurable: neither store
 
 Gradle was not run by the builder; no device run. Play's card shows only in a build installed from Play (internal
 testing), so the `card_completed` branch needs that track to be seen at all.
+
+## Addendum 2026-10-19 — iOS: the Rate card is shown
+
+- **Asked by:** the owner, after seeing iOS TestFlight 1.0.2 build 33, where the lists' support icon opened "I need
+  help" directly. The iOS exception (open point 4) was a build shortcut marked "owner to confirm" in the mockup; he does
+  not accept it. **One sheet, "How can we help?", two equal cards, on both platforms.**
+- **What iOS does:** "Rate Invotick" opens the **App Store's own "write a review" page** for our app, by Apple's link
+  for a button the user pressed: `https://apps.apple.com/app/id6757918977?action=write-review` (the https form, the
+  app's existing App Store page `getPlatformShareUrl()` plus `action=write-review`). No stars and no question of ours
+  before it, as on Android. The press takes the process's one ask (`OneAskGate.Ask.RATE_SHEET`), so the automatic
+  StoreKit request (`IosStoreReview`, untouched) does not follow it in that process.
+- **Why not StoreKit's request (`SKStoreReviewController`):** Apple shows it at most three times a year per user and
+  says nothing about whether it appeared, so a button the user pressed could do nothing, silently. The write-review page
+  always opens where the App Store is.
+- **Event:** the same `rate_sheet_result`. On iOS only `listing_opened` (the page opened) and `listing_unavailable` (it
+  could not; the sheet says "Couldn't open the store.", counted as `error_shown`). No new outcome name. Split by platform
+  before reading `listing_opened` (AGENTS-EVENTS §1.37).
+- **Code** (`invoice-kmp-app`, branch `ios/1.0.2-34`, worktree `kaam/worktrees/invoice-kmp-app-ios34`, for iOS 1.0.2
+  build 34): `StorePageOnPress` + `AppStorePage` (commonMain review path), `openAppStoreWriteReview` (iosMain), bound in
+  `IosPlatformModule`.
+- **Guard:** `TheStoreReviewPathAsksNothingTest` rule 4 is now *bound once per platform* (one `androidMain`, one
+  `iosMain`, none in shared code); rule 2 allows exactly two store-link files (`PlayStoreListing` and
+  `StorePageOnPress.kt`); iOS still binds no `StoreListing`, so the stars dialog keeps no store step on an iPhone.
+- **Rejected:** keeping the iPhone without a Rate card (the owner's decision above); StoreKit's request on the press
+  (capped, silent); the `itms-apps://` form (the app already uses the https page, which the App Store app answers as a
+  universal link).
+- **Not verified:** Gradle not run by the builder; no device run. TestFlight can show whether the page opens.
