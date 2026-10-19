@@ -709,6 +709,58 @@ one-tap answers, Skip, and nothing typed.
 never alone. No first session is ever asked, and 57 % of Continue pressers press on their first open: "What happened?"
 cannot speak for them.
 
+### 1.39 A nudge's whole life is one coded row; a copy and a reminder are parameters on the events that already count. *(decided 2026-10-19)*
+
+The second-invoice nudges (decision
+[0227](docs/decisions/0227-the-second-invoice-is-one-press-away-and-an-unpaid-one-is-remembered-only-on-request.md)):
+the Next step card on the saved invoice (A), Repeat on the list (B), and the opt-in unpaid-invoice reminder (C, Android),
+behind one 20 % control (decision [0228](docs/decisions/0228-owner-decisions-2026-10-19-panel-round-one-g1-pdf-and-the-test-groups.md)).
+
+- **`next_step_card`**, coded, **one row per card shown**, when its life ends: `entry` (`first_share`), `outcome`
+  (`pressed` | `dismissed` | `left`), `layout` (`full` | `title` | `button`: how much fitted over the preview), `shown_ms`
+  (steps of 100 ms). `left` = the card was on screen and the screen stopped being seen (§1.14: not "did not care"). A card
+  decided but never drawn (no room, or the screen went first) sends nothing and is not remembered as shown.
+- **`repeat_action`**, coded, **one row per press of Repeat**: `entry` (`list_latest` | `list_selection`), `outcome`
+  (`opened` | `failed`), `reason` **only on `failed`** (`source_missing` | `no_business` | `no_client_or_items` |
+  `db_error`). The press and its result are one moment (the copy is checked on the phone). "Make another invoice" on the
+  card is not a Repeat row: it is `next_step_card` `outcome=pressed`.
+- **`reminder_opt_in`**, coded, **one row per question shown**, when it ends: `entry` (`list_strip`), `outcome` (`on` |
+  `declined` | `left`), `permission` **only after Remind me** (`not_needed` Android ≤ 12 | `granted` allowed before |
+  `asked_granted` | `asked_denied` | `blocked` = refused with no dialog, read from an answer under 300 ms), `shown_ms`.
+  Shown once per phone; `left` is never asked again.
+- **`unpaid_reminder`**, coded, **one row per reminder when it leaves the person's hands**: `outcome` (`shared` = Send
+  reminder and a target picked | `dismissed` | `stopped` = "Stop these reminders", every reminder on the phone ends, only
+  the one on screen sends a row | `unanswered` = 14 days after it was due, written when the app next opens), `entry`
+  (`notification` | `list_strip`: how the person reached the card; **absent on `unanswered`**), `delivery`
+  (`notification` | `in_app` | `none`), `days_since_share`. A reminder whose invoice was paid (any part), deleted or left
+  the phone ends **silently, with no row**: it never reached the person.
+- **`nudges_assigned`**, coded, **once per phone**, the moment it is dealt its arm (the first time a nudge asks): `arm`
+  (`on` | `off`), `bucket` (0–99), `bucket_source` (`device_id` | `random`), `holdout_percent`, `percent_source`
+  (`remote` | `missing` | `invalid`, the tour test's code space, §1.15). The arm never changes afterwards.
+- **On existing events, parameters, never a new event (§1.1):**
+  - `invoice_created_success.origin` = `new` | `repeat` (a converted estimate is `new`); on `repeat` only,
+    `repeat_entry` (`next_step_card` | `list_latest` | `list_selection`) and `amounts_changed` (`true` when a copied line's
+    price or quantity moved, or a line was added or removed, before Save; **a yes/no, never an amount**). Rows before
+    this build have no `origin`: absent = unknown, never `new` (§1.7).
+  - `invoice_shared_success.purpose` = `reminder` **only on a reminder's share**; absent = the ordinary share. **A
+    `purpose=reminder` row is not a G1 share** (decision 0006) and never counts toward the store's card (0176): read
+    `purpose IS NULL` before counting confirmed shares.
+  - `store_review_not_requested.reason` and `rate_us_not_shown.reason` gain `reminder_opt_in_this_session`
+    (`OneAskGate.Ask.REMINDER_OPT_IN` holds the process's one ask).
+- **No tap of their own:** the card's button and close, Repeat (row and top bar), the strip's buttons and the reminder
+  card's buttons go through the touch gate with no auto-captured id; the coded row is the press's one event (§1.11).
+- **Never in any of them:** an invoice number, a client's name, an amount, a link, a token, a message's words. Country and
+  platform are the gateway's stamps.
+- **Remote Config** (all text): `next_step_card_enabled`, `repeat_action_enabled`, `unpaid_reminder_enabled` (off only on
+  `false`; the events are coded, so these are their only switches; `unpaid_reminder_enabled=false` also silences
+  reminders already scheduled), and `nudges_holdout_percent` (the control's share; blank or unreadable = the code's 20,
+  never 0, because about a quarter of new phones decide before the first fetch).
+
+⚠️ **Read every nudge row per arm**, and the headline (a second `invoice_created_success` within 7 days of the first)
+only on phones whose 7 days have passed (§3.15). The bundle cannot say which nudge worked. C never proves a payment: the
+app sees only payments the person records. C is Android only; an iPhone sends no `reminder_opt_in` and no
+`unpaid_reminder`.
+
 ### 1.10 Layers
 
 `intent.screen` · `intent.action` · `response.outcome` · `response.gate` · `response.interruption` ·
