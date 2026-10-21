@@ -8,7 +8,7 @@
 - G1 is flat: new installs reach a confirmed share in 7.8 to 9.1 percent of cases in every week since 31 August (24 h read); invoice created drifts 20.4 -> 17.7 percent. The funnel shape is the same every week: item added 41 percent, invoice created 18 percent, a 23-point drop, the largest.
 - The save ad gate (`AdOrPremiumDialog` on the create-invoice screen, 30 days: dismissed 1,705 times by 1,207 phones, "watch ad" 292 by 151, "go premium" 422 by 375) is a candidate cause, not a proven one: the 2026-10-19 G1 report found 43 percent of Save presses without an invoice.
 - What the gate earns: the save interstitial, 3,809 impressions and **$21.75 in 30 days** (the whole app: app-open $137.46, banners about $13). That is the most it can cost, for old and new users together.
-- The gate is also a door to the paywall (422 "go premium" taps by 375 phones): skipping it removes that door for the test arm, so premium is a guardrail.
+- The gate is also a door to the paywall (422 "go premium" taps by 375 phones): moving it changes when that door is seen (after the save, on the dashboard) in the test arm, so premium is a guardrail.
 
 ## Decided
 
