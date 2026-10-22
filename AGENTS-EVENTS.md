@@ -761,6 +761,137 @@ only on phones whose 7 days have passed (§3.15). The bundle cannot say which nu
 app sees only payments the person records. C is Android only; an iPhone sends no `reminder_opt_in` and no
 `unpaid_reminder`.
 
+### 1.40 An invitation's showing and its end are coded rows; the arm is dealt once, when the phone earns it. *(decided 2026-10-22)*
+
+The signup invitation at app exit and the Account safety line (decisions
+[0231](docs/decisions/0231-the-signup-invitation-lives-at-app-exit-and-never-blocks-invoice-iap-or-ads.md) and
+[0232](docs/decisions/0232-how-the-panel-proves-the-signup-invitation-worked.md), registry 157, app branch
+`feat/157-signup-at-exit`, build 1.5.5 or later). Two surfaces only, both opened by the person: the exit dialog (a back
+press at a root screen) and the top bar's cloud sheet (a tap). Never in the invoice, purchase or ad paths
+(`NoSignupAskSitsInTheInvoicePurchaseOrAdPathsTest`).
+
+- **`signup_invite_assigned`**, coded, **once per phone**, the moment a guest first becomes eligible (a confirmed share,
+  3+ invoices, premium, or 3+ days of use) with the switch on: `arm` (`invited` | `holdout`), `reason`
+  (`premium` | `share` | `invoices` | `days`, strongest first), `level` (`at_risk` | `better` | `safe`; **absent when
+  not known**, often at the moment of the deal because the device list is read after it), `paying` (`true` | `false`),
+  `bucket` (0-99), `bucket_source` (`device_id` | `random`), `holdout_percent`, `percent_source` (`remote` | `missing` |
+  `invalid`, §1.15). FNV-1a with its own salt; the arm never changes. A phone that later buys premium keeps its arm
+  and is invited anyway: read `paying` on the rows below, never the arm alone.
+- **`signup_invite_shown`**, coded, **one row per invitation drawn**: `surface` (`exit` | `sheet`), `level` (absent =
+  unknown), `reason`, `paying`; at `exit` also `exits_since_last` (**absent for the phone's first invitation**) and
+  `shown_this_week` (this one included). A plain dialog, the holdout and the switch off send none.
+- **`signup_invite_result`**, coded, **one row per press on an invitation**: `surface`, `action` (`google` | `email` |
+  `sign_in` | `stay` | `exit` | `dismiss`), `paying`; `sign_in` is an iPhone's one filled button, which opens the sign-in
+  screen with Apple beside Google (App Store guideline 4.8; no iPhone ever sends `google` or `email` here); `outcome` **only on `google`** (`done` | `cancelled` | `error`, where `done`
+  is the whole sign-in road finished, sent when it does, not at Google's own yes); `error_class` **only on `error`**
+  (`google_sheet`, `no_token`, `server_refused`, `closed_account`, `save_failed`, or an exception's class). `email`
+  says the existing sign-in screen opened, nothing more: its end is `register_success` / `login_success`. On the sheet,
+  `dismiss` is sent when it closes after an invitation nobody acted on, whatever closed it (the sheet's own
+  `sync_status_sheet_close` row still says how).
+  - ⚠️ **Stay and Exit are two rows**: `app_exit_cancelled` / `app_exit_confirmed` (the dialog's own, unchanged, every
+    arm) and this result (invited arm only). 0232 decided both; count dialogs from the first, the invitation's end from
+    this one, never add them.
+- **`top_bar_icon_shown`**, coded, **once per state per process**: `icon` (`cloud`), `state` (`resting` | `dot` |
+  `syncing` | `done` | `offline` | `failed`). `resting` is the standing cloud with nothing on it; it is not in 0232's list
+  and was added so the standing icon's showings are counted at all. Both arms send it (the holdout for 0159's states
+  only). This reverses 0159's "nothing per icon state" for this one purpose: taps per 100 showings.
+- **On existing events, parameters, never a new event (§1.1):** `sync_status_sheet` `screen_view` `state` gains `resting`
+  and `dot`; `app_exit_dialog_shown` gains `after_sign_in=true` **only** on the dialog that opens by itself after a
+  sign-in that began at it finished ("You're all set"); absent on every back press. `premium_scr` `entry` gains
+  `sync_sheet` (the signed-in free account's "See Premium" in the cloud sheet, 0155's code space).
+- **No tap of their own:** the Google button and "Use email" are guarded and carry no auto-captured id; the coded result
+  is the press's one row (§1.11). "See Premium" (`sync_status_sheet_see_premium`) and the sheet's Close
+  (`sync_status_sheet_close`, `method=close_button`) are auto-captured.
+- **Remote Config** (all text): `signup_exit_invite_enabled` (off only on `false`; the coded rows' only switch, and the
+  one a guardrail breach names), `signup_invite_holdout_percent` (blank or unreadable = the code's 20, never 0),
+  `account_safety_line_enabled`, `top_bar_cloud_icon_standing_enabled` (off only on `false`), `signup_invite_cap_exits`
+  and `signup_invite_cap_per_week` (default 3, never below 1).
+
+⚠️ **The arm is the phone's, the level is the moment's.** Read the verdict per arm on `signup_invite_assigned` with
+`paying=false`, and the steps on `signup_invite_shown` / `_result` joined by device. The level is computed from the
+account's other devices seen within 90 days and never guessed: an unread list is no level, not `at_risk`.
+
+### 1.41 A moved ad keeps its own events; where it stood is a parameter, and its whole life is one coded row. *(decided 2026-10-22)*
+
+The first-invoice gate test (decision
+[0233](docs/decisions/0233-a-new-users-first-invoice-saves-first-and-the-ad-gate-moves-to-the-dashboard-for-20-percent.md),
+registry 158, app branch `feat/158-first-invoice-gate-move`, build 1.5.5 or later). A phone that has never saved an
+invoice is dealt `move` or `show`. In `move` its first invoice saves at once and the same ad-or-premium dialog is
+shown once on the dashboard afterwards; in `show`, and everywhere else, the dialog stands before the save as today.
+
+- **`first_invoice_gate_assigned`**, coded, **once per phone**, when the create screen first opens with the test on
+  (before any Save): `arm` (`move` | `show`), `bucket` (0-99), `bucket_source` (`device_id` | `random`), `move_percent`
+  (the share in `move`), `percent_source` (`remote` | `missing` | `invalid`, the tour test's code space, §1.15). The arm
+  never changes. **Never dealt, and no row**, when the key is 0 or absent (the code default: nothing changes), or when
+  an invoice was ever saved on the phone (see below).
+- **`gate_arm`** (`move` | `show`) on **`invoice_created_success`** and **`invoice_shared_success`** (both the ordinary
+  and the `purpose=reminder` share), on every row of a phone that has an arm. **Absent = no arm**: a phone outside the
+  test, or a build before 1.5.5. Never read absent as `show` (§1.7).
+- **`position`** on the dialog's four existing events, `ad_dialog_shown`, `watch_ad_click`, `ad_dailog_premium_click`
+  (sic) and `ad_dialog_dismissed`: `before_save` (the invoice create and edit screens' gate, every phone) |
+  `after_save_dashboard` (the moved dialog). **Absent on the estimate gate and the saved-invoice share gate** (they did
+  not change), and on every row before 1.5.5. The moved dialog is the same dialog: the same names, `document=invoice`,
+  the same ad call (the save interstitial's unit and placement), the same premium door (`premium_scr` `entry=save_ad_dialog`).
+  Its `ad_dialog_dismissed` has no `outcome`: nothing is kept behind it, the invoice is already saved.
+- **`first_invoice_gate_moved_result`**, coded, **one row per moved dialog**, when its life ends: `outcome`
+  - `ad_watched`: "Watch a short ad" pressed and the ad flow ended. It does **not** say an ad was seen: a no-fill or a
+    consent not yet given ends the flow too. The impression is `ad_shown` / `ad_impression_value`;
+  - `premium_tapped`: "Go Premium" pressed (the paywall opens);
+  - `dismissed`: closed without a choice (the cross, back, or outside);
+  - `shown`: drawn, and no choice reached us before the app ended (written when the app is next on the dashboard);
+  - `not_reached`: never drawn, with `reason` **only here** (§1.7): `left_app` (the app ended, closed by the user or by
+    the system, between the first save and the dashboard; a trip to WhatsApp and back in the same run is not leaving),
+    `premium` (premium by then), `gate_off` (`saved_invoice_inter_enable` false by then).
+  So the moved dialog's denominator is in one name: owed = the sum of all five outcomes. A `left_app` or `shown` row is
+  written late, on the next visit to the dashboard; one that never comes back sends nothing.
+- **Who is never in it.** A phone is sealed out, for ever and with no row, the first time the create screen opens with
+  the test on if any of these holds: the phone-wide `has_seen_invoice_spotlight` (written on every invoice and estimate
+  save on this phone, by any account, kept across accounts), a finished invoice of the open account on this phone
+  (deleted ones count), or the account's `user_state.hasCreatedFirstInvoice`. A phone that saved an **estimate** first
+  is therefore out too. Drafts are not saves.
+- **Remote Config `first_invoice_gate_move_percent`** (text; blank, absent or unreadable = **0**, and 0 changes nothing).
+  Setting it back to 0 is the kill switch: a `move` phone that has not saved yet gets the dialog before the save again
+  (its arm stays; read `position` to see which place it got). A phone that decides before the first fetch is simply not
+  dealt and is asked again on its next create screen, so the default cannot leak phones into either arm.
+
+⚠️ **Read the G1 rows per `gate_arm`, and the price beside them**: ad money per new phone in each arm, from
+`ad_impression_value` joined by device (the moved dialog's ad carries the save interstitial's own `placement`, the same as
+the gate before the save; split by `position` on the dialog's events, not by placement). Read `outcome=not_reached`
+beside `outcome=shown|ad_watched|premium_tapped|dismissed`: a moved dialog the user never sees is the test's main cost.
+
+### 1.42 A sheet, a screen and a dialog say more through parameters on the events they already have; no screen is announced twice. *(decided 2026-10-22)*
+
+The screen-by-screen audit (`kaam/research/g1-screen-churn-audit-2026-10-22.md`, section 3) found the panel's churn per screen could not be read: a sheet's close was not a screen event, the screen under it was never announced again, `app_background` mixed an ad, a share sheet and a picker into one word, and 14.3 % of taps had no screen. Registry 159, app branch `feat/159-screen-events` (build 1.5.5 or later). **Analytics only: no screen, string, ad, paywall, sign-up, purchase or Remote Config key changed.** Owner's rule, 2026-10-22: **when a sheet closes, the screen underneath is NOT announced again** (every visit count and all history would stop being comparable); the sheet's own events carry what that leaves out. No new event name and no new screen name was added.
+
+| Parameter | On | Values | Absent when |
+|:--|:--|:--|:--|
+| `had_input` | `create_product_screen_close` (the item form's close id) | `true` / `false`: the name field holds something, as on the business, client and line forms | outside a sheet. It was on 0 of 3,293 rows |
+| `fields_filled` | the close id of the business, client, item and line forms (`business_form_close`, `client_form_close`, `create_product_screen_close`, `invoice_item_screen_close`), on the X and on a swipe or scrim | integer: text fields holding something (item and line: name, price, description, a quantity other than 1, category, unit, discount, tax; client: its 13 fields and a rating) | the form never reported (any other sheet) |
+| `ms_since_last_input` | the same rows | milliseconds since any of those fields last changed | nothing changed since the form opened |
+| `open_index` | the `screen_view` of every sheet (`analyticsSheetId`), `premium_scr` included | 1-based count of this sheet's opens in this app process | never |
+| `last_result` | the same view | `saved` (only the four forms above say it), `closed` (X, scrim, back), `swiped`, `unknown` (the previous open ended unseen: the screen under it was left, the app ended, or a sheet that does not report a save closed itself) | first open of the process |
+| `over` | `app_background` | `ad`, `ad_click`, `share_sheet`, `picker`, `camera`, `permission`, `external_app`, `billing`, `sign_in`, `speech`, `store_review`, `play_screen`, `other` | `reason` is anything but `other_activity` |
+| `phase` | `app_background` | the splash phases as before, and **`done`** after the splash | the process never began a splash |
+| `viewer` | the `screen_view` of `received_invoice` | `owner` (the sender, or another account of the sender on this phone) / `receiver` | the link could not be read, or the view model did not answer in 3 s |
+| `entry` | the `screen_view` of `saved_inv_scr` | `just_created`, `just_edited`, `reopened`, `received`, `reminder`, `from_preview` | never |
+| `method` | `saved_inv_back_click` | `close_button` (the arrow) / `back_press` (the system gesture) | before this build |
+| `dialog` | `create_inv_discard_dailog_shown`, `app_exit_dialog_shown`, `share_bottom_sheet_open` | `discard_changes`, `exit`, `share_chooser` | never |
+| `item_count`, `has_client` | `create_inv_discard_dailog_shown` | the same two facts, computed the same way, as on `invoice_screen_close` | the estimate and every other caller of the dialog |
+| `prev_screen` | `app_exit_dialog_shown` | the shell screen before the one the back press landed on | the shell had shown only one screen |
+| `open_index`, `last_result` | `share_bottom_sheet_open` | the chooser's opens in this process; `last_result` is `shared` or `unknown` | first open |
+| `ms_to_pick` | `invoice_shared_success` (the ordinary share, not the reminder's) | ms from the chooser going up to the pick | never |
+
+- **`fields_filled` is the form's fullness, not the user's typing.** The first report is the baseline; an edit starts filled. A saved draft or an edit that loads into the form after its first frame counts as one change, at the moment it loads, so `ms_since_last_input` after a restore is small without anyone typing. Read it with `had_input`.
+- **`open_index` is per app process, not per `session_id`.** A sheet's composition is destroyed on close, so nothing inside it can count; the ledger lives in `core:ui`. A process that stays open across a long pause is still one count. A sheet that leaves and re-enters composition counts as an open, as it already sent another `screen_view`.
+- **`phase` was absent after the splash on purpose**, which is the whole reason it sat on 21 % of rows: it was the splash share of all backgrounds. A reader that treats "`phase` present" as "left during the splash" now reads wrong: filter `phase != done`.
+- **`over` has two sources and a precedence:** an ad click the SDK counted, then the activity that stopped when it is not ours (the ad's own, the billing proxy), then what we launched (classified from the intent's action and component), then an excursion we raised. `other` is an honest value: the platform did not name it.
+- **`viewer` delays one `screen_view`.** `received_invoice` is announced when the view model knows who is looking (about 1 s for the owner, after the document loads for a receiver), at most 3 s after arrival, and it goes out before any later screen if the user leaves first, so the **order and the count of the journey do not change** and the row is still sent exactly once, by the shell's one announcer (`ShellScreenAnnouncer`). Its timestamp, and the `prev_screen_ms` of the screen it came from, run later than arrival by that wait. Rows before this build have no `viewer`: never read them as `receiver`.
+- **Tap ids: only the screen part changes.** The shell now provides `LocalScreenId` over the tab bar, the rail, the drawer and the exit screen, and the sign-in host provides one over splash, login, sign-up, code and password screens. `tap:?:BottomNavItem.EstimateRoute` becomes `tap:dashboard:BottomNavItem.EstimateRoute`; the control's own name after the screen is unchanged (`OnlyTheScreenPartOfATapIdChangesTest`). **History splits at this build**, and one control now has one id per screen it is tapped on, which is the point (a tab tap now says which screen it left). **A denylist entry keyed `tap:?:...` stops matching**: that control sends again, under its new id, until it is switched off again. Hand-written names (no dot) are never touched.
+- **`from_screen` on `app_exit_dialog_shown` is true and stays `dashboard`** (the dialog opens only at the root, and back from any screen reaches the dashboard first). The fact the audit wanted is `prev_screen`. `app_exit_confirmed.method` and `app_exit_cancelled.method` are in the code at the base; 1.5.0 (versionCode 114) is a shipped build and cannot gain it.
+- **The onboarding tour's step is already on every event it covers** as `screen_mode` (`tour_business|tour_client|tour_items`, `OnboardingOverlayStamps`); a per-step `screen_view` would be a second screen event for the screen underneath, which this rule forbids.
+- **Not possible as a parameter:** a share chooser that was backed out of sends nothing (the OS tells us only of a pick); the next open says `last_result=unknown`. A row for the back-out itself is a new coded event, not added here.
+- **Guards:** `TheScreenMeasurementFixesAreParametersOnlyTest` (no event name added in any touched file, each new name spelled in one file only, the provider above the bar, the drawer and the exit screen, `method` always on the exit dialog's confirm and cancel), `tools/analytics/measurement-only-check.sh` (no string, ad, paywall, Remote Config or build file in the diff), `tools/analytics/shared-id-check.sh` (no shared tap id).
+
 ### 1.10 Layers
 
 `intent.screen` · `intent.action` · `response.outcome` · `response.gate` · `response.interruption` ·
