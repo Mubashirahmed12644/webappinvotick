@@ -189,7 +189,8 @@ Memory is dated observation. Verify any file:line against the code before relyin
       - `provider = APPLE_APP_STORE`;
       - `provider_purchase_id` = the original transaction id (rule 5's equivalent);
       - `purchase_token` = the latest transaction id.
-    - **Sandbox is accepted,** because App Review buys there.
+    - **Sandbox is accepted, but grants account premium only to `apple.sandbox-accounts`** (0220; empty = nobody), never
+      a lifetime (≤ 24 h, rolling). Anyone else is "could not ask", so App Review's iPhone stays premium on StoreKit's word.
     - **Apple's refund window is 14 days** (rule 9). Without the App Store Connect key, other devices hold an
       App Store purchase a day at a time, and renewals and refunds arrive only by notification.
     - **The paywall never dead-ends:** no plans means a retry line, never "Checking plans…" for ever.
@@ -304,6 +305,16 @@ Memory is dated observation. Verify any file:line against the code before relyin
       even in the daily check's dry run — it is our count, not a grant.
     - **It never decides premium.** Nothing that grants, dates, restores or moves a purchase reads `purchase_charge`.
     - Test purchases (0156) are kept with the store's flag and count 0; NULL counts as real.
+
+18. **A refund stays a refund; a replay never reopens it** (0220, security audit 2026-10-15). Built on `invotick-apis`
+    `fix/billing-security-2026-10-15`, not deployed.
+    - A REFUNDED/REVOKED grant is reopened only by a charge made after it ended (charge time vs `revokedAt`). The store's
+      live word about the same purchase is no evidence: Google shows no refund on a subscription, and an old App Store
+      receipt verifies for ever.
+    - Apple's signed revocation is written onto the grant (current transaction only); with the App Store Connect key, a
+      receipt older than 24 h is checked with Apple now.
+    - `/purchase` and `/restore`: 60 per account, 300 per address per 10 min; over budget is 503 / `UNVERIFIED`, never a
+      refusal. Google's requests time out at 15 s.
 
 ## Every feature carries its own free/premium decision — *standing instruction, owner, 2026-09-25*
 

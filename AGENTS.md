@@ -454,8 +454,8 @@ the list is wrong, not the app.**
   `shared_invoice_rejected` on the backend's confirmation, `shared_invoice_decision_failed`
   (`decision`, `http_status`) and `shared_invoice_create_own_click` (`destination` =
   `play_store|app_store|web_app`) on the click.
-  **`app_store`** exists from the iOS release (decision 0110 addendum; branch `feat/web-share-events-carry-link`,
-  **not deployed**, and it must wait for the App Store listing).
+  **`app_store`** is **live since 2026-10-15** (decision 0110 addendum; web `main` `186d503` + `ef51b11`, the App Store
+  listing id6757918977 answered 200 that day). Checked on the live pages: an iPhone gets "Get it on the App Store".
   - An iPhone's own-app button goes to `apps.apple.com/app/id6757918977`.
   - "Download PDF" stays `print_dialog` on iOS.
   - Safari's Smart App Banner (Open/Get) is not in our events.
@@ -591,6 +591,12 @@ the list is wrong, not the app.**
   `NO_PROOF`, `JOINED_ANOTHER_ACCOUNT`, `NOT_A_GUEST`, `NOT_AN_ACCOUNT` — or `HTTP_<n>`) and
   `exception_class`. No answer at all is not reported (0029). `guest_data_merged` now fires only where a
   move is decided: a sign-up, or a "yes" to the one question.
+  **From 1.5.3 (decision [0214](docs/decisions/0214-an-unreachable-phone-retries-and-proves-it-before-it-reports.md))**
+  `push_unreachable` / `pull_unreachable` are sent only after the call was sent again and a control check proved the
+  phone reaches the internet and not us, at most once per (run, exception class) per 6 h. They carry `tries`,
+  `waited_ms`, `probe_web`, `probe_neutral`, `probe_api` (`ok|fail|timeout`), `probe_dns` (`ok|fail`), and the live
+  `net_online` / `net_type`, which replace the gateway's stamp on that row. Builds 1.4.8–1.5.2 sent them on the phone's
+  word alone (93 % noise on 1.5.2): never read those as proven.
 - **Accounts on one phone, from 1.4.9:** **`legacy_guest_move`** — a guest still inside `invotick_v2.db` moved into
   a file of its own, or left where it is, or a failed attempt (decision
   [0153](docs/decisions/0153-a-guest-inside-the-legacy-file-moves-into-a-file-of-its-own.md)). `outcome`
@@ -683,6 +689,21 @@ name `invoice_shared` on pre-release branches.
    - Memory keeps the incidents and the dated state.
    - When a harness does not list these agents, spawn a general-purpose agent told to read and follow
      the file, and put only the task itself in the prompt.
+
+10. **A feature is not done until the admin panel can measure it, tested with invented numbers** —
+    *standing instruction from the user, 2026-10-19.* The measurement code (query, endpoint, page or card, silence
+    check) is written with the feature, a synthetic data set with a known answer is run through the real road
+    (app payload -> track endpoint -> stored rows -> panel endpoint -> page) on a throwaway backend, and the number,
+    its denominator, the declared expectation and the guardrails are written in the decision first. Every work order
+    for a measurable feature carries these items. Full rule: [`docs/measurement-definition-of-done.md`](docs/measurement-definition-of-done.md).
+
+11. **Release-impact work loops in the `release-impact` agent** (`.claude/agents/release-impact.md`) —
+    *standing instruction from the user, 2026-10-19.* Every feature the owner wants to read on the panel gets its own
+    section with its own KPIs and graphs (ads are read like ads, the second invoice like a funnel, the paywall like a
+    paywall); every KPI the change concerns is measured or written down as left out; the panel says plainly when a
+    change made things worse and names the switch to turn it off. The agent owns the KPI choice, the panel section
+    design brief, the verdict and the keep / iterate / roll back / wait recommendation. Registry:
+    [`docs/measurement/FEATURE-REGISTRY.md`](docs/measurement/FEATURE-REGISTRY.md).
 
 ## 8. Where the rest of the knowledge lives
 

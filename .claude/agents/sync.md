@@ -33,6 +33,19 @@ Answer the owner in **Roman Urdu and plain words** (`AGENTS.md` §7.4).
 - Open every piece of work with *"meri samajh ye hai: …"*. Order: what the data says → idea → pros/cons → plan →
 the owner's decisions → code. Log every decision in `docs/decisions/`, including what was rejected.
 
+## A second mandate (the owner's words, 2026-10-13)
+
+*"Sync ke chhote se chhote issue ko bhi fix karna hai. Jo issue real nahi hain, fixable nahi hain, unko sync failed mein report
+nahi karna. Real sync failed ka har case report ho, aur jab bhi report ho hum usay fix karein, jaise crashes."*
+
+1. **`sync_failed` means a real, fixable failure.** The phone's own internet, a cancelled call, a 502 during a deploy gap, a cancelled
+   HTTP/2 stream are not. The APP must not send them (`NotASyncFailure.kt`), and the server card sets aside what older builds
+   still send (`SyncFailureCheck.TRANSPORT_EXCEPTIONS`/`NETWORK_MARKERS`). Both lists change together, in the same words.
+2. **Every other row is traced to its root and fixed**, like a crash: signature -> evidence -> the line of code or the row of data ->
+   fix -> test -> re-read production after the release. "Permanent fix" is not claimed without that last step.
+3. **Keep the ledger** `kaam/research/sync-defects-2026-10-13.md`: one line per defect signature with its verdict (noise / real),
+   root cause, fix (branch, commit) and the number to read afterwards.
+
 ## Read first, every task
 
 1. `AGENTS.md` §4 (invariants), §4b (Tier rules — sync is Tier 2, and Tier 1 where data can be lost),
@@ -919,11 +932,10 @@ Memory is dated observation. Verify any file:line against the code before relyin
       net_type=wifi`.
       - `NetworkMonitorImpl.isCurrentlyConnected()` now asks the system **and corrects the flow**, so the live reading
         is the only reading; `SyncManager`'s gate asks instead of reading the cache.
-    - **Offline is silent; online is reported.** `SyncQueueManager.reportRequestFailed` takes a fresh reading when a
-      call never reached the server. No network → nothing (0125, the owner's word). Online → `push_unreachable` /
-      `pull_unreachable`, carrying exactly `push_failed`'s and `pull_failed`'s columns (0050's table; its contract test
-      covers both). A cancellation is never reported whatever the network says, and a build with no reading to take
-      reports nothing.
+    - ~~**Offline is silent; online is reported.**~~ **Superseded by 0214 (rule 35a): online alone is silent too.**
+      `SyncQueueManager.reportRequestFailed` takes a fresh reading when a call never reached the server. No network →
+      nothing (0125, the owner's word). A cancellation is never reported whatever the network says, and a build with no
+      reading to take reports nothing.
     - **The Health Centre names it.** `SyncFailureCheck` files those two stages on their own line, "Could not reach us
       while the phone said it was online", with devices and occurrences, decided by the **stage** and never by the
       message — so old builds' rows stay where they are. `app_stage` already holds it: no column, no migration. It is
@@ -967,6 +979,44 @@ Memory is dated observation. Verify any file:line against the code before relyin
     - Guards: `APhoneThatThoughtItWasOnlineIsNotSilentTest`, `TheNetworkIsReadWhenItIsAskedTest`,
       `APhoneThatCouldNotReachUsIsNamedTest` (9 cases: an ordinary week green at 340/4,292, red at 500/4,292, a
       handful never red, and no denominator at all).
+    - **The follow-up above was failed** (ledger 2026-10-13, part 2: 19.5 % of 7,306 phones on 1.5.1 with a live
+      reading). Rule 35a replaces the reporting half.
+
+35a. **A call that never reached us is sent again, then proved, before it is reported** (0214; the owner, 2026-10-14:
+    *"retry + jaanch wala tareeqa banao"*). App `fix/153-sync-defects` `3ab058649` + `1e7ea36ef` + `1d873977c`; backend
+    `feat/unreachable-needs-a-probe` `24f836a` — **on `stage` and live by 2026-10-15** (the card shows its "unproven"
+    line). The app half is unreleased (1.5.3). No migration.
+    - **Why:** on 1.5.2, 397 `*_unreachable` reports in 48 h were 93 % noise — 369 named no network, 63 % of the phones
+      were back after >10 min (offline), 27 % within a minute (a blip).
+    - **`UnreachableCallPolicy.send`** wraps the push's and the pull's API call. A network-class failure (`isNetworkFailure`,
+      never `isGatewayAnswer`, never a cancellation) with the live reading **offline** → silent, no retry. **Online** → the
+      same call again after 3 s and 10 s, inside 20 s from the first failure, only while still online. Success → nothing
+      reported, and the sync goes through.
+    - **A push is resent only when it provably never left** (`neverLeftThePhone`: DNS, refused, no route, connect
+      timeout, iOS −1003/−1004/−1006/−1009/−1018/−1020). A read timeout or reset may still be running on the server; a
+      copy 3 s later would race it on the same keys (duplicate key → 0080's path → possibly an ERROR line → Slack). A
+      resend after the first has committed is safe (`ALREADY_APPLIED`), which is what the next scheduled run relies on.
+      Each send has its own request id and its own journey T0.
+    - **Still failing → `HttpControlProbe`**, own bare client, 5 s each, in parallel: HEAD `www.invotick.com/icon.png`,
+      HEAD `www.google.com/generate_204`, HEAD `<BASE_URL>/logo.webp`, DNS of the API name. Never the app's client (it
+      carries the pass).
+    - **Reported only when proven** (`UnreachableCallPolicy.proves`): `net_online=true`, web **or** neutral `ok`, and
+      `probe_api` not `ok`. At most once per (run, exception class) per 6 h, in DataStore
+      (`lastUnreachableReportAt`); the guard is read before the check, so a phone already told spends no data.
+    - **Params, on `push_unreachable` / `pull_unreachable` only:** `tries`, `waited_ms`, `probe_web`, `probe_neutral`,
+      `probe_api`, `probe_dns`, `net_online`, `net_type`. `net_online`/`net_type` are the gateway's stamp names; the
+      event's own live value wins over the stamp.
+    - **Switch:** `sync_unreachable_retry_enabled` (on unless `false`). Off = no retry, no check, nothing reported.
+    - **Server:** `SyncFailureCheck` counts toward red only builds that send the proof —
+      `health.sync-failures.unreachable-proven-from-version-code` (117) and `…-from-ios-build` (31); **set both to the
+      real first builds before relying on the card.** Older builds' rows go on "Ignored — could not reach us, unproven
+      (builds before the check of decision 0214)", never red. The row has no probe column; the build decides.
+    - **Not covered:** the parked-account push (sent once, silent as before), images, reconcile, guest sign-in. iOS
+      `getaddrinfo` actual needs an Xcode/simulator compile.
+    - **Due one week after 1.5.3 is wide:** 0214 §7's two queries; set the red share from the measured week.
+    - Guards: `AnUnreachableCallRetriesAndProvesItBeforeItReportsTest` (commonTest),
+      `ABlipIsSentThroughAndAPushIsNeverRacedTest` (real handlers), the amended `APhoneThatThoughtItWasOnlineIsNotSilentTest`,
+      `SyncFailureEvidenceTest`; backend `APhoneThatCouldNotReachUsIsNamedTest` (proven vs unproven, iOS floor).
 
 36. **One drift is one report, and it says how many were refused for good** (0130; the owner's Live Events
     screenshot, 2026-09-20). App `fix/147-one-drift-one-report` off `VC_107_VN_147`, `c73b6da3`, pushed, not merged;
@@ -1052,6 +1102,15 @@ Memory is dated observation. Verify any file:line against the code before relyin
       id, which is never in this state.
     - **Measure after the release:** `queue_renumbered` by phone and count, then re-run 0133's `OWNERSHIP_VIOLATION`
       count — it should stop growing and start falling.
+    - **It never ran in production until 1.5.3 (found 2026-10-15, 0216).** The query asked for `lastError LIKE
+      '%OWNERSHIP_VIOLATION%'`; a queue row keeps the server's message (`result.error`), never the code, and only this
+      rule's test seeds wrote the code. `queue_renumbered`: 0 reports in 60 days. From 1.5.3 (`af81ef366`) it matches the
+      server's sentence about the record's **own** id; a refusal for a number the record names ("… reference …", a line's
+      invoice) is never renumbered, and is put back in line when the named record is renumbered (`reviveRefusedFor`); a
+      payload refusal ("userId does not match") is never renumbered. **When the open account is a guest**, "belongs to a
+      guest whose work has not joined" is stranded too: a guest never claims, so rule 24 never resolves it (guests
+      `89baed90`, `f8cf253c`, `17f1bcf8`, `9e426f06`). Guard: 6 new cases in `AStrandedRecordGetsANewNumberTest`.
+      **A seed in a test must be the server's real sentence**, never a shorthand with the code in it.
     - Guard: `AStrandedRecordGetsANewNumberTest` (7 cases on the real schema under Robolectric; 4 red first, and
       the 3 that passed are what must not change — another failure state, a kind it cannot move, an interrupted
       run).
@@ -1342,6 +1401,40 @@ Memory is dated observation. Verify any file:line against the code before relyin
       the stuck guests. Its analytics are refused at the same moments for a `userId` that is not a UUID, so the phone's
       owner id is malformed; which build and what shape is unknown until the server logs the refused id's shape (length,
       dash count, masked).
+
+49. **Only a defect that shipped code can cure turns a sync card red** (0216; the owner's 2026-10-13 rule). Backend
+    `fix/sync-defects-2026-10-15` `8eac352` + `91976a0` + `ddeb864`, not deployed.
+    - **`FixedInALaterBuild`** lists each sync-failure shape a later Android build fixed, with its commit and first
+      build. On an older build the row is "Older builds, fixed in a later build" — on the Device sync card, the
+      refused-record card and the Sync health page — **only once that build is on the store**:
+      `health.sync-failures.released-version-code` (116 = 1.5.2). **Move it to 117 the day 1.5.3 is live**, never before.
+      An entry needs the commit and its guard; never add one for a fix that is only believed. 401s and drift are
+      deliberately not in it (a registered account's pass is cured by signing in; the drift fix is unproven).
+    - **Set aside by name:** the phone's repair notes (`queue_revive`, `queue_settled_as_held`, `queue_renumbered`,
+      `queue_asked_server`, `queue_repair_reference`, a stuck backlog that CLEARED — one that has not cleared stays a
+      defect), "Job was cancelled", and a 401 for a session the server ended on purpose ("Token revoked", "This device
+      was signed out.", "This account was deleted.").
+    - **An APP row's `last_seen_at` is the report's arrival**, 15–18 min after the event. A guest's stale or empty pass
+      ("bad signature", "malformed", "Invalid authorization header", "Token expired") counts as recovered when the phone
+      was accepted again up to 30 min before that arrival. Only a guest (looked up by id), never a registered account.
+    - **The Sync health page applies the card's floor**, so the owner's list and the card agree on older builds.
+    - **The refused-record card's loop on `33a46139` (632) was a 1.4.5 phone's own loop** ("Product: local row missing
+      for UPDATE", push_gather): the server never saw the record. The card now says so when only the phone reports.
+    - Guard: `OnlyALiveDefectTurnsTheSyncCardsRedTest` (each set-aside case paired with the one that stays red).
+
+50. **Every sync write asks whose record it is before it answers anything about it, on v1 and v2** (0217, security
+    batch 1; backend `fix/security-batch1-2026-10-15`, not deployed).
+    - **v2:** `InvoicePaymentSyncV2Service.updateFromSync` was the one update of 21 that never asked. A stale copy was
+      answered with the owner's record; a newer one re-pointed the owner's link. Now `assertOwnership` comes before
+      `refuseRevival`/`checkNotStale`; a link stored with no owner is its invoice's, then its payment's. Guard:
+      `EveryUpdateAsksWhoseRecordItIsFirstTest` reads all 21 `updateFromSync` bodies — **a new group, or a line placed
+      above the check, fails the build**. Behaviour: `AnotherAccountsPaymentLinkStaysItsOwnersTest`.
+    - **v1:** `payments.created` / `invoicePayments.created` skip (null, SKIPPED) another account's stored row and a
+      foreign payment method. Guard: `TheV1SyncWritesOnlyTheCallersOwnPaymentsTest`.
+    - **A removed phone's pass is refused on every call** (F5): the first call naming a phone ties the pass to it
+      (`user_sessions.device_info`), and the filter judges that phone with or without `X-Device-Id`. The answer is the
+      same 401 "This device was signed out." as rule 28's, so rule 49 still sets it aside. Guard:
+      `ARemovedPhonesPassDiesWithoutItsHeaderTest`.
 
 ## Established 2026-09-12, while planning the receipt number
 
