@@ -1,6 +1,6 @@
 # 0235 — A busy machine queues a deploy; it never refuses it
 
-**Date:** 2026-10-24 · **Decided by:** the owner ("agar machine already 90% engage hai aur next deployment ko run karne ki
+**Date:** 2026-10-24 · **Decided by:** the owner, for the principle only ("agar machine already 90% engage hai aur next deployment ko run karne ki
 gunjaish nahi hai to usko queue mein laga do, mana nahi karna; jaise hi aik deployment complete ho to dosri start ho, system
 farigh bhi na ho kaam ke load ke time par aur stuck bhi na ho") · **Applies to:** every project that builds on the owner's M3
 and deploys to KVM4 (Invotick, Codlytics, Accplix, PMML, anything later).
@@ -19,10 +19,12 @@ A job is refused only for a reason that waiting cannot fix (list below).
   build under Rosetta hung for 45 minutes). One shared folder `/Users/Shared/ci-queue` (mode 1777, created once by the owner)
   holds the line.
 - The first heavy step of each job is `ci-queue.sh acquire <project>`; the last step, with `if: always()`, is `ci-queue.sh release`.
-- Rules in the script: **oldest first**; **one heavy job at a time**; a **second slot opens only while the Mac is quiet**
-  (1-minute load below 40% of the cores and at least 25% memory free), so a busy Mac is never asked for more and a quiet Mac never
-  waits behind one slow job; the next job starts within `CI_QUEUE_POLL_S` (15 s) of a slot freeing; a waiting ticket not touched for 90 s
-  belongs to a dead job and is dropped; a slot nobody released is taken back after 3 h; a job gives up only after 2 h of waiting
+- Rules in the script (**rewritten 2026-10-31, see Correction**): **oldest first**; **no limit on the number of jobs** - the owner's
+  rule is only "queue when the machine is ~90% engaged", so a job starts the moment the Mac is under `CI_QUEUE_BUSY_PCT` (90) of its
+  cores and has at least 10% memory free; the load figure lags a job that has just started, so the next start waits
+  `CI_QUEUE_SETTLE_S` (45 s) after the previous one; `MAX_SLOTS` (8) is a safety ceiling for a runaway, not a rule; the head of the line is
+  never starved (after `CI_QUEUE_STARVE_S`, 600 s, with nothing of ours running it starts even on a busy Mac); a waiting ticket not touched
+  for 90 s belongs to a dead job and is dropped; a slot nobody released is taken back after 3 h; a job gives up only after 2 h of waiting
   (exit 75, "queue timeout", a message that says re-run, not a code failure). Workflows set `timeout-minutes` at least 180.
 - A job waiting prints one line a minute ("waiting, N in line, M running"), so the log is alive and nobody thinks it is stuck.
 
@@ -91,3 +93,12 @@ missing secret or token; an image that does not exist; a rollback that failed (s
 - `ci-queue.sh` tested with four jobs and one slot: served in arrival order, each started the moment the previous released; a
   slot nobody released was taken back after its limit.
 - Production check after each project's change: two deploys sent together run one after the other with no gap and no refusal.
+
+## Correction 2026-10-31 (owner)
+The first version of `ci-queue.sh` capped the Mac at "one heavy job, a second only when load < 40% and memory 25% free, never more than 2".
+The owner never asked for that: he said **queue when the machine is 90% engaged**, nothing about a number of jobs. The cap and the 40% line were
+the manager's own invention (fear of three builds starting in the same second: a Next.js build under Rosetta hung for 45 min on 2026-10-2x),
+and this page wrongly put them under "Decided by: the owner". Rewritten the same day: busy test at 90% load / 10% free memory, no job-count limit,
+a 45 s settle between starts, a 600 s anti-starvation start for the head of the line. Tested with 3 simultaneous projects on a not-busy Mac
+(all 3 running, starts at 0 s, 2 s, 3 s with a 2 s settle) and on a busy Mac (the head waits, starts after the starvation time, the second waits).
+Each project's copy `.github/scripts/ci-queue.sh` must be replaced by the new file (byte-identical copy of `kaam/ops-scripts/ci-queue.sh`).
