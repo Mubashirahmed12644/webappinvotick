@@ -94,7 +94,7 @@ export default async function SharedInvoicePage({
   // The reason the read failed is kept, not flattened to "no document": a revoked link, a token that
   // never existed and our own backend being unreachable are three different outcomes for the person
   // holding the link, and until now the web reported all three as the same blank page.
-  const { state: linkState, data: shared, status } = await getSharedInvoiceResult(token);
+  const { state: linkState, data: shared, status, replacedByToken } = await getSharedInvoiceResult(token);
   const platform = await detectPlatform();
   const installUrl = installUrlForToken(token);
 
@@ -108,15 +108,42 @@ export default async function SharedInvoicePage({
         {/* Neutral wording on purpose: the share could not be loaded, so which kind of document it
             held is exactly what we do not know here. Guessing "invoice" is wrong half as often as
             it is right, and it is the last thing this person reads. */}
-        <h1 className="text-2xl font-semibold text-neutral-900">This link is no longer available</h1>
-        <p className="mt-3 text-neutral-600">
-          It may have been revoked, replaced by a newer version, or expired.
-        </p>
+        {replacedByToken ? (
+          // The sender edited the document after sending it and sent this client the newer one: the
+          // old link was retired on purpose (decision 0046). Say that, and give the way to it — the
+          // token is one the same account sent for the same document, and was shape-checked on the way in.
+          <>
+            <h1 className="text-2xl font-semibold text-neutral-900">A newer version was sent to you</h1>
+            <p className="mt-3 text-neutral-600">
+              The sender updated this document after sending it. This link shows the earlier version, so it no
+              longer opens.
+            </p>
+            <a
+              href={`/i/${replacedByToken}`}
+              className="mt-6 rounded-full bg-[#0D4DC0] px-6 py-3 text-center font-medium text-white"
+            >
+              Open the latest version
+            </a>
+          </>
+        ) : (
+          <>
+            <h1 className="text-2xl font-semibold text-neutral-900">This link is no longer available</h1>
+            <p className="mt-3 text-neutral-600">
+              The sender may have replaced it with a newer version or withdrawn it, or it has expired. Please ask
+              them to send you the document again.
+            </p>
+          </>
+        )}
         <GetYourOwnCta
           platform={platform}
           installUrl={installUrl}
           route="web_app"
-          className="mt-6 rounded-full bg-[#0D4DC0] px-6 py-3 text-center font-medium text-white"
+          // One filled button per screen: with a newer version to open, that is the filled one.
+          className={
+            replacedByToken
+              ? "mt-4 rounded-full border border-[#0D4DC0] px-6 py-3 text-center font-medium text-[#0D4DC0]"
+              : "mt-6 rounded-full bg-[#0D4DC0] px-6 py-3 text-center font-medium text-white"
+          }
         />
       </main>
     );

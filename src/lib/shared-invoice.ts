@@ -2,6 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { config } from "./config";
 import type { InvoiceRenderData } from "./data";
+import { replacedByTokenFrom } from "./shared-invoice-replacement";
 import { withOwnersFooterRule } from "./invotick-footer";
 
 // Public (no-login) shared invoice, read from the Spring backend by its opaque
@@ -60,6 +61,13 @@ export interface SharedInvoiceResult {
   data: PublicSharedInvoice | null;
   /** The HTTP status when there was one. Absent when the request never got an answer. */
   status: number | null;
+  /**
+   * On `gone` only: the token of the newer link the sender SENT after editing the document, when the
+   * backend names one (it does from the backend deploy of the "retired link names its replacement"
+   * change). Null on every other answer, and on an older backend. Additive: the page reads null as
+   * "no pointer" and says what it always said.
+   */
+  replacedByToken?: string | null;
 }
 
 /**
@@ -93,7 +101,12 @@ export const getSharedInvoiceResult = cache(
       if (!res.ok) {
         const state: SharedInvoiceLinkState =
           res.status === 404 ? "not_found" : res.status === 410 ? "gone" : "fetch_failed";
-        return { state, data: null, status: res.status };
+        // Only a 410 can carry a pointer to a newer link. A body that cannot be read is no pointer.
+        const replacedByToken =
+          state === "gone"
+            ? replacedByTokenFrom(await res.json().catch(() => null), token)
+            : null;
+        return { state, data: null, status: res.status, replacedByToken };
       }
       const json = (await res.json()) as { success?: boolean; data?: PublicSharedInvoice } | null;
       // 200 with no usable body is the read failing, not the link being dead. Reporting it as
